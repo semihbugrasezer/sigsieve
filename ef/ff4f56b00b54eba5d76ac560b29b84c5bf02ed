@@ -1,0 +1,23 @@
+README.md
+  s_8fca33fa657aa8::t_45558d02ee289b 28-44,122-124,127-131,134,137-139,141-209,269-270,276-291
+docs/FINDINGS.md
+  s_8fca33fa657aa8::t_0da13fd9fae604 42
+docs/TESTING.md
+  s_8fca33fa657aa8::t_c26b85507c4bc7 20-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "efff4f56b00b54eba5d76ac560b29b84c5bf02ed",
+  "prompts": {},
+  "sessions": {
+    "s_8fca33fa657aa8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0b2fe32e-49c3-450a-aec6-7f8545377859",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <semih.b.sezer@gmail.com>"
+    }
+  }
+}
