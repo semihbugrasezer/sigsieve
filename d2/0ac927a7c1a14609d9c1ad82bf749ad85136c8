@@ -1,0 +1,591 @@
+guard/src/main.rs
+  s_8fca33fa657aa8::t_3e51ca34204e87 1-143,145-146,148
+  s_8fca33fa657aa8::t_4d620d3c17f879 144,147,149-154
+guard/src/mcp.rs
+  s_8fca33fa657aa8::t_3d6141867b9744 1-371,374-375
+  s_8fca33fa657aa8::t_33f90bc4051e84 372-373,376-433
+guard/tests/bypass.rs
+  s_8fca33fa657aa8::t_56347f51ffc27c 1-470
+  s_8fca33fa657aa8::t_0b000e3c30003f 471-562
+guard/src/redact.rs
+  s_8fca33fa657aa8::t_c93752168eddf6 1-158
+  s_8fca33fa657aa8::t_fbf0df70104195 159-164
+guard/src/config.rs
+  s_8fca33fa657aa8::t_1fc108fcc5eda1 1-293
+  s_8fca33fa657aa8::t_cc655b44eb5cf3 294-299
+guard/src/lib.rs
+  s_8fca33fa657aa8::t_ab14d9ee95ea2f 1-113,115
+  s_8fca33fa657aa8::t_5a024c1f5c9735 114,116-121
+guard/src/request.rs
+  s_8fca33fa657aa8::t_9dd03e81ad804a 1-200,214
+  s_8fca33fa657aa8::t_59cc39bbcf2b4c 201-213,215-216
+guard/src/ops.rs
+  s_8fca33fa657aa8::t_fd38f102692b61 1-296,300,307,309
+  s_8fca33fa657aa8::t_3d6ae9961a6691 297-299,301-306,308,310-320
+docs/adr/0001-diagnostic-privilege-boundaries.md
+  s_8fca33fa657aa8::t_efa3bf5dc2e5d5 1-138
+guard/Cargo.lock
+  s_8fca33fa657aa8::t_dae1bcb27e11d8 1-250
+guard/Cargo.toml
+  s_8fca33fa657aa8::t_b5c8c2145a5227 1-27
+guard/src/audit.rs
+  s_8fca33fa657aa8::t_9016301ac1b1bd 1-44
+guard/target/.rustc_info.json
+  s_8fca33fa657aa8::t_0b72d86258fb9c 1
+guard/target/CACHEDIR.TAG
+  s_8fca33fa657aa8::t_ef6f5db3b88c3e 1-3
+guard/target/debug/.fingerprint/aho-corasick-339d0232fdfb834e/invoked.timestamp
+  s_8fca33fa657aa8::t_ecaf6c45e0a77f 1
+guard/target/debug/.fingerprint/aho-corasick-339d0232fdfb834e/lib-aho_corasick
+  s_8fca33fa657aa8::t_9214962aa35fdb 1
+guard/target/debug/.fingerprint/aho-corasick-339d0232fdfb834e/lib-aho_corasick.json
+  s_8fca33fa657aa8::t_4f4f38c6ec59ae 1
+guard/target/debug/.fingerprint/aho-corasick-c87c71c0ce305985/invoked.timestamp
+  s_8fca33fa657aa8::t_7cd61c31454578 1
+guard/target/debug/.fingerprint/aho-corasick-c87c71c0ce305985/lib-aho_corasick
+  s_8fca33fa657aa8::t_4c251211770e70 1
+guard/target/debug/.fingerprint/aho-corasick-c87c71c0ce305985/lib-aho_corasick.json
+  s_8fca33fa657aa8::t_e43cc19bae157c 1
+guard/target/debug/.fingerprint/bitflags-ad434670d6c019f8/invoked.timestamp
+  s_8fca33fa657aa8::t_f3270623e98b42 1
+guard/target/debug/.fingerprint/bitflags-ad434670d6c019f8/lib-bitflags
+  s_8fca33fa657aa8::t_77d86b6d82b456 1
+guard/target/debug/.fingerprint/bitflags-ad434670d6c019f8/lib-bitflags.json
+  s_8fca33fa657aa8::t_7890070950f098 1
+guard/target/debug/.fingerprint/bitflags-c2973591c174539a/invoked.timestamp
+  s_8fca33fa657aa8::t_1417b36d2bfcab 1
+guard/target/debug/.fingerprint/bitflags-c2973591c174539a/lib-bitflags
+  s_8fca33fa657aa8::t_ad488550bab8de 1
+guard/target/debug/.fingerprint/bitflags-c2973591c174539a/lib-bitflags.json
+  s_8fca33fa657aa8::t_4f600a9ef952ad 1
+guard/target/debug/.fingerprint/cfg-if-52ec2228f4c14b18/invoked.timestamp
+  s_8fca33fa657aa8::t_a407cdaed7e591 1
+guard/target/debug/.fingerprint/cfg-if-52ec2228f4c14b18/lib-cfg_if
+  s_8fca33fa657aa8::t_d50b69d3fd3f1d 1
+guard/target/debug/.fingerprint/cfg-if-52ec2228f4c14b18/lib-cfg_if.json
+  s_8fca33fa657aa8::t_ffe4ca746a5527 1
+guard/target/debug/.fingerprint/cfg-if-9646dc4634849171/invoked.timestamp
+  s_8fca33fa657aa8::t_6cb7692cf7ecd0 1
+guard/target/debug/.fingerprint/cfg-if-9646dc4634849171/lib-cfg_if
+  s_8fca33fa657aa8::t_759caac3a1f53f 1
+guard/target/debug/.fingerprint/cfg-if-9646dc4634849171/lib-cfg_if.json
+  s_8fca33fa657aa8::t_9a20e5edd1f92a 1
+guard/target/debug/.fingerprint/errno-0c9a645a60fa08cb/invoked.timestamp
+  s_8fca33fa657aa8::t_a461f36ce53bd8 1
+guard/target/debug/.fingerprint/errno-0c9a645a60fa08cb/lib-errno
+  s_8fca33fa657aa8::t_52dfdac843948c 1
+guard/target/debug/.fingerprint/errno-0c9a645a60fa08cb/lib-errno.json
+  s_8fca33fa657aa8::t_b5f4f65318f776 1
+guard/target/debug/.fingerprint/errno-f86072fed4b50a60/invoked.timestamp
+  s_8fca33fa657aa8::t_5b1bf6c25672d1 1
+guard/target/debug/.fingerprint/errno-f86072fed4b50a60/lib-errno
+  s_8fca33fa657aa8::t_71751feeca8bf6 1
+guard/target/debug/.fingerprint/errno-f86072fed4b50a60/lib-errno.json
+  s_8fca33fa657aa8::t_8568b96a30c5b1 1
+guard/target/debug/.fingerprint/fastrand-0d79c9d19580ca3a/invoked.timestamp
+  s_8fca33fa657aa8::t_9afe06bd4852cd 1
+guard/target/debug/.fingerprint/fastrand-0d79c9d19580ca3a/lib-fastrand
+  s_8fca33fa657aa8::t_3bc64b7b8924b5 1
+guard/target/debug/.fingerprint/fastrand-0d79c9d19580ca3a/lib-fastrand.json
+  s_8fca33fa657aa8::t_c3ac0388c387b4 1
+guard/target/debug/.fingerprint/fastrand-871579525d420a8c/invoked.timestamp
+  s_8fca33fa657aa8::t_d86a61c84cbbe0 1
+guard/target/debug/.fingerprint/fastrand-871579525d420a8c/lib-fastrand
+  s_8fca33fa657aa8::t_aba7e0cde51b46 1
+guard/target/debug/.fingerprint/fastrand-871579525d420a8c/lib-fastrand.json
+  s_8fca33fa657aa8::t_23abbbb740378d 1
+guard/target/debug/.fingerprint/getrandom-001deb09dae3d36b/invoked.timestamp
+  s_8fca33fa657aa8::t_01d232742e014a 1
+guard/target/debug/.fingerprint/getrandom-001deb09dae3d36b/lib-getrandom
+  s_8fca33fa657aa8::t_30e5c4cc344aee 1
+guard/target/debug/.fingerprint/getrandom-001deb09dae3d36b/lib-getrandom.json
+  s_8fca33fa657aa8::t_2fed4d09bdaa1d 1
+guard/target/debug/.fingerprint/getrandom-5b5d19dfb51e63a8/run-build-script-build-script-build
+  s_8fca33fa657aa8::t_c758e396d433e3 1
+guard/target/debug/.fingerprint/getrandom-5b5d19dfb51e63a8/run-build-script-build-script-build.json
+  s_8fca33fa657aa8::t_e3a56ae1f57622 1
+guard/target/debug/.fingerprint/getrandom-bb076f03db1eb7aa/build-script-build-script-build
+  s_8fca33fa657aa8::t_c10ade5f73f2a1 1
+guard/target/debug/.fingerprint/getrandom-bb076f03db1eb7aa/build-script-build-script-build.json
+  s_8fca33fa657aa8::t_7d19de0759d345 1
+guard/target/debug/.fingerprint/getrandom-bb076f03db1eb7aa/invoked.timestamp
+  s_8fca33fa657aa8::t_2f58e076226f50 1
+guard/target/debug/.fingerprint/getrandom-d999f59a76bf2760/invoked.timestamp
+  s_8fca33fa657aa8::t_832cec33b92411 1
+guard/target/debug/.fingerprint/getrandom-d999f59a76bf2760/lib-getrandom
+  s_8fca33fa657aa8::t_9aca6e942cbcfb 1
+guard/target/debug/.fingerprint/getrandom-d999f59a76bf2760/lib-getrandom.json
+  s_8fca33fa657aa8::t_c7c0fcbd6b408e 1
+guard/target/debug/.fingerprint/itoa-37e2ae4c6caf50c7/invoked.timestamp
+  s_8fca33fa657aa8::t_a3e87ca94efa5c 1
+guard/target/debug/.fingerprint/itoa-37e2ae4c6caf50c7/lib-itoa
+  s_8fca33fa657aa8::t_21752afa4378ea 1
+guard/target/debug/.fingerprint/itoa-37e2ae4c6caf50c7/lib-itoa.json
+  s_8fca33fa657aa8::t_0741bc7c2950ee 1
+guard/target/debug/.fingerprint/itoa-ec00fe56a1f158c1/invoked.timestamp
+  s_8fca33fa657aa8::t_795a34e94fe670 1
+guard/target/debug/.fingerprint/itoa-ec00fe56a1f158c1/lib-itoa
+  s_8fca33fa657aa8::t_5ebee7dddef53e 1
+guard/target/debug/.fingerprint/itoa-ec00fe56a1f158c1/lib-itoa.json
+  s_8fca33fa657aa8::t_7346dadce357b5 1
+guard/target/debug/.fingerprint/libc-4dadd2072ccaef9f/invoked.timestamp
+  s_8fca33fa657aa8::t_7aae9ef5468e91 1
+guard/target/debug/.fingerprint/libc-4dadd2072ccaef9f/lib-libc
+  s_8fca33fa657aa8::t_74f1194feebf2d 1
+guard/target/debug/.fingerprint/libc-4dadd2072ccaef9f/lib-libc.json
+  s_8fca33fa657aa8::t_8fa4d6e09ee5f2 1
+guard/target/debug/.fingerprint/libc-68f51597f6faf3b1/invoked.timestamp
+  s_8fca33fa657aa8::t_773787bf5744ca 1
+guard/target/debug/.fingerprint/libc-68f51597f6faf3b1/lib-libc
+  s_8fca33fa657aa8::t_f4def77e82f966 1
+guard/target/debug/.fingerprint/libc-68f51597f6faf3b1/lib-libc.json
+  s_8fca33fa657aa8::t_bf9e195dac2df7 1
+guard/target/debug/.fingerprint/libc-77d548c60ba9ac16/build-script-build-script-build
+  s_8fca33fa657aa8::t_d29129834547d8 1
+guard/target/debug/.fingerprint/libc-77d548c60ba9ac16/build-script-build-script-build.json
+  s_8fca33fa657aa8::t_9d11400b9d23e0 1
+guard/target/debug/.fingerprint/libc-77d548c60ba9ac16/invoked.timestamp
+  s_8fca33fa657aa8::t_91666646f4ec31 1
+guard/target/debug/.fingerprint/libc-919b524de6c494ed/run-build-script-build-script-build
+  s_8fca33fa657aa8::t_e8c9cfe9729b92 1
+guard/target/debug/.fingerprint/libc-919b524de6c494ed/run-build-script-build-script-build.json
+  s_8fca33fa657aa8::t_7073e650c091b2 1
+guard/target/debug/.fingerprint/memchr-6b1e11802461c7ce/invoked.timestamp
+  s_8fca33fa657aa8::t_980233bfaeb592 1
+guard/target/debug/.fingerprint/memchr-6b1e11802461c7ce/lib-memchr
+  s_8fca33fa657aa8::t_1e04cf4c92fcb8 1
+guard/target/debug/.fingerprint/memchr-6b1e11802461c7ce/lib-memchr.json
+  s_8fca33fa657aa8::t_26cc9589970e0d 1
+guard/target/debug/.fingerprint/memchr-e5a5d40cbc870987/invoked.timestamp
+  s_8fca33fa657aa8::t_79615676778b7e 1
+guard/target/debug/.fingerprint/memchr-e5a5d40cbc870987/lib-memchr
+  s_8fca33fa657aa8::t_00181553f8087e 1
+guard/target/debug/.fingerprint/memchr-e5a5d40cbc870987/lib-memchr.json
+  s_8fca33fa657aa8::t_0834e9b267a343 1
+guard/target/debug/.fingerprint/once_cell-8f0b96755f3947cc/invoked.timestamp
+  s_8fca33fa657aa8::t_8d65b6c7e8967e 1
+guard/target/debug/.fingerprint/once_cell-8f0b96755f3947cc/lib-once_cell
+  s_8fca33fa657aa8::t_9f3600c419e72d 1
+guard/target/debug/.fingerprint/once_cell-8f0b96755f3947cc/lib-once_cell.json
+  s_8fca33fa657aa8::t_06fb8a411405f1 1
+guard/target/debug/.fingerprint/once_cell-e6fe189f467f6de6/invoked.timestamp
+  s_8fca33fa657aa8::t_5e0fb0855475fb 1
+guard/target/debug/.fingerprint/once_cell-e6fe189f467f6de6/lib-once_cell
+  s_8fca33fa657aa8::t_60c17b6f69b97d 1
+guard/target/debug/.fingerprint/once_cell-e6fe189f467f6de6/lib-once_cell.json
+  s_8fca33fa657aa8::t_b5aee7c2717971 1
+guard/target/debug/.fingerprint/regex-0b4d1c99e37d332b/invoked.timestamp
+  s_8fca33fa657aa8::t_82e266e4bdd8b0 1
+guard/target/debug/.fingerprint/regex-0b4d1c99e37d332b/lib-regex
+  s_8fca33fa657aa8::t_fc591f7d1bb2e0 1
+guard/target/debug/.fingerprint/regex-0b4d1c99e37d332b/lib-regex.json
+  s_8fca33fa657aa8::t_db43b899e84ec9 1
+guard/target/debug/.fingerprint/regex-3c9f8f3439ade256/invoked.timestamp
+  s_8fca33fa657aa8::t_05c8c36b136838 1
+guard/target/debug/.fingerprint/regex-3c9f8f3439ade256/lib-regex
+  s_8fca33fa657aa8::t_591671196cd9d1 1
+guard/target/debug/.fingerprint/regex-3c9f8f3439ade256/lib-regex.json
+  s_8fca33fa657aa8::t_5e396fd23a360b 1
+guard/target/debug/.fingerprint/regex-8fbb0de7253d554a/invoked.timestamp
+  s_8fca33fa657aa8::t_340aef611ab787 1
+guard/target/debug/.fingerprint/regex-8fbb0de7253d554a/lib-regex
+  s_8fca33fa657aa8::t_d6be3c1857654c 1
+guard/target/debug/.fingerprint/regex-8fbb0de7253d554a/lib-regex.json
+  s_8fca33fa657aa8::t_c923ba97cf4fe3 1
+guard/target/debug/.fingerprint/regex-automata-169a09bf006bfcc6/invoked.timestamp
+  s_8fca33fa657aa8::t_e008404187b90a 1
+guard/target/debug/.fingerprint/regex-automata-169a09bf006bfcc6/lib-regex_automata
+  s_8fca33fa657aa8::t_c68752ed17deb1 1
+guard/target/debug/.fingerprint/regex-automata-169a09bf006bfcc6/lib-regex_automata.json
+  s_8fca33fa657aa8::t_d53a24e0a3628a 1
+guard/target/debug/.fingerprint/regex-automata-4745ea361a2f18ab/invoked.timestamp
+  s_8fca33fa657aa8::t_3ebed718eaa50a 1
+guard/target/debug/.fingerprint/regex-automata-4745ea361a2f18ab/lib-regex_automata
+  s_8fca33fa657aa8::t_098eacf52866b3 1
+guard/target/debug/.fingerprint/regex-automata-4745ea361a2f18ab/lib-regex_automata.json
+  s_8fca33fa657aa8::t_14d2464e7571c4 1
+guard/target/debug/.fingerprint/regex-automata-deed70bd78741fb1/invoked.timestamp
+  s_8fca33fa657aa8::t_4cf9f285462cb5 1
+guard/target/debug/.fingerprint/regex-automata-deed70bd78741fb1/lib-regex_automata
+  s_8fca33fa657aa8::t_67c20824bd3991 1
+guard/target/debug/.fingerprint/regex-automata-deed70bd78741fb1/lib-regex_automata.json
+  s_8fca33fa657aa8::t_106bbdf64362b1 1
+guard/target/debug/.fingerprint/regex-syntax-3ec9d6c0e6c0573c/invoked.timestamp
+  s_8fca33fa657aa8::t_1a68776b9c660f 1
+guard/target/debug/.fingerprint/regex-syntax-3ec9d6c0e6c0573c/lib-regex_syntax
+  s_8fca33fa657aa8::t_75d45dfdbb71df 1
+guard/target/debug/.fingerprint/regex-syntax-3ec9d6c0e6c0573c/lib-regex_syntax.json
+  s_8fca33fa657aa8::t_627fedce9c980b 1
+guard/target/debug/.fingerprint/regex-syntax-e6ade204cc829a0d/invoked.timestamp
+  s_8fca33fa657aa8::t_d95f98ad08ca99 1
+guard/target/debug/.fingerprint/regex-syntax-e6ade204cc829a0d/lib-regex_syntax
+  s_8fca33fa657aa8::t_c005bdb576f249 1
+guard/target/debug/.fingerprint/regex-syntax-e6ade204cc829a0d/lib-regex_syntax.json
+  s_8fca33fa657aa8::t_2d51e7d63a50f6 1
+guard/target/debug/.fingerprint/regex-syntax-e9ea92cc7c89b28d/invoked.timestamp
+  s_8fca33fa657aa8::t_8dbc2e3692e35c 1
+guard/target/debug/.fingerprint/regex-syntax-e9ea92cc7c89b28d/lib-regex_syntax
+  s_8fca33fa657aa8::t_45e5bc9c70112d 1
+guard/target/debug/.fingerprint/regex-syntax-e9ea92cc7c89b28d/lib-regex_syntax.json
+  s_8fca33fa657aa8::t_9c2939a23491c6 1
+guard/target/debug/.fingerprint/rustix-4b3c1aa69c4f464e/run-build-script-build-script-build
+  s_8fca33fa657aa8::t_40b9dbc997683f 1
+guard/target/debug/.fingerprint/rustix-4b3c1aa69c4f464e/run-build-script-build-script-build.json
+  s_8fca33fa657aa8::t_fa71d34a23a1c1 1
+guard/target/debug/.fingerprint/rustix-7dc252be23443ffc/invoked.timestamp
+  s_8fca33fa657aa8::t_b0b5e6fa7b415c 1
+guard/target/debug/.fingerprint/rustix-7dc252be23443ffc/lib-rustix
+  s_8fca33fa657aa8::t_6088723ca2c934 1
+guard/target/debug/.fingerprint/rustix-7dc252be23443ffc/lib-rustix.json
+  s_8fca33fa657aa8::t_69d3df1ba038c7 1
+guard/target/debug/.fingerprint/rustix-d7a5ec62b32f31c6/build-script-build-script-build
+  s_8fca33fa657aa8::t_f2938ce0cded78 1
+guard/target/debug/.fingerprint/rustix-d7a5ec62b32f31c6/build-script-build-script-build.json
+  s_8fca33fa657aa8::t_257c29b6da5cc4 1
+guard/target/debug/.fingerprint/rustix-d7a5ec62b32f31c6/invoked.timestamp
+  s_8fca33fa657aa8::t_475e2bb223af08 1
+guard/target/debug/.fingerprint/rustix-f96f8035222f6dc3/invoked.timestamp
+  s_8fca33fa657aa8::t_a2ff8ae062ab75 1
+guard/target/debug/.fingerprint/rustix-f96f8035222f6dc3/lib-rustix
+  s_8fca33fa657aa8::t_2084ea926d2dac 1
+guard/target/debug/.fingerprint/rustix-f96f8035222f6dc3/lib-rustix.json
+  s_8fca33fa657aa8::t_2c19eb7d35a504 1
+guard/target/debug/.fingerprint/serde_core-02b7e38ea2ef48d0/build-script-build-script-build
+  s_8fca33fa657aa8::t_3b65e48d923387 1
+guard/target/debug/.fingerprint/serde_core-02b7e38ea2ef48d0/build-script-build-script-build.json
+  s_8fca33fa657aa8::t_f12d9c6a70993d 1
+guard/target/debug/.fingerprint/serde_core-02b7e38ea2ef48d0/invoked.timestamp
+  s_8fca33fa657aa8::t_bac4e0849b6857 1
+guard/target/debug/.fingerprint/serde_core-65671cbcf137b84c/invoked.timestamp
+  s_8fca33fa657aa8::t_201e28fb779bd9 1
+guard/target/debug/.fingerprint/serde_core-65671cbcf137b84c/lib-serde_core
+  s_8fca33fa657aa8::t_5823716918ae8f 1
+guard/target/debug/.fingerprint/serde_core-65671cbcf137b84c/lib-serde_core.json
+  s_8fca33fa657aa8::t_18838ceb057bd1 1
+guard/target/debug/.fingerprint/serde_core-ba8a8851dab699f8/invoked.timestamp
+  s_8fca33fa657aa8::t_ccf29ff2c70dca 1
+guard/target/debug/.fingerprint/serde_core-ba8a8851dab699f8/lib-serde_core
+  s_8fca33fa657aa8::t_616075304ff52e 1
+guard/target/debug/.fingerprint/serde_core-ba8a8851dab699f8/lib-serde_core.json
+  s_8fca33fa657aa8::t_c721d1d6feb769 1
+guard/target/debug/.fingerprint/serde_core-d4618f711546fb4f/run-build-script-build-script-build
+  s_8fca33fa657aa8::t_1c7c2886f13732 1
+guard/target/debug/.fingerprint/serde_core-d4618f711546fb4f/run-build-script-build-script-build.json
+  s_8fca33fa657aa8::t_97d989f6f55c12 1
+guard/target/debug/.fingerprint/serde_json-9a38088def5b7ab9/invoked.timestamp
+  s_8fca33fa657aa8::t_2a18505a599527 1
+guard/target/debug/.fingerprint/serde_json-9a38088def5b7ab9/lib-serde_json
+  s_8fca33fa657aa8::t_af3e23bdf9abe9 1
+guard/target/debug/.fingerprint/serde_json-9a38088def5b7ab9/lib-serde_json.json
+  s_8fca33fa657aa8::t_b08cd9e98ab873 1
+guard/target/debug/.fingerprint/serde_json-ace510910c466014/run-build-script-build-script-build
+  s_8fca33fa657aa8::t_515dee2377c69e 1
+guard/target/debug/.fingerprint/serde_json-ace510910c466014/run-build-script-build-script-build.json
+  s_8fca33fa657aa8::t_df8f37fa51a245 1
+guard/target/debug/.fingerprint/serde_json-c0f0aef10d025cb5/invoked.timestamp
+  s_8fca33fa657aa8::t_6adb80f109550d 1
+guard/target/debug/.fingerprint/serde_json-c0f0aef10d025cb5/lib-serde_json
+  s_8fca33fa657aa8::t_6e53978a2e5363 1
+guard/target/debug/.fingerprint/serde_json-c0f0aef10d025cb5/lib-serde_json.json
+  s_8fca33fa657aa8::t_f0d19e234ab31d 1
+guard/target/debug/.fingerprint/serde_json-e13f2e6599a46c00/build-script-build-script-build
+  s_8fca33fa657aa8::t_af12ced28c151c 1
+guard/target/debug/.fingerprint/serde_json-e13f2e6599a46c00/build-script-build-script-build.json
+  s_8fca33fa657aa8::t_acb8eab595e3a9 1
+guard/target/debug/.fingerprint/serde_json-e13f2e6599a46c00/invoked.timestamp
+  s_8fca33fa657aa8::t_6e88612c00724a 1
+guard/target/debug/.fingerprint/sigsieve-guard-11f010acdd7d2718/invoked.timestamp
+  s_8fca33fa657aa8::t_bce77ef6803b0a 1
+guard/target/debug/.fingerprint/sigsieve-guard-11f010acdd7d2718/test-bin-sigsieve-guard
+  s_8fca33fa657aa8::t_bd0e3b730fe2c7 1
+guard/target/debug/.fingerprint/sigsieve-guard-11f010acdd7d2718/test-bin-sigsieve-guard.json
+  s_8fca33fa657aa8::t_fcafb38e70a354 1
+guard/target/debug/.fingerprint/sigsieve-guard-16da9b5771e9c049/invoked.timestamp
+  s_8fca33fa657aa8::t_8ab09473275295 1
+guard/target/debug/.fingerprint/sigsieve-guard-16da9b5771e9c049/test-bin-sigsieve-guard
+  s_8fca33fa657aa8::t_0952af7cc5e773 1
+guard/target/debug/.fingerprint/sigsieve-guard-16da9b5771e9c049/test-bin-sigsieve-guard.json
+  s_8fca33fa657aa8::t_c13160fc5815a8 1
+guard/target/debug/.fingerprint/sigsieve-guard-26138b517f6f96a1/invoked.timestamp
+  s_8fca33fa657aa8::t_a6001f11c4087d 1
+guard/target/debug/.fingerprint/sigsieve-guard-26138b517f6f96a1/test-lib-sigsieve_guard
+  s_8fca33fa657aa8::t_b6e5789ca84230 1
+guard/target/debug/.fingerprint/sigsieve-guard-26138b517f6f96a1/test-lib-sigsieve_guard.json
+  s_8fca33fa657aa8::t_687644172ffdf3 1
+guard/target/debug/.fingerprint/sigsieve-guard-30be94197838b8a5/invoked.timestamp
+  s_8fca33fa657aa8::t_5cde78ca952267 1
+guard/target/debug/.fingerprint/sigsieve-guard-30be94197838b8a5/test-bin-sigsieve-guard
+  s_8fca33fa657aa8::t_794980ddb6b063 1
+guard/target/debug/.fingerprint/sigsieve-guard-30be94197838b8a5/test-bin-sigsieve-guard.json
+  s_8fca33fa657aa8::t_cd67c9c0a232d7 1
+guard/target/debug/.fingerprint/sigsieve-guard-3e8d75a0f77143b1/bin-sigsieve-guard
+  s_8fca33fa657aa8::t_e6feacf36ea357 1
+guard/target/debug/.fingerprint/sigsieve-guard-3e8d75a0f77143b1/bin-sigsieve-guard.json
+  s_8fca33fa657aa8::t_f9e2193b61e21d 1
+guard/target/debug/.fingerprint/sigsieve-guard-3e8d75a0f77143b1/invoked.timestamp
+  s_8fca33fa657aa8::t_c86e94d9d493a0 1
+guard/target/debug/.fingerprint/sigsieve-guard-4d6c178ca38de480/bin-sigsieve-guard
+  s_8fca33fa657aa8::t_6f3c12bc18a1ad 1
+guard/target/debug/.fingerprint/sigsieve-guard-4d6c178ca38de480/bin-sigsieve-guard.json
+  s_8fca33fa657aa8::t_efc29d69b58780 1
+guard/target/debug/.fingerprint/sigsieve-guard-4d6c178ca38de480/invoked.timestamp
+  s_8fca33fa657aa8::t_31ec32f1037138 1
+guard/target/debug/.fingerprint/sigsieve-guard-8c4d099887ab0ab5/invoked.timestamp
+  s_8fca33fa657aa8::t_f88507ec0e8a60 1
+guard/target/debug/.fingerprint/sigsieve-guard-8c4d099887ab0ab5/test-lib-sigsieve_guard
+  s_8fca33fa657aa8::t_80c34073b09995 1
+guard/target/debug/.fingerprint/sigsieve-guard-8c4d099887ab0ab5/test-lib-sigsieve_guard.json
+  s_8fca33fa657aa8::t_6a89e0854ddeb2 1
+guard/target/debug/.fingerprint/sigsieve-guard-8d79505a3ecb480e/invoked.timestamp
+  s_8fca33fa657aa8::t_dff32737c3ed5b 1
+guard/target/debug/.fingerprint/sigsieve-guard-8d79505a3ecb480e/lib-sigsieve_guard
+  s_8fca33fa657aa8::t_79f13a205f21bf 1
+guard/target/debug/.fingerprint/sigsieve-guard-8d79505a3ecb480e/lib-sigsieve_guard.json
+  s_8fca33fa657aa8::t_81d45271a3d765 1
+guard/target/debug/.fingerprint/sigsieve-guard-9bf56506f2d7ab63/invoked.timestamp
+  s_8fca33fa657aa8::t_77e770b3d5ada7 1
+guard/target/debug/.fingerprint/sigsieve-guard-9bf56506f2d7ab63/lib-sigsieve_guard
+  s_8fca33fa657aa8::t_1ce25c9ec30ee9 1
+guard/target/debug/.fingerprint/sigsieve-guard-9bf56506f2d7ab63/lib-sigsieve_guard.json
+  s_8fca33fa657aa8::t_0754a519ac786a 1
+guard/target/debug/.fingerprint/sigsieve-guard-ad9acf86ddbb7236/bin-sigsieve-guard
+  s_8fca33fa657aa8::t_9dae52463e375c 1
+guard/target/debug/.fingerprint/sigsieve-guard-ad9acf86ddbb7236/bin-sigsieve-guard.json
+  s_8fca33fa657aa8::t_84b17dcba4730e 1
+guard/target/debug/.fingerprint/sigsieve-guard-ad9acf86ddbb7236/invoked.timestamp
+  s_8fca33fa657aa8::t_e64172e9b1e4dc 1
+guard/target/debug/.fingerprint/sigsieve-guard-b402857ef53ad63a/invoked.timestamp
+  s_8fca33fa657aa8::t_75b528197c0391 1
+guard/target/debug/.fingerprint/sigsieve-guard-b402857ef53ad63a/lib-sigsieve_guard
+  s_8fca33fa657aa8::t_d0e317f8ad4d54 1
+guard/target/debug/.fingerprint/sigsieve-guard-b402857ef53ad63a/lib-sigsieve_guard.json
+  s_8fca33fa657aa8::t_7497945a764e3d 1
+guard/target/debug/.fingerprint/sigsieve-guard-bd1f197c7a19416b/invoked.timestamp
+  s_8fca33fa657aa8::t_9d725e45ce6aa2 1
+guard/target/debug/.fingerprint/sigsieve-guard-bd1f197c7a19416b/test-lib-sigsieve_guard
+  s_8fca33fa657aa8::t_c665af81ab878b 1
+guard/target/debug/.fingerprint/sigsieve-guard-bd1f197c7a19416b/test-lib-sigsieve_guard.json
+  s_8fca33fa657aa8::t_94847e7819cf69 1
+guard/target/debug/.fingerprint/sigsieve-guard-cf6050d00bfe44e0/invoked.timestamp
+  s_8fca33fa657aa8::t_31d4a51fc0493d 1
+guard/target/debug/.fingerprint/sigsieve-guard-cf6050d00bfe44e0/test-integration-test-bypass
+  s_8fca33fa657aa8::t_ccbef5dd545c68 1
+guard/target/debug/.fingerprint/sigsieve-guard-cf6050d00bfe44e0/test-integration-test-bypass.json
+  s_8fca33fa657aa8::t_9e4e316e288173 1
+guard/target/debug/.fingerprint/sigsieve-guard-ebf66d11218a0476/invoked.timestamp
+  s_8fca33fa657aa8::t_60aadd19dfb323 1
+guard/target/debug/.fingerprint/sigsieve-guard-ebf66d11218a0476/test-integration-test-bypass
+  s_8fca33fa657aa8::t_ea31eaa28196d1 1
+guard/target/debug/.fingerprint/sigsieve-guard-ebf66d11218a0476/test-integration-test-bypass.json
+  s_8fca33fa657aa8::t_3dbf17c84ebebc 1
+guard/target/debug/.fingerprint/tempfile-1357eb6e0a05da0c/invoked.timestamp
+  s_8fca33fa657aa8::t_4fd56e43f87ba1 1
+guard/target/debug/.fingerprint/tempfile-1357eb6e0a05da0c/lib-tempfile
+  s_8fca33fa657aa8::t_019e0c8b1afc1e 1
+guard/target/debug/.fingerprint/tempfile-1357eb6e0a05da0c/lib-tempfile.json
+  s_8fca33fa657aa8::t_316a05bcd1713a 1
+guard/target/debug/.fingerprint/tempfile-e4db04d9e458b927/invoked.timestamp
+  s_8fca33fa657aa8::t_5af84a177eb4d4 1
+guard/target/debug/.fingerprint/tempfile-e4db04d9e458b927/lib-tempfile
+  s_8fca33fa657aa8::t_89cf54319b68cf 1
+guard/target/debug/.fingerprint/tempfile-e4db04d9e458b927/lib-tempfile.json
+  s_8fca33fa657aa8::t_15b2e46fb31690 1
+guard/target/debug/.fingerprint/zmij-4dc00db4ecd0468e/invoked.timestamp
+  s_8fca33fa657aa8::t_391d683935bc09 1
+guard/target/debug/.fingerprint/zmij-4dc00db4ecd0468e/lib-zmij
+  s_8fca33fa657aa8::t_f77899b9e8efdc 1
+guard/target/debug/.fingerprint/zmij-4dc00db4ecd0468e/lib-zmij.json
+  s_8fca33fa657aa8::t_f4f4ca6895822a 1
+guard/target/debug/.fingerprint/zmij-884393edd6e7bacb/run-build-script-build-script-build
+  s_8fca33fa657aa8::t_c6d94b712c78dd 1
+guard/target/debug/.fingerprint/zmij-884393edd6e7bacb/run-build-script-build-script-build.json
+  s_8fca33fa657aa8::t_ac2e7572fcf6d9 1
+guard/target/debug/.fingerprint/zmij-8fee8c86f8fefd56/build-script-build-script-build
+  s_8fca33fa657aa8::t_f58e07653acba7 1
+guard/target/debug/.fingerprint/zmij-8fee8c86f8fefd56/build-script-build-script-build.json
+  s_8fca33fa657aa8::t_52ced1e05a3954 1
+guard/target/debug/.fingerprint/zmij-8fee8c86f8fefd56/invoked.timestamp
+  s_8fca33fa657aa8::t_c276509594441a 1
+guard/target/debug/.fingerprint/zmij-cfdcc4c2c841ae7c/invoked.timestamp
+  s_8fca33fa657aa8::t_5411c5b330bfea 1
+guard/target/debug/.fingerprint/zmij-cfdcc4c2c841ae7c/lib-zmij
+  s_8fca33fa657aa8::t_81065ad997dc68 1
+guard/target/debug/.fingerprint/zmij-cfdcc4c2c841ae7c/lib-zmij.json
+  s_8fca33fa657aa8::t_31acc6a9b21f0f 1
+guard/target/debug/build/getrandom-5b5d19dfb51e63a8/invoked.timestamp
+  s_8fca33fa657aa8::t_6a31b5ab96b6c1 1
+guard/target/debug/build/getrandom-5b5d19dfb51e63a8/output
+  s_8fca33fa657aa8::t_578bef79516b56 1
+guard/target/debug/build/getrandom-5b5d19dfb51e63a8/root-output
+  s_8fca33fa657aa8::t_81cbe2aded0a7c 1
+guard/target/debug/build/getrandom-bb076f03db1eb7aa/build_script_build-bb076f03db1eb7aa.d
+  s_8fca33fa657aa8::t_82f37d2b332d27 1-5
+guard/target/debug/build/libc-77d548c60ba9ac16/build_script_build-77d548c60ba9ac16.d
+  s_8fca33fa657aa8::t_e0056888cf04b2 1-5
+guard/target/debug/build/libc-919b524de6c494ed/invoked.timestamp
+  s_8fca33fa657aa8::t_895265eaeb65c0 1
+guard/target/debug/build/libc-919b524de6c494ed/output
+  s_8fca33fa657aa8::t_2d692dfaec5378 1-29
+guard/target/debug/build/libc-919b524de6c494ed/root-output
+  s_8fca33fa657aa8::t_819b040659971a 1
+guard/target/debug/build/rustix-4b3c1aa69c4f464e/invoked.timestamp
+  s_8fca33fa657aa8::t_0c88d297b4bd39 1
+guard/target/debug/build/rustix-4b3c1aa69c4f464e/output
+  s_8fca33fa657aa8::t_0a679d8fee33f7 1-11
+guard/target/debug/build/rustix-4b3c1aa69c4f464e/root-output
+  s_8fca33fa657aa8::t_d0b12656496b4e 1
+guard/target/debug/build/rustix-d7a5ec62b32f31c6/build_script_build-d7a5ec62b32f31c6.d
+  s_8fca33fa657aa8::t_17a384ac43d49d 1-5
+guard/target/debug/build/serde_core-02b7e38ea2ef48d0/build_script_build-02b7e38ea2ef48d0.d
+  s_8fca33fa657aa8::t_63923122c0168c 1-5
+guard/target/debug/build/serde_core-d4618f711546fb4f/invoked.timestamp
+  s_8fca33fa657aa8::t_7f7a2bd3e3334d 1
+guard/target/debug/build/serde_core-d4618f711546fb4f/out/private.rs
+  s_8fca33fa657aa8::t_49ed4137615097 1-5
+guard/target/debug/build/serde_core-d4618f711546fb4f/output
+  s_8fca33fa657aa8::t_806af1735549e0 1-11
+guard/target/debug/build/serde_core-d4618f711546fb4f/root-output
+  s_8fca33fa657aa8::t_0cf19b75833466 1
+guard/target/debug/build/serde_json-ace510910c466014/invoked.timestamp
+  s_8fca33fa657aa8::t_1c696f8bf5ee92 1
+guard/target/debug/build/serde_json-ace510910c466014/output
+  s_8fca33fa657aa8::t_66cefeaca17b2d 1-3
+guard/target/debug/build/serde_json-ace510910c466014/root-output
+  s_8fca33fa657aa8::t_a9ccacf08521ff 1
+guard/target/debug/build/serde_json-e13f2e6599a46c00/build_script_build-e13f2e6599a46c00.d
+  s_8fca33fa657aa8::t_581bb6327865a3 1-5
+guard/target/debug/build/zmij-884393edd6e7bacb/invoked.timestamp
+  s_8fca33fa657aa8::t_629dc50bc5a1b1 1
+guard/target/debug/build/zmij-884393edd6e7bacb/output
+  s_8fca33fa657aa8::t_8fbb7e09504b7e 1-4
+guard/target/debug/build/zmij-884393edd6e7bacb/root-output
+  s_8fca33fa657aa8::t_b1e84f88903721 1
+guard/target/debug/build/zmij-8fee8c86f8fefd56/build_script_build-8fee8c86f8fefd56.d
+  s_8fca33fa657aa8::t_be948986ddb82f 1-5
+guard/target/debug/deps/aho_corasick-339d0232fdfb834e.d
+  s_8fca33fa657aa8::t_3f01052fb39149 1-35
+guard/target/debug/deps/aho_corasick-c87c71c0ce305985.d
+  s_8fca33fa657aa8::t_f6b08fbbc8b28f 1-33
+guard/target/debug/deps/bitflags-ad434670d6c019f8.d
+  s_8fca33fa657aa8::t_5aa84aff2e84e9 1-11
+guard/target/debug/deps/bitflags-c2973591c174539a.d
+  s_8fca33fa657aa8::t_612640a0f61b86 1-13
+guard/target/debug/deps/bypass-cf6050d00bfe44e0.d
+  s_8fca33fa657aa8::t_d978622a39343e 1-10
+guard/target/debug/deps/bypass-ebf66d11218a0476.d
+  s_8fca33fa657aa8::t_7338da6136c33c 1-7
+guard/target/debug/deps/cfg_if-52ec2228f4c14b18.d
+  s_8fca33fa657aa8::t_84b9eb07f9fa3c 1-7
+guard/target/debug/deps/cfg_if-9646dc4634849171.d
+  s_8fca33fa657aa8::t_dd85e1ab8cc0de 1-5
+guard/target/debug/deps/errno-0c9a645a60fa08cb.d
+  s_8fca33fa657aa8::t_37b3cb1c607a77 1-8
+guard/target/debug/deps/errno-f86072fed4b50a60.d
+  s_8fca33fa657aa8::t_0eb02e04efd19f 1-6
+guard/target/debug/deps/fastrand-0d79c9d19580ca3a.d
+  s_8fca33fa657aa8::t_d737ce65483a77 1-6
+guard/target/debug/deps/fastrand-871579525d420a8c.d
+  s_8fca33fa657aa8::t_0057a384d57395 1-8
+guard/target/debug/deps/getrandom-001deb09dae3d36b.d
+  s_8fca33fa657aa8::t_ffd792a70bf813 1-13
+guard/target/debug/deps/getrandom-d999f59a76bf2760.d
+  s_8fca33fa657aa8::t_a298b1dce33863 1-11
+guard/target/debug/deps/itoa-37e2ae4c6caf50c7.d
+  s_8fca33fa657aa8::t_3b843c17b28df9 1-6
+guard/target/debug/deps/itoa-ec00fe56a1f158c1.d
+  s_8fca33fa657aa8::t_29cb26504e1c14 1-8
+guard/target/debug/deps/libc-4dadd2072ccaef9f.d
+  s_8fca33fa657aa8::t_2e82cd68239171 1-54
+guard/target/debug/deps/libc-68f51597f6faf3b1.d
+  s_8fca33fa657aa8::t_e8a7678dec1d10 1-52
+guard/target/debug/deps/memchr-6b1e11802461c7ce.d
+  s_8fca33fa657aa8::t_6264d13c7a5a43 1-30
+guard/target/debug/deps/memchr-e5a5d40cbc870987.d
+  s_8fca33fa657aa8::t_ea1b9cf7b2b141 1-28
+guard/target/debug/deps/once_cell-8f0b96755f3947cc.d
+  s_8fca33fa657aa8::t_ecbc4c90a2e200 1-9
+guard/target/debug/deps/once_cell-e6fe189f467f6de6.d
+  s_8fca33fa657aa8::t_0ce0894b9913b5 1-7
+guard/target/debug/deps/regex-0b4d1c99e37d332b.d
+  s_8fca33fa657aa8::t_e7d7230cc2f0a5 1-17
+guard/target/debug/deps/regex-3c9f8f3439ade256.d
+  s_8fca33fa657aa8::t_b1e7730dc5914c 1-15
+guard/target/debug/deps/regex-8fbb0de7253d554a.d
+  s_8fca33fa657aa8::t_bc5b7ce2163432 1-17
+guard/target/debug/deps/regex_automata-169a09bf006bfcc6.d
+  s_8fca33fa657aa8::t_6845bf1ab699c9 1-65
+guard/target/debug/deps/regex_automata-4745ea361a2f18ab.d
+  s_8fca33fa657aa8::t_ab942de08ce5fd 1-67
+guard/target/debug/deps/regex_automata-deed70bd78741fb1.d
+  s_8fca33fa657aa8::t_fa30facd647250 1-67
+guard/target/debug/deps/regex_syntax-3ec9d6c0e6c0573c.d
+  s_8fca33fa657aa8::t_d826496bc3fa79 1-31
+guard/target/debug/deps/regex_syntax-e6ade204cc829a0d.d
+  s_8fca33fa657aa8::t_6be21d8ef4f8b8 1-29
+guard/target/debug/deps/regex_syntax-e9ea92cc7c89b28d.d
+  s_8fca33fa657aa8::t_817074d4e56316 1-30
+guard/target/debug/deps/rustix-7dc252be23443ffc.d
+  s_8fca33fa657aa8::t_8100c3f4e016c6 1-59
+guard/target/debug/deps/rustix-f96f8035222f6dc3.d
+  s_8fca33fa657aa8::t_3a98e375473a4d 1-57
+guard/target/debug/deps/serde_core-65671cbcf137b84c.d
+  s_8fca33fa657aa8::t_d366967f964183 1-27
+guard/target/debug/deps/serde_core-ba8a8851dab699f8.d
+  s_8fca33fa657aa8::t_a4a96527de63be 1-25
+guard/target/debug/deps/serde_json-9a38088def5b7ab9.d
+  s_8fca33fa657aa8::t_774b4d9ec278cb 1-20
+guard/target/debug/deps/serde_json-c0f0aef10d025cb5.d
+  s_8fca33fa657aa8::t_94f292be5df6ea 1-22
+guard/target/debug/deps/sigsieve_guard-11f010acdd7d2718.d
+  s_8fca33fa657aa8::t_d24cb0b39b20be 1-5
+guard/target/debug/deps/sigsieve_guard-16da9b5771e9c049.d
+  s_8fca33fa657aa8::t_e49749465217ca 1-5
+guard/target/debug/deps/sigsieve_guard-26138b517f6f96a1.d
+  s_8fca33fa657aa8::t_1165495537a917 1-16
+guard/target/debug/deps/sigsieve_guard-30be94197838b8a5.d
+  s_8fca33fa657aa8::t_64ab0dd127577f 1-9
+guard/target/debug/deps/sigsieve_guard-3e8d75a0f77143b1.d
+  s_8fca33fa657aa8::t_026d927da937df 1-9
+guard/target/debug/deps/sigsieve_guard-4d6c178ca38de480.d
+  s_8fca33fa657aa8::t_a02e9e8f11242c 1-5
+guard/target/debug/deps/sigsieve_guard-8c4d099887ab0ab5.d
+  s_8fca33fa657aa8::t_d3d05746006857 1-13
+guard/target/debug/deps/sigsieve_guard-8d79505a3ecb480e.d
+  s_8fca33fa657aa8::t_f80b52848d54c5 1-15
+guard/target/debug/deps/sigsieve_guard-9bf56506f2d7ab63.d
+  s_8fca33fa657aa8::t_d86848d51ac717 1-16
+guard/target/debug/deps/sigsieve_guard-ad9acf86ddbb7236.d
+  s_8fca33fa657aa8::t_b2de2ce00f84de 1-5
+guard/target/debug/deps/sigsieve_guard-b402857ef53ad63a.d
+  s_8fca33fa657aa8::t_492e654dc8b84b 1-15
+guard/target/debug/deps/sigsieve_guard-bd1f197c7a19416b.d
+  s_8fca33fa657aa8::t_244fcd1a016ad6 1-13
+guard/target/debug/deps/tempfile-1357eb6e0a05da0c.d
+  s_8fca33fa657aa8::t_fd2563db1fdc00 1-17
+guard/target/debug/deps/tempfile-e4db04d9e458b927.d
+  s_8fca33fa657aa8::t_b466572fae4310 1-15
+guard/target/debug/deps/zmij-4dc00db4ecd0468e.d
+  s_8fca33fa657aa8::t_13556305c53335 1-8
+guard/target/debug/deps/zmij-cfdcc4c2c841ae7c.d
+  s_8fca33fa657aa8::t_410a4ddd55ba7e 1-6
+guard/target/debug/libsigsieve_guard.d
+  s_8fca33fa657aa8::t_db35272daa44b6 1
+guard/target/debug/sigsieve-guard.d
+  s_8fca33fa657aa8::t_8e30b3b28fa619 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d20ac927a7c1a14609d9c1ad82bf749ad85136c8",
+  "prompts": {},
+  "sessions": {
+    "s_8fca33fa657aa8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0b2fe32e-49c3-450a-aec6-7f8545377859",
+        "model": "unknown"
+      },
+      "human_author": "Semih Buğra Sezer <semih.b.sezer@gmail.com>"
+    }
+  }
+}
