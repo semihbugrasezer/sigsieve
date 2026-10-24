@@ -1,0 +1,57 @@
+src/proxy.rs
+  s_8fca33fa657aa8::t_735942cd6214ee 39-42,52,181-184,227-234,246-248,251-252,256,317,319
+tests/common/mod.rs
+  s_8fca33fa657aa8::t_790cea8eef6816 210
+src/cli.rs
+  s_8fca33fa657aa8::t_6d6ea0014b3318 602-605,608-611,613-614,914
+  s_8fca33fa657aa8::t_735942cd6214ee 579-580,599-601,606-607,612,618-621,651-669,756-763,805,812-815,833-836,838-841,851-853,913
+  s_8fca33fa657aa8::t_998dc3d94acec2 898-912
+tests/openssh.rs
+  s_8fca33fa657aa8::t_7f0979023ec136 2-3
+  s_8fca33fa657aa8::t_65d3c3b36df1d1 304-305,311,316-333,335
+docs/secretive.md
+  s_8fca33fa657aa8::t_4d2f555127254f 33-51,84-86
+  s_8fca33fa657aa8::t_e99cc5fdf186be 87
+.github/workflows/ci.yml
+  s_8fca33fa657aa8::t_7f0979023ec136 38-41,44-45,47-48,50-51
+tests/e2e_sshd.rs
+  s_8fca33fa657aa8::t_132e056cec8fb8 52-96,197-200,217-221,249-254,273-276,335-338,360-377,383-386,399-402,424-447,484,496-502,505-509
+  s_8fca33fa657aa8::t_508a4b514b28f8 1-51,97-196,201-216,222-248,255-272,277-334,339-359,378-382,387-398,403-423,448-483,485-495,503-504,510-511
+tests/cli.rs
+  s_8fca33fa657aa8::t_65d3c3b36df1d1 292,297,304,322-330,361,363-364,370-371,397-399,406-407,421-429,457-477
+  s_8fca33fa657aa8::t_6812b44b914d61 478
+README.md
+  s_8fca33fa657aa8::t_4d2f555127254f 231-233,237-238,251
+  s_8fca33fa657aa8::t_c6d66c6642138d 279
+scripts/agent-integration-check.sh
+  s_8fca33fa657aa8::t_94879d5bbfceb9 1-162
+CHANGELOG.md
+  s_8fca33fa657aa8::t_4d2f555127254f 46-63
+THREAT_MODEL.md
+  s_8fca33fa657aa8::t_4d2f555127254f 43,46,144-147,180-183
+docs/agent-protocol.md
+  s_8fca33fa657aa8::t_0bc4b722ce451c 66
+docs/limitations.md
+  s_8fca33fa657aa8::t_4d2f555127254f 51-76
+tests/proxy.rs
+  s_8fca33fa657aa8::t_790cea8eef6816 527-529,542-570
+  s_8fca33fa657aa8::t_59351054e25c01 571-572
+CONTRIBUTING.md
+  s_8fca33fa657aa8::t_e97dc1b1819677 36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ce53ee7fccfe5c00dc2acd4135bf2c313c27998a",
+  "prompts": {},
+  "sessions": {
+    "s_8fca33fa657aa8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0b2fe32e-49c3-450a-aec6-7f8545377859",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <semih.b.sezer@gmail.com>"
+    }
+  }
+}
