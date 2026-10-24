@@ -1,0 +1,87 @@
+.github/ISSUE_TEMPLATE/bug_report.yml
+  s_8fca33fa657aa8::t_f687a8afb0f07b 1-34
+.github/ISSUE_TEMPLATE/config.yml
+  s_8fca33fa657aa8::t_d91151b9bfa045 1-5
+.github/ISSUE_TEMPLATE/feature_request.yml
+  s_8fca33fa657aa8::t_410709df6d45aa 1-21
+.github/pull_request_template.md
+  s_8fca33fa657aa8::t_f29c8acde74153 1-14
+.github/workflows/ci.yml
+  s_8fca33fa657aa8::t_591070874948a6 1-58
+.gitignore
+  s_8fca33fa657aa8::t_c99f235558fab1 1-13
+CHANGELOG.md
+  s_8fca33fa657aa8::t_9591bbfd2e2452 1-23
+CODE_OF_CONDUCT.md
+  s_8fca33fa657aa8::t_3bf22522192b9b 1-47
+CONTRIBUTING.md
+  s_8fca33fa657aa8::t_ccb791d4489660 1-54
+Cargo.lock
+  s_8fca33fa657aa8::t_ee14543ab08c0b 1-671
+LICENSE
+  s_8fca33fa657aa8::t_9b2a01343df8dd 1-21
+README.md
+  s_8fca33fa657aa8::t_964c879db60c11 1-286
+SECURITY.md
+  s_8fca33fa657aa8::t_6021c5d63692d1 1-49
+deny.toml
+  s_8fca33fa657aa8::t_bdb87e0bf882b2 1-16
+docs/agent-protocol.md
+  s_8fca33fa657aa8::t_94a9c8ae8d041a 1-67
+docs/architecture.md
+  s_8fca33fa657aa8::t_28d7e49fd1b067 1-79
+docs/limitations.md
+  s_8fca33fa657aa8::t_59b2a475bc972f 1-53
+docs/secretive.md
+  s_8fca33fa657aa8::t_459cd3e9f76bd1 1-79
+docs/sudo-integration.md
+  s_8fca33fa657aa8::t_4d96302fef5817 1-126
+src/cli.rs
+  s_8fca33fa657aa8::t_3dda31d99eb1b5 1-706
+src/keys.rs
+  s_8fca33fa657aa8::t_29005e082eeea9 1-282
+src/lib.rs
+  s_8fca33fa657aa8::t_15481a4a57643f 1-18
+src/policy.rs
+  s_8fca33fa657aa8::t_4924b0402a73d7 1-81
+src/protocol.rs
+  s_8fca33fa657aa8::t_d3ac0e351103eb 1-292
+src/proxy.rs
+  s_8fca33fa657aa8::t_d06e6ea52d325d 1-299
+src/socket.rs
+  s_8fca33fa657aa8::t_b9d097eef3225f 1-298
+src/upstream.rs
+  s_8fca33fa657aa8::t_47fe18d85ad81e 1-155
+tests/cli.rs
+  s_8fca33fa657aa8::t_cb4f5d6e0fd698 1-378
+tests/common/mod.rs
+  s_8fca33fa657aa8::t_60e1f310b7be28 1-298
+tests/openssh.rs
+  s_8fca33fa657aa8::t_35a166dc01ba1c 1-295
+tests/proxy.rs
+  s_8fca33fa657aa8::t_2396ad7dd23e55 1-608
+tests/socket.rs
+  s_8fca33fa657aa8::t_3589cc3d204447 1-156
+Cargo.toml
+  s_8fca33fa657aa8::t_2e48ab9779eb97 1-25
+THREAT_MODEL.md
+  s_8fca33fa657aa8::t_7279b7c9db7974 1-192
+src/main.rs
+  s_8fca33fa657aa8::t_4f35ad2335fb63 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "97ac5fcfde51a74ece76db6d57add9ebdb6be586",
+  "prompts": {},
+  "sessions": {
+    "s_8fca33fa657aa8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0b2fe32e-49c3-450a-aec6-7f8545377859",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <semih.b.sezer@gmail.com>"
+    }
+  }
+}
