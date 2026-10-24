@@ -1,0 +1,34 @@
+THREAT_MODEL.md
+  s_8fca33fa657aa8::t_63027365d1965a 43,181-185
+docs/limitations.md
+  s_8fca33fa657aa8::t_63027365d1965a 55-56,58-71,81-84
+tests/cli.rs
+  s_8fca33fa657aa8::t_42ee087c0d5c3b 428-434,473
+  s_8fca33fa657aa8::t_4b215d72b93f50 442
+README.md
+  s_8fca33fa657aa8::t_63027365d1965a 237-239
+src/cli.rs
+  s_8fca33fa657aa8::t_a25e02e3025b9a 606
+  s_8fca33fa657aa8::t_73f2714365813c 672
+  s_8fca33fa657aa8::t_bb1d32bfeef35a 580-581,600-605,607-608,610-613,620,664,666-668,673-678,823-824,834-854,866-871,934,937-955
+tests/openssh.rs
+  s_8fca33fa657aa8::t_fdf02ae10edef9 326-346,348-349
+CHANGELOG.md
+  s_8fca33fa657aa8::t_63027365d1965a 55-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "84592e3ba6ef480cad06ac390e9f9f4c5f61a5a9",
+  "prompts": {},
+  "sessions": {
+    "s_8fca33fa657aa8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0b2fe32e-49c3-450a-aec6-7f8545377859",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <semih.b.sezer@gmail.com>"
+    }
+  }
+}
