@@ -1,0 +1,53 @@
+.github/workflows/ci.yml
+  s_a3e5cf70945cf6::t_3d9ae9bebf94cd 64-65
+.github/workflows/release.yml
+  s_a3e5cf70945cf6::t_142a72bb0b7868 38-43
+CHANGELOG.md
+  s_8fca33fa657aa8::t_031c2139a5a518 9-16
+Cargo.lock
+  s_8fca33fa657aa8::t_7f3031d1523e1e 63,65,106,108,110,162-163,206-211,220,222,231-232,234,247,249,251-256,263,265,267-279,284,286,289,310,312,320,322,327,332,334,342,347,349,356,358,368,370,374,378,380,410,412,414,420,422,439,444,446,449,467,469,474-484,542,544,548,555,557,561-562,569,571,576,583,585,591-604,607,609,612-615,683-684,699,710,712,714,754,756,759,761,802-811,814,816,819,845,847,850,872,874,921,1014-1025
+Cargo.toml
+  s_8fca33fa657aa8::t_5a37566218233d 17,19-22
+README.md
+  s_8fca33fa657aa8::t_06746dcc83e9f9 199-221
+docs/ARCHITECTURE.md
+  s_a3e5cf70945cf6::t_355c8e3b93a076 74
+docs/FINDINGS.md
+  s_8fca33fa657aa8::t_96ba40391d1f85 38-45
+docs/RELEASE_CHECKLIST.md
+  s_8fca33fa657aa8::t_73298838806caa 24
+docs/SECURITY_MODEL.md
+  s_8fca33fa657aa8::t_808e128ef12997 100
+docs/THIRD_PARTY.md
+  s_8fca33fa657aa8::t_f118e4f9a4f6d8 3,5-8,10,19,22,28,30-36,38-43,45-48,50-51,54-55,57-62,65-68,72-73,76-77,87,90
+fuzz/Cargo.lock
+  s_a3e5cf70945cf6::t_dd8a10f858a920 61-66,69,71,87,89,91,152-157,166-172,174,178,180,187,189,191-195,203,205,207-219,224,226,250,252,260,262,267,272,274,282,287,289,296,298,308,310,314,318,338,340,348,350,367,372,374,389,391,396-406,419,439-453,462,464,468,475,477,481-482,489,491,496,503,505,511-524,527,529,532-535,564,566,570,572,574,589,591,594,596,636-645,648,650,685,687,718,720,793-804
+src/binding.rs
+  s_a3e5cf70945cf6::t_12b0112e61a480 397,402,407-408,441
+tests/e2e_sshd.rs
+  s_8fca33fa657aa8::t_61d51b10be4452 174-179,296-298,719-756
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "696cc303235ec8b1ff897cb2ff4e12ac258fb1c8",
+  "prompts": {},
+  "sessions": {
+    "s_8fca33fa657aa8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0b2fe32e-49c3-450a-aec6-7f8545377859",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <semih.b.sezer@gmail.com>"
+    },
+    "s_a3e5cf70945cf6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16b9a-b17f-72e0-9cf2-33b1e6769d67",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Semih Buğra Sezer <semih.b.sezer@gmail.com>"
+    }
+  }
+}
