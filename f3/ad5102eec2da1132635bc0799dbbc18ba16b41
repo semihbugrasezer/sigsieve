@@ -1,0 +1,46 @@
+SECURITY.md
+  s_8fca33fa657aa8::t_a0ef328c538115 47-48
+docs/FINDINGS.md
+  s_8fca33fa657aa8::t_5bea8678f2e789 1-119
+docs/SECURITY_MODEL.md
+  s_8fca33fa657aa8::t_e292cd99f8f1c1 1-89,91-118
+  s_8fca33fa657aa8::t_440eb165227cc1 90
+docs/RELEASE_CHECKLIST.md
+  s_8fca33fa657aa8::t_7c4595e54c10c0 1-44
+docs/SUDO_INTEGRATION.md
+  s_8fca33fa657aa8::t_a0ef328c538115 1-126
+docs/ARCHITECTURE.md
+  s_8fca33fa657aa8::t_2f83c60933d2b1 3-87
+CONTRIBUTING.md
+  s_8fca33fa657aa8::t_a0ef328c538115 15,18-19,48
+docs/SECRETIVE_INTEGRATION.md
+  s_8fca33fa657aa8::t_a0ef328c538115 1-121
+README.md
+  s_8fca33fa657aa8::t_0a373a63795d3e 6-8,11-13,18-22,28,30-46,48,50-71,80-85,89,91,94,102,106-107,114,117,121-123,125-126,128-131,133-136,139-142,145-147,150-153,155,158-159,164-167,169,172-176,179-186,190,192-197,201-202,206,212-214
+CHANGELOG.md
+  s_8fca33fa657aa8::t_bbebe8afa2c3fc 9-30
+docs/SSH_COMPATIBILITY.md
+  s_8fca33fa657aa8::t_5b3a4c45390fd9 1-86
+docs/TESTING.md
+  s_8fca33fa657aa8::t_9ad46baa68642e 1-85
+docs/THREAT_MODEL.md
+  s_8fca33fa657aa8::t_8294a8ea252b79 1-176
+docs/LIMITATIONS.md
+  s_8fca33fa657aa8::t_443d194fb7f174 3-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f3ad5102eec2da1132635bc0799dbbc18ba16b41",
+  "prompts": {},
+  "sessions": {
+    "s_8fca33fa657aa8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0b2fe32e-49c3-450a-aec6-7f8545377859",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <semih.b.sezer@gmail.com>"
+    }
+  }
+}
