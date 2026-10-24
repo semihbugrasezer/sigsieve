@@ -1,0 +1,32 @@
+.github/workflows/ci.yml
+  s_8fca33fa657aa8::t_4563141861b33e 46,67-73
+  s_8fca33fa657aa8::t_626ab5146e2a81 43-45
+  s_8fca33fa657aa8::t_03ee3ee2e29c7d 47-49
+  s_8fca33fa657aa8::t_6f0d0469f1d628 3-4,29-37,56,75-78,86-88,90,97-106
+tests/cli.rs
+  s_8fca33fa657aa8::t_2bed686b1eb931 108,141,158,234,250,345,387,446,475,489,529,582,601,639,665
+tests/common/mod.rs
+  s_8fca33fa657aa8::t_dc299a4d4acab8 5,7,24-34,98,241
+tests/openssh.rs
+  s_8fca33fa657aa8::t_7a5a3799c491e0 15,77,259
+tests/proxy.rs
+  s_8fca33fa657aa8::t_8be993f262a0c6 399,414,687
+tests/socket.rs
+  s_8fca33fa657aa8::t_ef262867d2f907 3-4,9,32,46,56,65,86,103,130,147
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "87e592e1184eb4226765ed83203295317565a954",
+  "prompts": {},
+  "sessions": {
+    "s_8fca33fa657aa8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0b2fe32e-49c3-450a-aec6-7f8545377859",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <semih.b.sezer@gmail.com>"
+    }
+  }
+}
