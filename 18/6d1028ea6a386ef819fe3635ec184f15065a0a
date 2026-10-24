@@ -1,0 +1,207 @@
+docs/adr/0001-diagnostic-privilege-boundaries.md
+  s_8fca33fa657aa8::t_c10305ba6e94b8 3-4,51-56,62-97,124-172,223-224
+docs/guard/ADR-ALIGNMENT.md
+  s_bd797623546da2::t_98070e56638251 1-31
+guard/src/main.rs
+  s_8fca33fa657aa8::t_67acbe31e54f00 22-29,46-51,81-89
+guard/target/release/.fingerprint/aho-corasick-3cf9bf5995f2bb9c/invoked.timestamp
+  s_8fca33fa657aa8::t_32679873d4f701 1
+guard/target/release/.fingerprint/aho-corasick-3cf9bf5995f2bb9c/lib-aho_corasick
+  s_8fca33fa657aa8::t_62a7b48ab6c198 1
+guard/target/release/.fingerprint/aho-corasick-3cf9bf5995f2bb9c/lib-aho_corasick.json
+  s_8fca33fa657aa8::t_5d0a08b7c90a81 1
+guard/target/release/.fingerprint/itoa-3b8b00927d5d913a/invoked.timestamp
+  s_8fca33fa657aa8::t_b0669e804a7916 1
+guard/target/release/.fingerprint/itoa-3b8b00927d5d913a/lib-itoa
+  s_8fca33fa657aa8::t_af3145c2507af6 1
+guard/target/release/.fingerprint/itoa-3b8b00927d5d913a/lib-itoa.json
+  s_8fca33fa657aa8::t_9ccabf4b1fe885 1
+guard/target/release/.fingerprint/libc-11a777c3c54fab78/invoked.timestamp
+  s_8fca33fa657aa8::t_33bcd6dca94482 1
+guard/target/release/.fingerprint/libc-11a777c3c54fab78/lib-libc
+  s_8fca33fa657aa8::t_f2af330788c487 1
+guard/target/release/.fingerprint/libc-11a777c3c54fab78/lib-libc.json
+  s_8fca33fa657aa8::t_f1932f51cddeec 1
+guard/target/release/.fingerprint/libc-5c8ffbf561bb422b/build-script-build-script-build
+  s_8fca33fa657aa8::t_97ec75dd8016ee 1
+guard/target/release/.fingerprint/libc-5c8ffbf561bb422b/build-script-build-script-build.json
+  s_8fca33fa657aa8::t_161f61641e6dbc 1
+guard/target/release/.fingerprint/libc-5c8ffbf561bb422b/invoked.timestamp
+  s_8fca33fa657aa8::t_01bed2b0746563 1
+guard/target/release/.fingerprint/libc-96ea80808f7aff78/run-build-script-build-script-build
+  s_8fca33fa657aa8::t_4aa09206ebbfab 1
+guard/target/release/.fingerprint/libc-96ea80808f7aff78/run-build-script-build-script-build.json
+  s_8fca33fa657aa8::t_f4372a1edf914c 1
+guard/target/release/.fingerprint/memchr-a6f3f0477215eed1/invoked.timestamp
+  s_8fca33fa657aa8::t_3fbb11fbfea03c 1
+guard/target/release/.fingerprint/memchr-a6f3f0477215eed1/lib-memchr
+  s_8fca33fa657aa8::t_ef2011d48958b8 1
+guard/target/release/.fingerprint/memchr-a6f3f0477215eed1/lib-memchr.json
+  s_8fca33fa657aa8::t_c6e7baabaf9551 1
+guard/target/release/.fingerprint/regex-automata-9ea6ed83544723be/invoked.timestamp
+  s_8fca33fa657aa8::t_fb82e9a40d8102 1
+guard/target/release/.fingerprint/regex-automata-9ea6ed83544723be/lib-regex_automata
+  s_8fca33fa657aa8::t_cd49a4534ecd25 1
+guard/target/release/.fingerprint/regex-automata-9ea6ed83544723be/lib-regex_automata.json
+  s_8fca33fa657aa8::t_c9e82e6dd7687f 1
+guard/target/release/.fingerprint/regex-bfdca7e1d2618c60/invoked.timestamp
+  s_8fca33fa657aa8::t_0d1f23feaf425e 1
+guard/target/release/.fingerprint/regex-bfdca7e1d2618c60/lib-regex
+  s_8fca33fa657aa8::t_8b4b5b13349d0e 1
+guard/target/release/.fingerprint/regex-bfdca7e1d2618c60/lib-regex.json
+  s_8fca33fa657aa8::t_84952faaef464f 1
+guard/target/release/.fingerprint/regex-syntax-bdffffed272fe86e/invoked.timestamp
+  s_8fca33fa657aa8::t_89d0d628a24805 1
+guard/target/release/.fingerprint/regex-syntax-bdffffed272fe86e/lib-regex_syntax
+  s_8fca33fa657aa8::t_777010501a07f1 1
+guard/target/release/.fingerprint/regex-syntax-bdffffed272fe86e/lib-regex_syntax.json
+  s_8fca33fa657aa8::t_7e1b08957c227d 1
+guard/target/release/.fingerprint/serde_core-14dc9bfdd3c3b7b2/run-build-script-build-script-build
+  s_8fca33fa657aa8::t_2dbc54e42e0b46 1
+guard/target/release/.fingerprint/serde_core-14dc9bfdd3c3b7b2/run-build-script-build-script-build.json
+  s_8fca33fa657aa8::t_839e5921197f6b 1
+guard/target/release/.fingerprint/serde_core-5ccc3bc9580efc7b/build-script-build-script-build
+  s_8fca33fa657aa8::t_3f2075c9ecca57 1
+guard/target/release/.fingerprint/serde_core-5ccc3bc9580efc7b/build-script-build-script-build.json
+  s_8fca33fa657aa8::t_ac4f98aea056bc 1
+guard/target/release/.fingerprint/serde_core-5ccc3bc9580efc7b/invoked.timestamp
+  s_8fca33fa657aa8::t_a6ec7a9648f9ef 1
+guard/target/release/.fingerprint/serde_core-5db3186437902378/invoked.timestamp
+  s_8fca33fa657aa8::t_925aceeef9b761 1
+guard/target/release/.fingerprint/serde_core-5db3186437902378/lib-serde_core
+  s_8fca33fa657aa8::t_8aac9fa8ae25d2 1
+guard/target/release/.fingerprint/serde_core-5db3186437902378/lib-serde_core.json
+  s_8fca33fa657aa8::t_9aba8a01082863 1
+guard/target/release/.fingerprint/serde_json-0f47d386e09ea1e7/run-build-script-build-script-build
+  s_8fca33fa657aa8::t_02c2000dc9ce28 1
+guard/target/release/.fingerprint/serde_json-0f47d386e09ea1e7/run-build-script-build-script-build.json
+  s_8fca33fa657aa8::t_f78b0068a239b3 1
+guard/target/release/.fingerprint/serde_json-9daa80624afe8745/build-script-build-script-build
+  s_8fca33fa657aa8::t_2281c25da7231a 1
+guard/target/release/.fingerprint/serde_json-9daa80624afe8745/build-script-build-script-build.json
+  s_8fca33fa657aa8::t_776b41f4c22442 1
+guard/target/release/.fingerprint/serde_json-9daa80624afe8745/invoked.timestamp
+  s_8fca33fa657aa8::t_2e5283f8b99eef 1
+guard/target/release/.fingerprint/serde_json-d16345509e5513c4/invoked.timestamp
+  s_8fca33fa657aa8::t_85a69fb1051170 1
+guard/target/release/.fingerprint/serde_json-d16345509e5513c4/lib-serde_json
+  s_8fca33fa657aa8::t_3341a6e732389d 1
+guard/target/release/.fingerprint/serde_json-d16345509e5513c4/lib-serde_json.json
+  s_8fca33fa657aa8::t_9a07554fddb677 1
+guard/target/release/.fingerprint/sigsieve-guard-1ccebf0e19c92210/bin-sigsieve-guard
+  s_bd797623546da2::t_703ced713dbc71 1
+guard/target/release/.fingerprint/sigsieve-guard-1ccebf0e19c92210/bin-sigsieve-guard.json
+  s_bd797623546da2::t_8b9f5d9ebf5d5c 1
+guard/target/release/.fingerprint/sigsieve-guard-1ccebf0e19c92210/invoked.timestamp
+  s_8fca33fa657aa8::t_f70b3fd6fb9a1b 1
+guard/target/release/.fingerprint/sigsieve-guard-2073eeb1bc471277/invoked.timestamp
+  s_8fca33fa657aa8::t_796543d146d852 1
+guard/target/release/.fingerprint/sigsieve-guard-2073eeb1bc471277/lib-sigsieve_guard
+  s_8fca33fa657aa8::t_b267149aa4200e 1
+guard/target/release/.fingerprint/sigsieve-guard-2073eeb1bc471277/lib-sigsieve_guard.json
+  s_8fca33fa657aa8::t_e0e217de604250 1
+guard/target/release/.fingerprint/zmij-62c5f63ca4c2ab0d/build-script-build-script-build
+  s_8fca33fa657aa8::t_48181829da3605 1
+guard/target/release/.fingerprint/zmij-62c5f63ca4c2ab0d/build-script-build-script-build.json
+  s_8fca33fa657aa8::t_0438c1e6cc63b2 1
+guard/target/release/.fingerprint/zmij-62c5f63ca4c2ab0d/invoked.timestamp
+  s_8fca33fa657aa8::t_275923a998ba32 1
+guard/target/release/.fingerprint/zmij-b2ab0750b8272e48/run-build-script-build-script-build
+  s_8fca33fa657aa8::t_66646e4f88f07b 1
+guard/target/release/.fingerprint/zmij-b2ab0750b8272e48/run-build-script-build-script-build.json
+  s_8fca33fa657aa8::t_fdf4bd1c69a63b 1
+guard/target/release/.fingerprint/zmij-c4026df62f04b091/invoked.timestamp
+  s_8fca33fa657aa8::t_43dcbf639265be 1
+guard/target/release/.fingerprint/zmij-c4026df62f04b091/lib-zmij
+  s_8fca33fa657aa8::t_b9063a60d59a96 1
+guard/target/release/.fingerprint/zmij-c4026df62f04b091/lib-zmij.json
+  s_8fca33fa657aa8::t_5601fa38f68d14 1
+guard/target/release/build/libc-5c8ffbf561bb422b/build_script_build-5c8ffbf561bb422b.d
+  s_8fca33fa657aa8::t_f62c519ccb1af8 1-5
+guard/target/release/build/libc-96ea80808f7aff78/invoked.timestamp
+  s_8fca33fa657aa8::t_c1179028a6085a 1
+guard/target/release/build/libc-96ea80808f7aff78/output
+  s_8fca33fa657aa8::t_cc1da77dbf47fb 1-29
+guard/target/release/build/libc-96ea80808f7aff78/root-output
+  s_8fca33fa657aa8::t_ba3117949a9846 1
+guard/target/release/build/serde_core-14dc9bfdd3c3b7b2/invoked.timestamp
+  s_8fca33fa657aa8::t_73fc938d3742f0 1
+guard/target/release/build/serde_core-14dc9bfdd3c3b7b2/out/private.rs
+  s_8fca33fa657aa8::t_daf81c8271312c 1-5
+guard/target/release/build/serde_core-14dc9bfdd3c3b7b2/output
+  s_8fca33fa657aa8::t_bb1ea77f961adc 1-11
+guard/target/release/build/serde_core-14dc9bfdd3c3b7b2/root-output
+  s_8fca33fa657aa8::t_627a8440c98606 1
+guard/target/release/build/serde_core-5ccc3bc9580efc7b/build_script_build-5ccc3bc9580efc7b.d
+  s_8fca33fa657aa8::t_acc918041cb7f3 1-5
+guard/target/release/build/serde_json-0f47d386e09ea1e7/invoked.timestamp
+  s_8fca33fa657aa8::t_0b6b1b36e12375 1
+guard/target/release/build/serde_json-0f47d386e09ea1e7/output
+  s_8fca33fa657aa8::t_4ce55fa24ab6ca 1-3
+guard/target/release/build/serde_json-0f47d386e09ea1e7/root-output
+  s_8fca33fa657aa8::t_4b0917a0ddf623 1
+guard/target/release/build/serde_json-9daa80624afe8745/build_script_build-9daa80624afe8745.d
+  s_8fca33fa657aa8::t_a78ef0a21d7525 1-5
+guard/target/release/build/zmij-62c5f63ca4c2ab0d/build_script_build-62c5f63ca4c2ab0d.d
+  s_8fca33fa657aa8::t_3a58aae3f47286 1-5
+guard/target/release/build/zmij-b2ab0750b8272e48/invoked.timestamp
+  s_8fca33fa657aa8::t_c9d90b799cd949 1
+guard/target/release/build/zmij-b2ab0750b8272e48/output
+  s_8fca33fa657aa8::t_3c986fc955a4c7 1-4
+guard/target/release/build/zmij-b2ab0750b8272e48/root-output
+  s_8fca33fa657aa8::t_474cef56b7c2aa 1
+guard/target/release/deps/aho_corasick-3cf9bf5995f2bb9c.d
+  s_8fca33fa657aa8::t_c54fca3b11d236 1-35
+guard/target/release/deps/itoa-3b8b00927d5d913a.d
+  s_8fca33fa657aa8::t_e7813214bf0791 1-8
+guard/target/release/deps/libc-11a777c3c54fab78.d
+  s_8fca33fa657aa8::t_f0d2a4d0497788 1-54
+guard/target/release/deps/memchr-a6f3f0477215eed1.d
+  s_8fca33fa657aa8::t_67b1a730bb6663 1-30
+guard/target/release/deps/regex-bfdca7e1d2618c60.d
+  s_8fca33fa657aa8::t_e06dc612dcbf36 1-17
+guard/target/release/deps/regex_automata-9ea6ed83544723be.d
+  s_8fca33fa657aa8::t_2aa87123fcf615 1-67
+guard/target/release/deps/regex_syntax-bdffffed272fe86e.d
+  s_8fca33fa657aa8::t_82a15576ce0cc5 1-31
+guard/target/release/deps/serde_core-5db3186437902378.d
+  s_8fca33fa657aa8::t_fd5a1b82d4955a 1-27
+guard/target/release/deps/serde_json-d16345509e5513c4.d
+  s_8fca33fa657aa8::t_d1acce4082d1fa 1-22
+guard/target/release/deps/sigsieve_guard-1ccebf0e19c92210.d
+  s_8fca33fa657aa8::t_68d362bf523de1 1-5
+guard/target/release/deps/sigsieve_guard-2073eeb1bc471277.d
+  s_8fca33fa657aa8::t_4690dd3337cf87 1-15
+guard/target/release/deps/zmij-c4026df62f04b091.d
+  s_8fca33fa657aa8::t_3c2ae47647730b 1-8
+guard/target/release/libsigsieve_guard.d
+  s_bd797623546da2::t_7e51a981000c8f 1
+guard/target/release/sigsieve-guard.d
+  s_bd797623546da2::t_52600957f705ab 1
+guard/tests/bypass.rs
+  s_8fca33fa657aa8::t_152796752c7b3c 562-586
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "186d1028ea6a386ef819fe3635ec184f15065a0a",
+  "prompts": {},
+  "sessions": {
+    "s_8fca33fa657aa8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0b2fe32e-49c3-450a-aec6-7f8545377859",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <semih.b.sezer@gmail.com>"
+    },
+    "s_bd797623546da2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ba86e9bb-b6e9-4df0-a56a-233515bfe794",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <semih.b.sezer@gmail.com>"
+    }
+  }
+}
