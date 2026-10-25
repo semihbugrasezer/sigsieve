@@ -88,7 +88,7 @@ still use it to authenticate to the allowed destinations.
   It disables connection sharing and forwardings for the session, refuses
   unverifiable ProxyCommands, verifies the effective configuration with
   `ssh -G`, and cleans up. `--dry-run` shows the plan without connecting.
-- No network access, accounts, telemetry or config files.
+- No accounts, telemetry or config files; remote connections use your OpenSSH client.
 
 The [protocol references](docs/REFERENCES.md) explain the RFC 9987 foundation,
 OpenSSH extensions, and differences from OpenSSH destination constraints.
@@ -216,7 +216,7 @@ OpenSSH hostbound authentication; an arbitrary Git/SSH service may not support i
 ssh-keyscan -t ed25519 destination.example | ssh-keygen -lf -
 # Verify this fingerprint through the destination operator's trusted channel.
 sigsieve connect build-host --secretive --allow-fingerprint SHA256:AbC… \
-  --allow-destination SHA256:<verified destination host key fingerprint>
+  --allow-destination "SHA256:REPLACE_WITH_VERIFIED_HOST_KEY_FINGERPRINT"
 ```
 
 ## Other agents (ssh-agent, 1Password, …)
@@ -236,7 +236,7 @@ sigsieve connect ci-vps --upstream /path/to/agent.sock --allow-fingerprint SHA25
 # Optional: also restrict where the key may authenticate from the remote host
 # (host key fingerprint of the server the remote host should reach)
 sigsieve connect ci-vps --upstream /path/to/agent.sock --allow-fingerprint SHA256:AbC… \
-  --allow-destination SHA256:<destination host key>
+  --allow-destination "SHA256:REPLACE_WITH_VERIFIED_HOST_KEY_FINGERPRINT"
 ```
 
 ## Secretive (macOS)
