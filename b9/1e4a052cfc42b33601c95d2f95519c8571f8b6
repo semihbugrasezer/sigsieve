@@ -1,0 +1,31 @@
+.github/workflows/ci.yml
+  s_38a0c0cab419cb::t_2304348f73d24a 115
+CHANGELOG.md
+  s_38a0c0cab419cb::t_f47bf014327178 35-36
+Cargo.lock
+  s_38a0c0cab419cb::t_db60c55c975449 247,249
+docs/ARCHITECTURE.md
+  s_38a0c0cab419cb::t_8aa6917584969c 76
+docs/FINDINGS.md
+  s_38a0c0cab419cb::t_405632bbbca0e0 49,250-257
+docs/THIRD_PARTY.md
+  s_38a0c0cab419cb::t_d86d4fbe0638f6 33
+fuzz/Cargo.lock
+  s_38a0c0cab419cb::t_36f4ca675e9a2e 187,189
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b91e4a052cfc42b33601c95d2f95519c8571f8b6",
+  "prompts": {},
+  "sessions": {
+    "s_38a0c0cab419cb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1755d-8ff8-7501-8d22-3aef42f808cc",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Semih Buğra Sezer <semih.b.sezer@gmail.com>"
+    }
+  }
+}
