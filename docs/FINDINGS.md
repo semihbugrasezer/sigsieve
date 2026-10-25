@@ -46,6 +46,7 @@ fix (where one exists).
 | F-28 | INFO | CI installed unpinned cargo-audit/cargo-deny; THIRD_PARTY.md listed crates of another component; no uninstall docs | Fixed |
 | F-29 | HIGH | `connect` verified only the destination's ProxyCommand; a wrapper on a ProxyJump (or relay) hop ran with the unfiltered login agent in its environment and could forward it (C-1) | Fixed: every hop verified |
 | F-30 | MEDIUM | `Match exec` was detected only from `ssh -G -v` output, i.e. after ssh had run the command during connect's verification | Fixed: user ssh_config (and includes) scanned before ssh runs |
+| F-33 | LOW (supply chain) | crypto-bigint 0.7.6 was yanked after the earlier local checks; public CI rejected it | Fixed: root and fuzz lockfiles updated to non-yanked 0.7.9 |
 | F-32 | HIGH | SSH pre-scan disagreed with OpenSSH on quoted keywords and Include argument delimiters, permitting Match exec during verification | Fixed: conservative keywords, exact space/tab path parsing, UTF-8 validation; regression tests |
 | F-31 | HIGH | Review of F-29/F-30: a relay's own `-F` was ignored for its nested hops; hop forwardings were not checked; quoting (`e'x'ec`) hid `Match exec`; X11 forwarding ran xauth with the login agent; unsafe `-F` paths reached ssh's ProxyJump shell command; concurrent stale-socket recovery could have two winners | Fixed (details below) |
 
@@ -246,3 +247,11 @@ handles the optional keyword `=` once, and splits Include paths on the same
 ASCII space/tab delimiters as SSH. Regression tests cover direct and included
 commands, `=` paths, NBSP and embedded CR/VT/FF. Real OpenSSH tests require
 refusal before the marker command runs in both dry-run and connect modes.
+
+### F-33 — LOW (supply chain) — withdrawn transitive dependency
+
+The first public CI run rejected `crypto-bigint 0.7.6` as yanked, while
+`cargo audit` reported no known advisory. The [upstream changelog](https://github.com/RustCrypto/crypto-bigint/blob/master/CHANGELOG.md)
+records withdrawn 0.7.6–0.7.8 versions and the 0.7.9 correction. Both the Core
+and fuzz lockfiles now select 0.7.9. The advisory/license policy is unchanged;
+acceptance requires fresh cryptographic verification tests and exact-commit CI.

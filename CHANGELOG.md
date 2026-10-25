@@ -32,7 +32,8 @@ First public experimental preview. Not independently audited; see
 - Refused indirect ProxyCommands, local commands and `Match exec` before SSH
   runs, including quoted keywords and unusual Include path delimiters.
 - Serialized stale-socket recovery to prevent concurrent recovery races.
-- Resolved the crypto-bigint advisory by updating RustCrypto dependencies.
+- Resolved the crypto-bigint advisory by updating RustCrypto dependencies;
+  the release lockfiles use non-yanked crypto-bigint 0.7.9.
 - Used RFC 9987 extension-failure responses for recognized failed extensions.
 - Repaired the session-binding fuzz harness to exercise valid signatures and
   authorization, with a test requiring the valid seed to reach that path.

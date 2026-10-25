@@ -73,7 +73,7 @@ sequenceDiagram
 | Crate | Why |
 |---|---|
 | `sha2`, `base64` | fingerprints |
-| `ed25519-dalek` 3, `p256`/`p384`/`p521` 0.14 (RustCrypto; `crypto-bigint` ≥ 0.7.6) | verifying host-key signatures for session binding; verification only |
+| `ed25519-dalek` 3, `p256`/`p384`/`p521` 0.14 (RustCrypto; `crypto-bigint` ≥ 0.7.9) | verifying host-key signatures for session binding; verification only |
 | `libc` | peer credentials, `getuid`, `poll`, `kill` |
 | `signal-hook` | signal flags for cleanup |
 | `clap` | CLI |

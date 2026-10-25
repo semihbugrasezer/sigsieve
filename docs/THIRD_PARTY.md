@@ -30,7 +30,7 @@ check licenses` enforces the allowed set.
 | const-oid | 0.10.2 | Apache-2.0 OR MIT |
 | cpubits | 0.1.1 | MIT OR Apache-2.0 |
 | cpufeatures | 0.3.1 | MIT OR Apache-2.0 |
-| crypto-bigint | 0.7.6 | Apache-2.0 OR MIT |
+| crypto-bigint | 0.7.9 | Apache-2.0 OR MIT |
 | crypto-common | 0.2.2 | MIT OR Apache-2.0 |
 | ctutils | 0.4.5 | Apache-2.0 OR MIT |
 | curve25519-dalek | 5.0.0 | BSD-3-Clause |
