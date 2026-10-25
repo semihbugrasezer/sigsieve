@@ -1,0 +1,88 @@
+tests/e2e_sshd.rs
+  s_38a0c0cab419cb::t_a230a852b412e5 668
+src/binding.rs
+  s_38a0c0cab419cb::t_a230a852b412e5 843-849,852
+  s_38a0c0cab419cb::t_5ff4d093a0c729 850-851
+src/protocol.rs
+  s_38a0c0cab419cb::t_a230a852b412e5 3,31
+src/fuzzing.rs
+  s_38a0c0cab419cb::t_a230a852b412e5 6,9,34-36,48-49,52,56,63-87,105-109
+  s_38a0c0cab419cb::t_b6ff20832f2a2a 110-114
+docs/REFERENCES.md
+  s_38a0c0cab419cb::t_e8d05e59e3caca 1-78
+docs/THREAT_MODEL.md
+  s_38a0c0cab419cb::t_a230a852b412e5 84-86
+docs/SSH_COMPATIBILITY.md
+  s_38a0c0cab419cb::t_a230a852b412e5 14,24,29,58,74,82-83
+src/sshconfig.rs
+  s_38a0c0cab419cb::t_5831381550f017 60-61,63-64,198,203,229,235
+  s_38a0c0cab419cb::t_e63cef4c0d729d 5-11,21-22,70-78,86,89,186-190,196-197,199-202,250-251,263
+  s_38a0c0cab419cb::t_9830d7c1faacc5 56-57,67
+  s_38a0c0cab419cb::t_d9364866162c33 48-50,52,58-59,62,92-96,224-228,230-234
+  s_38a0c0cab419cb::t_7a9a1909caf8e0 90-91,204-205
+src/proxy.rs
+  s_38a0c0cab419cb::t_a230a852b412e5 135,414-429
+  s_38a0c0cab419cb::t_b26e69dcdb4350 430-436
+tests/openssh.rs
+  s_38a0c0cab419cb::t_9830d7c1faacc5 519-528,535-537,569-652
+  s_38a0c0cab419cb::t_5831381550f017 529-534
+  s_38a0c0cab419cb::t_ec1e030b64e54e 653-656
+README.md
+  s_38a0c0cab419cb::t_947504abcca5fe 5-8,45-46,93-95,134-135,145-148,195,212-213,216-217,219,282-283
+examples/ssh_config
+  s_38a0c0cab419cb::t_947504abcca5fe 1-15
+.github/workflows/release.yml
+  s_38a0c0cab419cb::t_bab15d74c92309 5-7
+CHANGELOG.md
+  s_38a0c0cab419cb::t_74c4dc4072c140 3,7,9-10,14-42
+CONTRIBUTING.md
+  s_38a0c0cab419cb::t_5dfbd5a67012dc 35-36
+Cargo.lock
+  s_38a0c0cab419cb::t_57e6989fc5b47d 855
+Cargo.toml
+  s_38a0c0cab419cb::t_03eb988420404a 3
+SECURITY.md
+  s_38a0c0cab419cb::t_23d3660525b522 12
+docs/ARCHITECTURE.md
+  s_38a0c0cab419cb::t_237d41cc49d76d 17-19,87-88
+docs/FINDINGS.md
+  s_38a0c0cab419cb::t_8e9d8266d56619 5-9,49-50,87,101,125-148,234-248
+docs/LIMITATIONS.md
+  s_38a0c0cab419cb::t_70fcd72623e899 56-65,104-105
+docs/RELEASE_CHECKLIST.md
+  s_38a0c0cab419cb::t_8da481aa10536f 3-58
+docs/TESTING.md
+  s_38a0c0cab419cb::t_184904c5ee9bf1 14,21-24,78-82,94-97
+fuzz/Cargo.lock
+  s_38a0c0cab419cb::t_5060ab3fdfdb09 695
+src/cli.rs
+  s_38a0c0cab419cb::t_85fd0cecb40ea5 19-23,776
+src/main.rs
+  s_38a0c0cab419cb::t_6697b836dc6487 2
+src/socket.rs
+  s_38a0c0cab419cb::t_517d2c5b9d35de 12,219-221,234,331-342,445-472
+src/ssh.rs
+  s_38a0c0cab419cb::t_e4c0885f6125cb 1-483
+tests/cli.rs
+  s_38a0c0cab419cb::t_951349bd88974b 309,316,322,329,397,593
+tests/resources.rs
+  s_38a0c0cab419cb::t_d5ab1bc7410e79 1-55
+tests/socket.rs
+  s_38a0c0cab419cb::t_8f4cfffa66ff35 161-165,168,178
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4fb9027202d97a0cce5e21aab0c6649801dc9a8f",
+  "prompts": {},
+  "sessions": {
+    "s_38a0c0cab419cb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1755d-8ff8-7501-8d22-3aef42f808cc",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Semih Buğra Sezer <semih.b.sezer@gmail.com>"
+    }
+  }
+}
