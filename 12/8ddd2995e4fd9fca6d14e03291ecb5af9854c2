@@ -1,0 +1,135 @@
+.github/ISSUE_TEMPLATE/bug_report.yml
+  s_38a0c0cab419cb::t_93c8adafde0487 1-34
+.github/ISSUE_TEMPLATE/config.yml
+  s_38a0c0cab419cb::t_f7c8277b704372 1-5
+.github/ISSUE_TEMPLATE/feature_request.yml
+  s_38a0c0cab419cb::t_9a5052b23383d7 1-21
+.github/pull_request_template.md
+  s_38a0c0cab419cb::t_fc5e80e6b4e3ed 1-14
+.github/workflows/ci.yml
+  s_38a0c0cab419cb::t_22282312f0b7fa 1-115
+.github/workflows/release.yml
+  s_38a0c0cab419cb::t_57079662610950 1-130
+.gitignore
+  s_38a0c0cab419cb::t_a7f246a4327a23 1-13
+CHANGELOG.md
+  s_38a0c0cab419cb::t_9cd2ce2dbac52b 1-42
+CODE_OF_CONDUCT.md
+  s_38a0c0cab419cb::t_0b9410b4e2da4b 1-47
+CONTRIBUTING.md
+  s_38a0c0cab419cb::t_aa2ec88e34c406 1-56
+Cargo.lock
+  s_38a0c0cab419cb::t_17c9de0c6d2fde 1-1030
+Cargo.toml
+  s_38a0c0cab419cb::t_ea7e076a2bca39 1-31
+LICENSE
+  s_38a0c0cab419cb::t_22c1843f67cce9 1-21
+README.md
+  s_38a0c0cab419cb::t_1fd0ba3abe3872 1-351
+SECURITY.md
+  s_38a0c0cab419cb::t_21eb9b1f6a2cf6 1-54
+deny.toml
+  s_38a0c0cab419cb::t_cbe6203d742e5f 1-16
+docs/ARCHITECTURE.md
+  s_38a0c0cab419cb::t_839f0fd4eee594 1-88
+docs/FINDINGS.md
+  s_38a0c0cab419cb::t_96a877e02773c4 1-248
+docs/LIMITATIONS.md
+  s_38a0c0cab419cb::t_87ae35e06dce8b 1-110
+docs/REFERENCES.md
+  s_38a0c0cab419cb::t_0f5221cc8f2ed9 1-78
+docs/RELEASE_CHECKLIST.md
+  s_38a0c0cab419cb::t_30e4f6a6fd6419 1-58
+docs/SECRETIVE_INTEGRATION.md
+  s_38a0c0cab419cb::t_7387bc0fdb5936 1-121
+docs/SECURITY_MODEL.md
+  s_38a0c0cab419cb::t_13c484de2d04e4 1-119
+docs/SSH_COMPATIBILITY.md
+  s_38a0c0cab419cb::t_fa1b897cfc26a6 1-91
+docs/TESTING.md
+  s_38a0c0cab419cb::t_328c3c5e022868 1-97
+docs/THIRD_PARTY.md
+  s_38a0c0cab419cb::t_5b7d7084f6fa10 1-91
+docs/THREAT_MODEL.md
+  s_38a0c0cab419cb::t_52264f86d568a9 1-184
+examples/ssh_config
+  s_38a0c0cab419cb::t_1e6b4730fc061c 1-15
+fuzz/Cargo.lock
+  s_38a0c0cab419cb::t_0258053122dbc5 1-809
+fuzz/Cargo.toml
+  s_38a0c0cab419cb::t_5bfc5f5a1cb27b 1-47
+fuzz/fuzz_targets/key_blob.rs
+  s_38a0c0cab419cb::t_1059208dbc8499 1-2
+fuzz/fuzz_targets/requests.rs
+  s_38a0c0cab419cb::t_e113acae1ad178 1-2
+fuzz/fuzz_targets/session_bind.rs
+  s_38a0c0cab419cb::t_a4dcf8c0ba3aab 1-2
+fuzz/fuzz_targets/upstream_reply.rs
+  s_38a0c0cab419cb::t_c89e0cc3643643 1-2
+rust-toolchain.toml
+  s_38a0c0cab419cb::t_24ed91964c9b95 1-6
+scripts/agent-integration-check.sh
+  s_38a0c0cab419cb::t_8d0f3c6c65fe00 1-162
+scripts/third-party-notices.py
+  s_38a0c0cab419cb::t_de718972ece9d9 1-79
+src/binding.rs
+  s_38a0c0cab419cb::t_70f9d05d8c3176 1-904
+src/cli.rs
+  s_38a0c0cab419cb::t_a41da4af226795 1-966
+src/fuzzing.rs
+  s_38a0c0cab419cb::t_c3e573e906b952 1-114
+src/keys.rs
+  s_38a0c0cab419cb::t_b7ab00d6b2de85 1-282
+src/lib.rs
+  s_38a0c0cab419cb::t_25ece74153780e 1-24
+src/main.rs
+  s_38a0c0cab419cb::t_38ff3ddcad7d05 1-6
+src/policy.rs
+  s_38a0c0cab419cb::t_c387e8ec384c76 1-116
+src/protocol.rs
+  s_38a0c0cab419cb::t_0661d0d8ab78e1 1-293
+src/proxy.rs
+  s_38a0c0cab419cb::t_9bfa2b77cdbc7a 1-446
+src/socket.rs
+  s_38a0c0cab419cb::t_4d22facda2e90e 1-472
+src/ssh.rs
+  s_38a0c0cab419cb::t_6c9a4937b411a1 1-483
+src/sshconfig.rs
+  s_38a0c0cab419cb::t_7600740e1202f0 1-278
+src/upstream.rs
+  s_38a0c0cab419cb::t_c64c1da64efa85 1-155
+tests/bench.rs
+  s_38a0c0cab419cb::t_3240cf7107ae3f 1-118
+tests/cli.rs
+  s_38a0c0cab419cb::t_63ac650f522fbb 1-723
+tests/common/mod.rs
+  s_38a0c0cab419cb::t_18504e3f91a4fc 1-315
+tests/e2e_sshd.rs
+  s_38a0c0cab419cb::t_2c6e5660f7c15a 1-804
+tests/fuzz_corpus.rs
+  s_38a0c0cab419cb::t_6b57a97a1a607d 1-101
+tests/openssh.rs
+  s_38a0c0cab419cb::t_1e3e21f0cb4cdb 1-685
+tests/proxy.rs
+  s_38a0c0cab419cb::t_6e86048451fc7d 1-738
+tests/resources.rs
+  s_38a0c0cab419cb::t_671daf345ea2f0 1-55
+tests/socket.rs
+  s_38a0c0cab419cb::t_4dd924885d9c0e 1-284
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "128ddd2995e4fd9fca6d14e03291ecb5af9854c2",
+  "prompts": {},
+  "sessions": {
+    "s_38a0c0cab419cb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1755d-8ff8-7501-8d22-3aef42f808cc",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Semih Buğra Sezer <semih.b.sezer@gmail.com>"
+    }
+  }
+}
