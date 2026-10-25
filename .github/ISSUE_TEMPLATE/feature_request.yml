@@ -1,0 +1,21 @@
+name: Feature request
+description: Suggest an improvement.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem you want to solve
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+  - type: textarea
+    id: security
+    attributes:
+      label: Security considerations
+      description: How could this be abused? Does it widen what a remote host can do?
+    validations:
+      required: true

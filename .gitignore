@@ -1,0 +1,13 @@
+/target
+/fuzz/target
+/fuzz/corpus
+/fuzz/artifacts
+.DS_Store
+# Local editor/agent settings
+.claude/
+.idea/
+.vscode/
+*.swp
+# Never commit key material or sockets
+*.sock
+id_*

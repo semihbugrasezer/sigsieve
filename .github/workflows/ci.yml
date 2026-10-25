@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # The release workflow runs exactly these checks as its gate.
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    # Explicit bash enables pipefail, so piping test output through tee/grep
+    # cannot hide a failing test.
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+  # Missing sshd end-to-end prerequisites are a failure in CI, not a skip.
+  SIGSIEVE_REQUIRE_SSHD: "1"
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # macOS arm64, Linux x86_64 (supported); Linux aarch64 (tested, not
+        # yet a release target). GitHub-hosted runners only.
+        os: [macos-latest, ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust toolchain (rust-toolchain.toml)
+        run: rustup show active-toolchain || rustup toolchain install
+      - name: Install OpenSSH and python3 (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends openssh-client openssh-server python3
+          sudo mkdir -p -m 0755 /run/sshd
+      - name: Require every tool the security tests use
+        # Some tests skip when a tool is missing; make that impossible here.
+        run: |
+          for t in ssh ssh-agent ssh-add ssh-keygen python3 /usr/sbin/sshd; do
+            command -v "$t" || { echo "::error::missing $t"; exit 1; }
+          done
+          uname -a; ssh -V
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --all-targets --all-features --locked -- -D warnings
+      - name: cargo test (debug)
+        run: |
+          cargo test --all-targets --locked -- --nocapture 2>&1 | tee test-debug.log
+          if grep -nE 'skipp(ing|ed)' test-debug.log; then echo "::error::a test was skipped"; exit 1; fi
+      - name: cargo test (release)
+        run: |
+          cargo test --release --locked -- --nocapture 2>&1 | tee test-release.log
+          if grep -nE 'skipp(ing|ed)' test-release.log; then echo "::error::a test was skipped"; exit 1; fi
+      - name: cargo test under umask 0002 (Ubuntu private-group default)
+        # The tests must create private directories themselves, not rely on
+        # the runner's umask; SigSieve refuses group-writable ones.
+        run: |
+          umask 0002
+          cargo test --all-targets --locked -- --nocapture 2>&1 | tee test-umask002.log
+          if grep -nE 'skipp(ing|ed)' test-umask002.log; then echo "::error::a test was skipped"; exit 1; fi
+      - run: cargo build --release --locked
+      - name: Peer-uid check rejects a connection from another uid
+        # Root bypasses the 0700 directory, so only the peer-uid check can
+        # stop it. ssh-add -l exits 1 both for an empty agent and for a
+        # dropped connection, so the checks use its output, not the code.
+        run: |
+          d=$(mktemp -d); chmod 700 "$d"
+          eval "$(ssh-agent -s -a "$d/up.sock")" >/dev/null
+          ./target/release/sigsieve run --upstream "$d/up.sock" --socket "$d/f.sock" >/dev/null 2>"$d/log" &
+          for _ in $(seq 50); do [ -S "$d/f.sock" ] && break; sleep 0.1; done
+          out=$(SSH_AUTH_SOCK="$d/f.sock" ssh-add -l 2>&1) || true
+          echo "same uid: $out"
+          grep -q "The agent has no identities" <<<"$out" || { echo "::error::same uid not served"; cat "$d/log"; exit 1; }
+          rc=0; out=$(sudo env SSH_AUTH_SOCK="$d/f.sock" ssh-add -l 2>&1) || rc=$?
+          echo "root: rc=$rc $out"
+          test "$rc" -ne 0 || { echo "::error::root was served"; cat "$d/log"; exit 1; }
+          if grep -q "The agent has no identities" <<<"$out"; then echo "::error::root was served"; exit 1; fi
+          grep -q "rejected connection from uid 0" "$d/log" || { echo "::error::no rejection logged"; cat "$d/log"; exit 1; }
+          cat "$d/log"
+          kill %1; ssh-agent -k >/dev/null
+      - name: Bounded stable fuzzing (corpus replay + mutation)
+        run: cargo test --release --locked --test fuzz_corpus
+        env:
+          SIGSIEVE_FUZZ_ITERS: "20000"
+      - name: Build cargo-fuzz targets
+        run: cargo build --release --manifest-path fuzz/Cargo.toml --locked
+
+  supply-chain:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - run: rustup show active-toolchain || rustup toolchain install
+      # Pinned tool versions for reproducible supply-chain checks.
+      - run: cargo install --locked cargo-audit@0.22.2 cargo-deny@0.20.2
+      - run: cargo audit
+      - run: cargo deny check

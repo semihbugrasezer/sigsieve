@@ -1,0 +1,6 @@
+# Pinned toolchain for reproducible CI and release builds (rustup honours
+# this file; a toolchain installed without rustup ignores it).
+[toolchain]
+channel = "1.99.1"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

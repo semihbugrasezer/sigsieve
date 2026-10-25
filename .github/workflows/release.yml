@@ -1,0 +1,130 @@
+# Release build for a pushed `v*` tag. Gates: the tag must match Cargo.toml
+# and the full CI workflow must pass. Then it builds the supported targets,
+# packages deterministic archives (binary, LICENSE files, third-party
+# notices, README, CHANGELOG) with SHA-256 checksums, and attests their build
+# provenance in a separate job that runs no build steps (attestations are
+# recorded in GitHub and the public Sigstore transparency log). It does NOT
+# create a GitHub release or publish any artifact: a maintainer does that manually after
+# verifying the artifacts (docs/RELEASE_CHECKLIST.md).
+name: Release build
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  verify-tag:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Tag matches Cargo.toml version
+        run: |
+          version=$(cargo metadata --no-deps --locked --format-version 1 \
+            | python3 -c 'import json,sys; print(next(p["version"] for p in json.load(sys.stdin)["packages"] if p["name"]=="sigsieve"))')
+          echo "tag ${GITHUB_REF_NAME}, Cargo.toml ${version}"
+          test "${GITHUB_REF_NAME}" = "v${version}" || { echo "::error::tag does not match Cargo.toml"; exit 1; }
+
+  ci:
+    needs: verify-tag
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: [verify-tag, ci]
+    strategy:
+      matrix:
+        include:
+          # Only targets whose full CI (incl. real sshd) is part of the gate.
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - run: rustup show active-toolchain || rustup toolchain install
+      - name: Build (path-remapped for reproducibility)
+        # Remap the checkout and the cargo registry so binaries do not embed
+        # runner-specific absolute paths.
+        run: |
+          export RUSTFLAGS="--remap-path-prefix=${GITHUB_WORKSPACE}=/sigsieve --remap-path-prefix=${HOME}/.cargo=/cargo"
+          cargo build --release --locked
+          test "$(rustc -vV | sed -n 's/^host: //p')" = "${{ matrix.target }}"
+      - name: Third-party notices
+        run: python3 scripts/third-party-notices.py --target "${{ matrix.target }}" THIRD_PARTY_LICENSES.txt
+      - name: Package (deterministic) and checksum
+        run: |
+          name="sigsieve-${GITHUB_REF_NAME}-${{ matrix.target }}"
+          export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          mkdir dist
+          python3 - "$name" <<'EOF'
+          import gzip, io, os, sys, tarfile
+          name, mtime = sys.argv[1], int(os.environ["SOURCE_DATE_EPOCH"])
+          files = [("target/release/sigsieve", "sigsieve", 0o755)] + [
+              (f, f, 0o644)
+              for f in sorted(os.listdir("."))
+              if f.startswith(("LICENSE", "THIRD_PARTY_LICENSES"))
+          ] + [("README.md", "README.md", 0o644), ("CHANGELOG.md", "CHANGELOG.md", 0o644)]
+          if not any(f[1].startswith("LICENSE") for f in files):
+              sys.exit("no LICENSE file")
+          buf = io.BytesIO()
+          with tarfile.open(fileobj=buf, mode="w", format=tarfile.PAX_FORMAT) as tar:
+              for src, arc, mode in files:
+                  data = open(src, "rb").read()
+                  info = tarfile.TarInfo(f"{name}/{arc}")
+                  info.size, info.mode, info.mtime = len(data), mode, mtime
+                  info.uid = info.gid = 0
+                  info.uname = info.gname = ""
+                  tar.addfile(info, io.BytesIO(data))
+          with open(f"dist/{name}.tar.gz", "wb") as out:
+              with gzip.GzipFile(filename="", mode="wb", fileobj=out, mtime=0) as gz:
+                  gz.write(buf.getvalue())
+          EOF
+          cd dist && shasum -a 256 "${name}.tar.gz" > "${name}.tar.gz.sha256"
+          cat "${name}.tar.gz.sha256"
+      # actions/upload-artifact v7.0.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: sigsieve-${{ matrix.target }}
+          path: dist/
+          if-no-files-found: error
+
+  attest:
+    # Kept apart from the build so no build step runs with an OIDC token.
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      # actions/download-artifact v8.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          pattern: sigsieve-*
+          path: dist
+          merge-multiple: true
+      - name: Exactly two archives with matching checksums
+        run: |
+          cd dist
+          test "$(ls *.tar.gz | wc -l)" -eq 2 || { ls -la; echo "::error::expected 2 archives"; exit 1; }
+          shasum -a 256 -c *.sha256
+      # actions/attest-build-provenance v4.2.2
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
+        with:
+          subject-path: dist/*.tar.gz

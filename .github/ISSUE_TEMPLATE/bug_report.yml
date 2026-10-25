@@ -1,0 +1,34 @@
+name: Bug report
+description: Something does not work as documented (NOT for security vulnerabilities).
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Security vulnerabilities must be reported privately**, see SECURITY.md.
+        Never paste private keys, real fingerprints you consider sensitive, hostnames or credentials.
+  - type: input
+    id: version
+    attributes:
+      label: SigSieve version or commit
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: OS, upstream agent, OpenSSH version
+      placeholder: "macOS 15, Secretive 2.x, OpenSSH 9.9"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce (with redacted output)
+    validations:
+      required: true

@@ -1,0 +1,47 @@
+[package]
+name = "sigsieve-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+sigsieve = { path = ".." }
+
+# Keep the fuzz crate out of the main workspace.
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "requests"
+path = "fuzz_targets/requests.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "session_bind"
+path = "fuzz_targets/session_bind.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "key_blob"
+path = "fuzz_targets/key_blob.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "upstream_reply"
+path = "fuzz_targets/upstream_reply.rs"
+test = false
+doc = false
+bench = false

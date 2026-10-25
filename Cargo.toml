@@ -1,0 +1,31 @@
+[package]
+name = "sigsieve"
+version = "0.1.0-alpha.1"
+edition = "2021"
+description = "SSH agent filtering proxy: expose only the identities you trust."
+license = "MIT"
+repository = "https://github.com/semihbugrasezer/sigsieve"
+readme = "README.md"
+keywords = ["ssh", "ssh-agent", "security", "agent-forwarding"]
+categories = ["command-line-utilities", "cryptography"]
+
+[dependencies]
+base64 = "0.22"
+clap = { version = "4", features = ["derive", "env"] }
+# Host-key signature verification for session-bind (destination binding).
+# Verification only; SigSieve never holds private keys.
+ed25519-dalek = { version = "3", default-features = false }
+libc = "0.2"
+p256 = { version = "0.14", default-features = false, features = ["ecdsa", "std"] }
+p384 = { version = "0.14", default-features = false, features = ["ecdsa", "std"] }
+p521 = { version = "0.14", default-features = false, features = ["ecdsa", "std"] }
+sha2 = "0.11"
+signal-hook = "0.3"
+
+[dev-dependencies]
+proptest = "1"
+tempfile = "3"
+
+[profile.release]
+lto = true
+codegen-units = 1

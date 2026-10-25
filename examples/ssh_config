@@ -1,0 +1,15 @@
+# Start `sigsieve run --socket ~/.sigsieve/agent.sock` first; see README.
+# Place this block before broad `Host *` defaults: SSH uses the first value.
+Host build-host
+  HostName build.example
+  User developer
+  ForwardAgent ~/.sigsieve/agent.sock
+  ControlMaster no
+  ControlPath none
+  StrictHostKeyChecking yes
+
+# This bastion needs no forwarded agent. `sigsieve connect` verifies each hop.
+# Add `ProxyJump bastion` to build-host when needed.
+Host bastion
+  HostName bastion.example
+  ForwardAgent no
