@@ -88,4 +88,3 @@ check licenses` enforces the allowed set.
 | zeroize | 1.9.1 | Apache-2.0 OR MIT |
 
 License expressions: `(MIT OR Apache-2.0) AND Unicode-3.0` ×1, `Apache-2.0 OR MIT` ×24, `Apache-2.0/MIT` ×1, `BSD-3-Clause` ×3, `MIT` ×1, `MIT OR Apache-2.0` ×40, `MIT OR Apache-2.0 OR BSD-1-Clause` ×1, `MIT OR Apache-2.0 OR LGPL-2.1-or-later` ×1, `MIT/Apache-2.0` ×3
-
