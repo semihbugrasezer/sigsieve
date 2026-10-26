@@ -50,6 +50,7 @@ fix (where one exists).
 | F-36 | LOW (protocol) | Non-RSA identities accepted RSA SHA-2 signature flags at the proxy boundary | Fixed: key-type validation before upstream; red/green mock-agent regression; not an authorization bypass |
 | F-37 | LOW (policy) | connect accepted explicitly disabled host-key verification | Changed: refuse no/off/false on target and hops; red/green real OpenSSH regression |
 | F-38 | LOW (policy) | Legacy RSA/SHA-1 (`ssh-rsa`, flag 0) signing passed through when the upstream allowed it | Fixed: exactly one SHA-2 flag required for RSA, returned algorithm checked; real OpenSSH regression |
+| F-39 | LOW | A non-UTF-8 home directory was converted lossily, so the ssh_config pre-scan read a missing path and skipped the real `~/.ssh/config` | Fixed: byte-exact path from the password database; red/green unit regression |
 | F-34 | HIGH | Missing or failed initial forwarding bind could expose the ordinary-publickey first-hop exception to a remote client | Fixed: hostbound required for every destination-bound signature; initial failure terminal; regression tests |
 | F-33 | LOW (supply chain) | crypto-bigint 0.7.6 was yanked after the earlier local checks; public CI rejected it | Fixed: root and fuzz lockfiles updated to non-yanked 0.7.9 |
 | F-32 | HIGH | SSH pre-scan disagreed with OpenSSH on quoted keywords and Include argument delimiters, permitting Match exec during verification | Fixed: conservative keywords, exact space/tab path parsing, UTF-8 validation; regression tests |
@@ -270,6 +271,19 @@ here; F-38 closes it.
 OpenSSH dry run demonstrated acceptance. Target and every proxy hop now refuse
 it. `ask`, `yes` and trust-on-first-use `accept-new` are preserved. This is an
 explicit alpha compatibility change; no SSH setting is silently rewritten.
+
+### F-39 — LOW — lossy home directory in the ssh_config pre-scan
+
+`socket::home_dir` reads the home directory from the password database (as
+ssh does for `~`) but converted it with `to_string_lossy`. A home whose name is
+not valid UTF-8 became a different path containing U+FFFD; the pre-scan then
+found no `~/.ssh/config` there and passed (missing files are skipped, as ssh
+does), while ssh read the real file, so a `Match exec` in it went unchecked.
+Preconditions: a non-UTF-8 home path in the password database; this is rare
+and not attacker-controlled, so it is a fail-open correctness defect rather
+than an exploitable bypass. Fix: build the path from the exact bytes
+(`OsStr::from_bytes`). Regression: `home_dir_bytes_are_preserved_exactly`
+fails on the lossy conversion and passes with the fix.
 
 ### F-38 — LOW — legacy RSA/SHA-1 signing
 
