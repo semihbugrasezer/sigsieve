@@ -46,25 +46,19 @@ fix (where one exists).
 | F-28 | INFO | CI installed unpinned cargo-audit/cargo-deny; THIRD_PARTY.md listed crates of another component; no uninstall docs | Fixed |
 | F-29 | HIGH | `connect` verified only the destination's ProxyCommand; a wrapper on a ProxyJump (or relay) hop ran with the unfiltered login agent in its environment and could forward it (C-1) | Fixed: every hop verified |
 | F-30 | MEDIUM | `Match exec` was detected only from `ssh -G -v` output, i.e. after ssh had run the command during connect's verification | Fixed: user ssh_config (and includes) scanned before ssh runs |
+| F-34 | HIGH | Missing or failed initial forwarding bind could expose the ordinary-publickey first-hop exception to a remote client | Fixed: hostbound required for every destination-bound signature; initial failure terminal; regression tests |
 | F-33 | LOW (supply chain) | crypto-bigint 0.7.6 was yanked after the earlier local checks; public CI rejected it | Fixed: root and fuzz lockfiles updated to non-yanked 0.7.9 |
 | F-32 | HIGH | SSH pre-scan disagreed with OpenSSH on quoted keywords and Include argument delimiters, permitting Match exec during verification | Fixed: conservative keywords, exact space/tab path parsing, UTF-8 validation; regression tests |
 | F-31 | HIGH | Review of F-29/F-30: a relay's own `-F` was ignored for its nested hops; hop forwardings were not checked; quoting (`e'x'ec`) hid `Match exec`; X11 forwarding ran xauth with the login agent; unsafe `-F` paths reached ssh's ProxyJump shell command; concurrent stale-socket recovery could have two winners | Fixed (details below) |
 
 
-### Fresh-context review (4th internal review) — summary
+### Review scope
 
-A new reviewer agent with no prior context audited the destination-binding
-branch (read-only; probes against its own agents/sshd). Result: **no critical
-or high findings**. It specifically examined the single-hop plain-`publickey`
-exception (a forged single auth binding would let a plain-publickey
-signature be replayed elsewhere) and showed it is unreachable from a remote
-attacker: the local ssh client always prepends its forwarding binding to every
-forwarded agent connection, so any attacker-influenced connection has ≥ 2
-bindings and must use `publickey-hostbound` (confirmed by the E2E raw
-attacker log "sign attempted on a forwarding hop"). It also confirmed the
-crypto verification details (Ed25519 `verify_strict`, per-curve ECDSA hashes,
-strict mpint decoding, algorithm/key-type matching) and that the tests are not
-vacuous.
+Earlier AI reviews checked host-key verification, strict parsing, forwarding
+and configuration handling. Later findings F-32 and F-34 show that those
+reviews did not establish the absence of high-severity defects. The current
+register and executable regression tests supersede earlier review summaries.
+None of these reviews is a professional independent audit.
 
 ## Details
 
@@ -255,3 +249,25 @@ The first public CI run rejected `crypto-bigint 0.7.6` as yanked, while
 records withdrawn 0.7.6–0.7.8 versions and the 0.7.9 correction. Both the Core
 and fuzz lockfiles now select 0.7.9. The advisory/license policy is unchanged;
 acceptance requires fresh cryptographic verification tests and exact-commit CI.
+
+### F-34 — HIGH — forwarding-context loss in destination binding
+
+The earlier authorization rule allowed ordinary `publickey` when only one
+binding was recorded. A failed initial forwarding bind (for example an
+unsupported RSA host key) left no binding, and a later valid authentication
+bind could replace it. Older forwarding clients can also omit the initial
+binding. OpenSSH's client source confirms forwarding can continue after a
+bind failure. In the threat-model case where an attacker owns an allowed
+host key, the attacker could sign another server's session identifier with
+that key and reach the first-hop exception without a host key in the signed
+userauth request.
+
+The proxy now requires hostbound authentication for every destination-bound
+signature, including single bindings. An initial failed bind is also terminal
+for that connection. Existing valid state is retained after a subsequent
+failure. Both regression conditions failed before their fixes; valid
+single-binding hostbound requests and normal forwarded E2E flows remain tested.
+
+Tests: `failed_bind_disables_signing_and_single_hop_requires_hostbound`,
+`failed_initial_binding_cannot_be_replaced_by_an_authentication_bind`, and
+`attacker_holding_a_permitted_host_key_cannot_redirect_forwarded_auth`.

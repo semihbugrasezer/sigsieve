@@ -39,14 +39,24 @@ certificates, or implement `restrict-destination-v00@openssh.com` key loading.
 Binding verification supports Ed25519 and ECDSA P-256/384/521 host keys;
 other host-key types are refused.
 
-An accepted single authentication binding may use ordinary `publickey`;
-forwarded connections require hostbound authentication. This follows the
-first-hop exception in the OpenSSH design and depends on the **trusted local
-SSH client** recording the initial forwarding binding before exposing an
-agent channel. A raw remote client cannot be treated as a trusted local
-client. Bindings and authorized requests can still be replayed to request
-signatures for an already bound session; they do not grant unrestricted
-signing or extend the destination policy.
+SigSieve requires `publickey-hostbound-v00@openssh.com` for **every**
+destination-bound signature, including single-binding connections. It does
+not implement OpenSSH's ordinary-`publickey` first-hop exception: the proxy
+cannot tell a local first hop from a remote client whose forwarding client
+omitted its initial binding. Requiring the destination host key in the signed
+request avoids depending on that distinction.
+
+An initial binding failure is terminal for the agent connection: later
+bindings and restricted signatures are refused. OpenSSH's
+[`client_request_agent`](https://github.com/openssh/openssh-portable/blob/master/clientloop.c)
+can continue forwarding after the initial bind fails. SigSieve supports fewer
+host-key types than SSH, so it must not let a later authentication binding
+erase that failure. Separate regression tests cover missing forwarding
+context, terminal initial failure, and valid single-binding hostbound requests.
+
+Bindings and authorized requests can still be replayed to request signatures
+for an already bound session; they do not grant unrestricted signing or
+extend the destination policy.
 
 Bindings are handled locally and are not propagated to the upstream agent.
 Upstream OpenSSH keys already constrained by `ssh-add -h` are therefore not

@@ -73,9 +73,9 @@ still use it to authenticate to the allowed destinations.
   Comments and listing history are never trusted.
 - **Destination binding** (opt-in): verifies `session-bind@openssh.com`
   host-key signatures (Ed25519/ECDSA) and only signs user-authentication
-  requests bound to an allowed destination. It mirrors OpenSSH's `ssh-agent`
-  destination constraints, and SigSieve enforces it itself, so it also works
-  with Secretive.
+  requests bound to an allowed destination. It uses OpenSSH's session-binding
+  and hostbound-authentication protocols; SigSieve enforces the destination
+  policy itself. Ordinary `publickey` requests are refused in this mode.
 - **No mutation, no extension passthrough**: everything except listing and
   authorized signing is answered locally.
 - **No private keys**: signing stays in the upstream agent, so Secretive's

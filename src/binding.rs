@@ -1,11 +1,11 @@
 //! Destination binding: verified `session-bind@openssh.com` state and the
 //! authorization of sign requests against it.
 //!
-//! This mirrors the checks OpenSSH's own ssh-agent applies to
+//! This uses the checks OpenSSH's own ssh-agent applies to
 //! destination-constrained keys (ssh-agent.c: `process_ext_session_bind`,
 //! `parse_userauth_request`, `identity_permitted`, `process_sign_request2`),
-//! with one policy: the final authentication hop's host key must be one of
-//! the allowed destination host keys.
+//! with a stricter hostbound-only policy: the final authentication hop's
+//! host key must be one of the allowed destination host keys.
 //!
 //! Why it is sound against a malicious forwarding host:
 //! - Every binding is verified: the host key must have signed the session
@@ -14,7 +14,7 @@
 //! - A sign request is only honoured if it is an SSH userauth request whose
 //!   session identifier equals the most recent (authentication) binding, so the
 //!   signature is only usable inside that one SSH session to that one server.
-//! - On forwarded connections (more than one binding) the request must use
+//! - Every authorized request must use
 //!   `publickey-hostbound-v00@openssh.com`, which embeds the server host key in
 //!   the signed data; the destination server checks it is its own key. This
 //!   defeats an attacker who holds the private host key of a permitted host
@@ -37,6 +37,7 @@ const SSH2_MSG_USERAUTH_REQUEST: u8 = 50;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BindError {
+    InitialBindFailed,
     Malformed,
     SessionIdTooLong,
     UnsupportedHostKey,
@@ -49,6 +50,7 @@ pub enum BindError {
 impl fmt::Display for BindError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
+            BindError::InitialBindFailed => "the initial binding on this connection failed",
             BindError::Malformed => "malformed session-bind",
             BindError::SessionIdTooLong => "session identifier too long",
             BindError::UnsupportedHostKey => {
@@ -92,7 +94,7 @@ impl fmt::Display for Denied {
             Denied::HostboundRequired => {
                 write!(
                     f,
-                    "forwarded connection requires publickey-hostbound authentication"
+                    "destination binding requires publickey-hostbound authentication"
                 )
             }
             Denied::HostKeyMismatch => {
@@ -123,6 +125,11 @@ impl Bindings {
     /// Process the body of a `session-bind@openssh.com` extension (everything
     /// after the extension name).
     pub fn bind(&mut self, body: &[u8]) -> Result<(), BindError> {
+        // SSH can keep forwarding after an unsupported first host key. A
+        // remote peer must not replace that failure with a first-hop auth bind.
+        if self.attempted && self.list.is_empty() {
+            return Err(BindError::InitialBindFailed);
+        }
         self.attempted = true;
         let mut r = Reader::new(body);
         let hostkey = r.string().map_err(|_| BindError::Malformed)?;
@@ -177,7 +184,7 @@ impl Bindings {
             return Err(Denied::SessionIdMismatch);
         }
         match req.hostkey {
-            None if self.list.len() > 1 => return Err(Denied::HostboundRequired),
+            None => return Err(Denied::HostboundRequired),
             Some(hk) if hk != last.hostkey.as_slice() => return Err(Denied::HostKeyMismatch),
             _ => {}
         }
@@ -710,7 +717,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn failed_bind_poisons_connection_and_single_hop_allows_plain_publickey() {
+    fn failed_bind_disables_signing_and_single_hop_requires_hostbound() {
         let dest = TestHost::ed(2);
         let key = client_key();
         let allowed = dests(&[&dest]);
@@ -721,13 +728,49 @@ pub(crate) mod tests {
             b.authorize(&key, &userauth(b"s", &key, alg, None), &allowed),
             Err(Denied::BindFailedEarlier)
         );
-        // First-hop (single binding) use may use plain publickey, as in OpenSSH.
+        // The proxy cannot prove that a single bind came from a local first
+        // hop: older forwarding clients omit their initial session binding.
         let mut b = Bindings::default();
         b.bind(&dest.bind_body(b"s", false)).unwrap();
         assert_eq!(
             b.authorize(&key, &userauth(b"s", &key, alg, None), &allowed),
+            Err(Denied::HostboundRequired)
+        );
+        assert_eq!(
+            b.authorize(
+                &key,
+                &userauth(b"s", &key, alg, Some(&dest.public_blob())),
+                &allowed
+            ),
             Ok(())
         );
+    }
+
+    #[test]
+    fn failed_initial_binding_cannot_be_replaced_by_an_authentication_bind() {
+        let host = TestHost::ed(2);
+        let key = client_key();
+        let mut bindings = Bindings::default();
+        // OpenSSH may keep forwarding after its initial bind fails, such as
+        // an unsupported RSA forwarding-host key. The remote peer must not
+        // replace that failure with a single authentication binding.
+        assert!(bindings.bind(b"failed initial forwarding bind").is_err());
+        assert_eq!(
+            bindings.bind(&host.bind_body(b"victim-session", false)),
+            Err(BindError::InitialBindFailed)
+        );
+        assert!(bindings
+            .authorize(
+                &key,
+                &userauth(
+                    b"victim-session",
+                    &key,
+                    b"ecdsa-sha2-nistp256",
+                    Some(&host.public_blob())
+                ),
+                &dests(&[&host]),
+            )
+            .is_err());
     }
 
     #[test]

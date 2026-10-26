@@ -82,8 +82,9 @@ policy. Upstream requests use a fresh connection each and are never retried
 All extensions are answered locally and never forwarded. In mode B,
 `session-bind@openssh.com` is verified (host key signature, size limits,
 duplicate/rebind rules) and can only *narrow* what may be signed. Signing is
-refused without a valid binding. A failed bind does not discard bindings
-already verified on that connection (matching OpenSSH).
+refused without a valid binding. A failed initial bind permanently prevents
+further bindings and restricted signing on that connection. A failed bind
+after a valid one does not discard previously verified state.
 
 ### Session binding replay and confusion
 

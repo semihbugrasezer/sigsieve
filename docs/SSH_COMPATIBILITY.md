@@ -48,7 +48,8 @@ after 300 s.
 | Binding host keys | Ed25519, ECDSA P-256/384/521 verified (real OpenSSH: Ed25519 and P-256 E2E). RSA and certificate host keys: bind fails → restricted signing refused. Use `-o HostKeyAlgorithms=ssh-ed25519,ecdsa-sha2-nistp256` if a server offers RSA first |
 | Session id | ≤ 128 bytes; duplicate (same id + key) accepted once; same id with another key refused |
 | Bindings per connection | ≤ 16; none after an authentication binding |
-| Userauth methods | `publickey` on a single-binding (first-hop) connection; **`publickey-hostbound-v00@openssh.com` required** when there is more than one binding (forwarded) |
+| Failed initial binding | terminal for that connection: subsequent binds and restricted signing are refused, even if a remote peer offers a valid binding |
+| Userauth methods | **`publickey-hostbound-v00@openssh.com` always required**; ordinary `publickey` is refused, including on single-binding connections |
 | Server support | `publickey-hostbound` is advertised by OpenSSH ≥ 8.9 servers. Whether a given service (e.g. GitHub) supports it is **not verified** by this project — test with `connect` before relying on it |
 | `restrict-destination` constraints in the upstream agent | not used; keys constrained in an upstream OpenSSH agent refuse to sign through SigSieve (fail closed, tested) |
 

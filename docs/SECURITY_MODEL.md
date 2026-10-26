@@ -19,7 +19,7 @@ guarantee. Read [THREAT_MODEL.md](THREAT_MODEL.md) for attackers and
 | What an allowed key can sign | **anything** the remote host asks for | only SSH user-authentication requests for a session cryptographically bound to an allowed destination host key |
 | Where an allowed key can authenticate | **any** server that trusts it, while you are connected | only the allowed destination(s) |
 | `session-bind@openssh.com` | rejected (not forwarded) | verified and recorded per connection (not forwarded) |
-| Works with servers lacking `publickey-hostbound` | yes | first hop only; forwarded hops require it (OpenSSH ≥ 8.9 servers) |
+| Works with servers lacking `publickey-hostbound` | yes | no; hostbound authentication is required for every signature |
 
 Destination binding is enforced **inside SigSieve**, so it works with upstream
 agents that have no destination-constraint support (for example Secretive).
@@ -114,6 +114,7 @@ with stated gaps; **N/A** = not a SigSieve property.
  SigSieve process                | further hops, raw protocol clients
 ```
 
-The local ssh client is trusted to perform the first-hop session binding and
-host key verification honestly. SigSieve does not defend against code running
-as your local user (see THREAT_MODEL.md, Scenario F).
+The local ssh client is trusted to forward the configured filtered socket and
+perform host-key verification honestly. Destination-bound signatures require
+hostbound authentication even if the initial forwarding binding is missing.
+SigSieve does not defend against code running as your local user (see THREAT_MODEL.md, Scenario F).
