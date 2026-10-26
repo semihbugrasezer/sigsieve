@@ -7,7 +7,10 @@
 use std::fmt;
 use std::io::{self, Read, Write};
 use std::os::unix::net::UnixStream;
+use std::sync::atomic::AtomicBool;
 use std::time::{Duration, Instant};
+
+use crate::socket;
 
 /// Largest frame we accept, matching OpenSSH's `AGENT_MAX_LEN` (256 KiB).
 pub const MAX_FRAME: usize = 256 * 1024;
@@ -30,8 +33,11 @@ pub const SSH_AGENTC_ADD_SMARTCARD_KEY_CONSTRAINED: u8 = 26;
 pub const SSH_AGENTC_EXTENSION: u8 = 27;
 pub const SSH_AGENT_EXTENSION_FAILURE: u8 = 28;
 
-/// Signature flags we pass through: `SSH_AGENT_RSA_SHA2_256` and `_512`.
-pub const ALLOWED_SIGN_FLAGS: u32 = 0x02 | 0x04;
+pub const SSH_AGENT_RSA_SHA2_256: u32 = 0x02;
+pub const SSH_AGENT_RSA_SHA2_512: u32 = 0x04;
+/// Signature flags we pass through. An RSA request must carry exactly one;
+/// other key types must carry none (see `KeyType::signature_alg`).
+pub const ALLOWED_SIGN_FLAGS: u32 = SSH_AGENT_RSA_SHA2_256 | SSH_AGENT_RSA_SHA2_512;
 
 #[derive(Debug)]
 pub enum WireError {
@@ -191,6 +197,13 @@ pub fn read_frame(
     }
     let deadline = Instant::now() + frame;
     read_full(s, &mut hdr[first..], deadline)?;
+    let len = frame_length(hdr)?;
+    let mut payload = vec![0u8; len];
+    read_full(s, &mut payload, deadline)?;
+    Ok(Some(payload))
+}
+
+fn frame_length(hdr: [u8; 4]) -> Result<usize, WireError> {
     let len = u32::from_be_bytes(hdr) as usize;
     if len == 0 {
         return Err(WireError::Empty);
@@ -198,13 +211,16 @@ pub fn read_frame(
     if len > MAX_FRAME {
         return Err(WireError::TooLarge(len));
     }
-    let mut payload = vec![0u8; len];
-    read_full(s, &mut payload, deadline)?;
-    Ok(Some(payload))
+    Ok(len)
 }
 
 /// Write one frame. `payload` must be non-empty and within [`MAX_FRAME`].
 pub fn write_frame(w: &mut impl Write, payload: &[u8]) -> io::Result<()> {
+    w.write_all(&encoded_frame(payload)?)?;
+    w.flush()
+}
+
+fn encoded_frame(payload: &[u8]) -> io::Result<Vec<u8>> {
     if payload.is_empty() || payload.len() > MAX_FRAME {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -213,8 +229,77 @@ pub fn write_frame(w: &mut impl Write, payload: &[u8]) -> io::Result<()> {
     }
     let mut buf = Vec::with_capacity(4 + payload.len());
     put_string(&mut buf, payload);
-    w.write_all(&buf)?;
-    w.flush()
+    Ok(buf)
+}
+
+/// A nonblocking exchange uses one deadline across its header and body.
+pub(crate) fn read_frame_until(
+    s: &mut UnixStream,
+    deadline: Instant,
+    cancelled: &AtomicBool,
+) -> Result<Option<Vec<u8>>, WireError> {
+    let mut hdr = [0u8; 4];
+    if !read_until(s, &mut hdr, deadline, cancelled)? {
+        return Ok(None);
+    }
+    let mut payload = vec![0u8; frame_length(hdr)?];
+    if !read_until(s, &mut payload, deadline, cancelled)? {
+        return Err(WireError::Truncated);
+    }
+    Ok(Some(payload))
+}
+
+fn read_until(
+    s: &mut UnixStream,
+    buf: &mut [u8],
+    deadline: Instant,
+    cancelled: &AtomicBool,
+) -> Result<bool, WireError> {
+    let mut filled = 0;
+    while filled < buf.len() {
+        let left = socket::time_left(deadline, cancelled)?;
+        match s.read(&mut buf[filled..]) {
+            Ok(0) if filled == 0 => return Ok(false),
+            Ok(0) => return Err(WireError::Truncated),
+            Ok(n) => filled += n,
+            Err(e) if e.kind() == io::ErrorKind::Interrupted => {}
+            Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
+                socket::wait_readable(s, left.min(Duration::from_millis(100)))?;
+            }
+            Err(e) => return Err(e.into()),
+        }
+    }
+    socket::time_left(deadline, cancelled)?;
+    Ok(true)
+}
+
+pub(crate) fn write_frame_until(
+    s: &mut UnixStream,
+    payload: &[u8],
+    deadline: Instant,
+    cancelled: &AtomicBool,
+) -> io::Result<()> {
+    let frame = encoded_frame(payload)?;
+    let mut written = 0;
+    while written < frame.len() {
+        let left = socket::time_left(deadline, cancelled)?;
+        match s.write(&frame[written..]) {
+            Ok(0) => {
+                return Err(io::Error::new(
+                    io::ErrorKind::WriteZero,
+                    "agent connection closed",
+                ))
+            }
+            Ok(n) => written += n,
+            Err(e) if e.kind() == io::ErrorKind::Interrupted => {}
+            Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
+                socket::wait_writable(s, left.min(Duration::from_millis(100)))?;
+            }
+            Err(e) => return Err(e),
+        }
+    }
+    socket::time_left(deadline, cancelled)?;
+    Ok(())
 }
 
 #[cfg(test)]

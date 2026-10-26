@@ -12,7 +12,7 @@ use base64::engine::general_purpose::STANDARD_NO_PAD;
 use base64::Engine;
 use sha2::{Digest, Sha256};
 
-use crate::protocol::Reader;
+use crate::protocol::{Reader, SSH_AGENT_RSA_SHA2_256, SSH_AGENT_RSA_SHA2_512};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Fingerprint([u8; 32]);
@@ -86,6 +86,25 @@ impl KeyType {
             KeyType::SkEd25519 => "ED25519-SK",
             KeyType::SkEcdsaP256 => "ECDSA-SK",
         }
+    }
+
+    /// The one signature algorithm a sign request with `flags` selects, or
+    /// `None` if SigSieve refuses that combination. RSA must request exactly
+    /// one SHA-2 algorithm: legacy `ssh-rsa` (SHA-1) is never requested or
+    /// accepted. Other key types take no flags.
+    pub fn signature_alg(self, flags: u32) -> Option<&'static [u8]> {
+        let alg: &'static [u8] = match (self, flags) {
+            (KeyType::Rsa, SSH_AGENT_RSA_SHA2_256) => b"rsa-sha2-256",
+            (KeyType::Rsa, SSH_AGENT_RSA_SHA2_512) => b"rsa-sha2-512",
+            (KeyType::Rsa, _) | (_, 1..) => return None,
+            (KeyType::Ed25519, 0) => b"ssh-ed25519",
+            (KeyType::EcdsaP256, 0) => b"ecdsa-sha2-nistp256",
+            (KeyType::EcdsaP384, 0) => b"ecdsa-sha2-nistp384",
+            (KeyType::EcdsaP521, 0) => b"ecdsa-sha2-nistp521",
+            (KeyType::SkEd25519, 0) => b"sk-ssh-ed25519@openssh.com",
+            (KeyType::SkEcdsaP256, 0) => b"sk-ecdsa-sha2-nistp256@openssh.com",
+        };
+        Some(alg)
     }
 }
 
@@ -223,6 +242,29 @@ mod tests {
                 fp.parse::<Fingerprint>().unwrap(),
                 Fingerprint::of_blob(&blob)
             );
+        }
+    }
+
+    #[test]
+    fn signature_algorithms_exclude_rsa_sha1_and_foreign_flags() {
+        let rsa = KeyType::Rsa;
+        assert_eq!(rsa.signature_alg(0x02), Some(&b"rsa-sha2-256"[..]));
+        assert_eq!(rsa.signature_alg(0x04), Some(&b"rsa-sha2-512"[..]));
+        for flags in [0, 0x01, 0x06, 0x08, u32::MAX] {
+            assert_eq!(rsa.signature_alg(flags), None, "rsa flags {flags:#x}");
+        }
+        for kind in [
+            KeyType::Ed25519,
+            KeyType::EcdsaP256,
+            KeyType::EcdsaP384,
+            KeyType::EcdsaP521,
+            KeyType::SkEd25519,
+            KeyType::SkEcdsaP256,
+        ] {
+            assert!(kind.signature_alg(0).is_some());
+            for flags in [0x02, 0x04, 0x06, 0x01] {
+                assert_eq!(kind.signature_alg(flags), None, "{kind:?} {flags:#x}");
+            }
         }
     }
 

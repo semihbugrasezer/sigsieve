@@ -306,11 +306,6 @@ fn run(args: RunArgs) -> i32 {
     if policy.is_empty() {
         warn("allowlist is empty: the filtered agent will expose no identities");
     }
-    if let Err(e) = upstream.identities() {
-        warn(format_args!(
-            "{e} (requests will fail until it is available)"
-        ));
-    }
     let signals = match shutdown_flag(&[
         signal_hook::consts::SIGINT,
         signal_hook::consts::SIGTERM,
@@ -322,6 +317,15 @@ fn run(args: RunArgs) -> i32 {
             return EXIT_FAIL;
         }
     };
+    if let Err(e) = upstream.identities_cancellable(&signals) {
+        if signals.load(Ordering::SeqCst) {
+            error("cancelled before starting the proxy");
+            return EXIT_FAIL;
+        }
+        warn(format_args!(
+            "{e} (requests will fail until it is available)"
+        ));
+    }
     let mut state = format!(
         "pid={}\nupstream={}\nstarted={}\n",
         std::process::id(),
@@ -335,11 +339,7 @@ fn run(args: RunArgs) -> i32 {
         state.push_str(&format!("destination={fp}\n"));
     }
     let n = policy.len();
-    let proxy = Proxy {
-        policy,
-        upstream,
-        limits: Limits::default(),
-    };
+    let proxy = Proxy::new(policy, upstream, Limits::default());
     let mut running = match Running::start(proxy, args.socket.as_deref()) {
         Ok(r) => r,
         Err(e) => {
@@ -453,7 +453,18 @@ fn doctor(args: DoctorArgs) -> i32 {
     }
 
     println!("Upstream socket:    {}", upstream.path().display());
-    let ids = match upstream.identities() {
+    let stop = match shutdown_flag(&[
+        signal_hook::consts::SIGINT,
+        signal_hook::consts::SIGTERM,
+        signal_hook::consts::SIGHUP,
+    ]) {
+        Ok(flag) => flag,
+        Err(e) => {
+            error(e);
+            return EXIT_FAIL;
+        }
+    };
+    let ids = match upstream.identities_cancellable(&stop) {
         Ok(ids) => {
             println!("Upstream agent:     reachable ({} identities)", ids.len());
             Some(ids)
@@ -486,11 +497,7 @@ fn doctor(args: DoctorArgs) -> i32 {
         let hidden = ids.iter().filter(|id| !policy.allows(&id.blob)).count();
         println!("Hidden identities:  {hidden} (not shown)");
 
-        let proxy = Proxy {
-            policy: policy.clone(),
-            upstream: upstream.clone(),
-            limits: Limits::default(),
-        };
+        let proxy = Proxy::new(policy.clone(), upstream.clone(), Limits::default());
         match Running::start(proxy, None).and_then(|r| {
             let res = self_test(r.rt.path(), &policy);
             drop(r);
@@ -703,7 +710,18 @@ fn connect(args: ConnectArgs) -> i32 {
         }
     };
 
-    let ids = match upstream.identities() {
+    let preflight_stop = match shutdown_flag(&[
+        signal_hook::consts::SIGINT,
+        signal_hook::consts::SIGTERM,
+        signal_hook::consts::SIGHUP,
+    ]) {
+        Ok(flag) => flag,
+        Err(e) => {
+            error(e);
+            return EXIT_FAIL;
+        }
+    };
+    let ids = match upstream.identities_cancellable(&preflight_stop) {
         Ok(ids) => ids,
         Err(e) => {
             error(e);
@@ -734,14 +752,7 @@ fn connect(args: ConnectArgs) -> i32 {
 
     eprintln!("sigsieve: {}", describe_binding(&policy));
     let check_policy = policy.clone();
-    let running = match Running::start(
-        Proxy {
-            policy,
-            upstream,
-            limits: Limits::default(),
-        },
-        None,
-    ) {
+    let running = match Running::start(Proxy::new(policy, upstream, Limits::default()), None) {
         Ok(r) => r,
         Err(e) => {
             error(e);

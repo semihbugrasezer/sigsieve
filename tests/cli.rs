@@ -104,6 +104,81 @@ fn help_and_version() {
 }
 
 #[test]
+fn hostile_requests_produce_bounded_logs_without_payloads() {
+    let up = MockAgent::start(three_identities(), Mode::Normal);
+    let dir = private_tempdir();
+    let sock = dir.path().join("f.sock");
+    let child = spawn_run(&up.path, &sock, &[ECDSA_CI_FP]);
+    let marker = b"synthetic-sensitive-content-must-never-be-logged";
+    let mut request = vec![sigsieve::protocol::SSH_AGENTC_EXTENSION];
+    sigsieve::protocol::put_string(&mut request, marker);
+    let start = Instant::now();
+    for _ in 0..4 {
+        let mut connection = connect(&sock);
+        for _ in 0..100 {
+            assert_eq!(roundtrip(&mut connection, &request), FAILURE);
+        }
+    }
+    thread::sleep(Duration::from_secs(1));
+    assert_eq!(common::request(&sock, &request), FAILURE);
+    signal(&child, libc::SIGTERM);
+    let output = child.finish();
+    let logs = stderr(&output);
+    assert!(!logs.contains(std::str::from_utf8(marker).unwrap()));
+    let details = logs
+        .lines()
+        .filter(|line| line.contains("rejected unsupported extension request"))
+        .count();
+    assert!(
+        details <= 16 * (start.elapsed().as_secs() as usize + 1),
+        "unbounded log count: {details}"
+    );
+    assert!(
+        logs.contains("suppressed"),
+        "no aggregation summary: {logs}"
+    );
+    assert!(up
+        .received()
+        .iter()
+        .all(|r| r == &[sigsieve::protocol::SSH_AGENTC_REQUEST_IDENTITIES]));
+}
+
+#[test]
+fn cancelling_a_stalled_initial_agent_query_does_not_wait_for_the_io_timeout() {
+    for command in [
+        vec!["run"],
+        vec!["doctor"],
+        vec!["connect", "unused.example"],
+    ] {
+        let up = MockAgent::start(three_identities(), Mode::Hang);
+        let child = bin()
+            .args(command)
+            .arg("--upstream")
+            .arg(&up.path)
+            .args(["--allow-fingerprint", ECDSA_CI_FP])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        let child = RunGuard(Some(child));
+        let start = Instant::now();
+        while up.received().is_empty() {
+            assert!(start.elapsed() < Duration::from_secs(5));
+            thread::sleep(Duration::from_millis(10));
+        }
+        signal(&child, libc::SIGTERM);
+        let start = Instant::now();
+        let output = child.finish();
+        assert!(!output.status.success(), "cancelled command succeeded");
+        assert!(
+            start.elapsed() < Duration::from_secs(2),
+            "cancellation waited for agent timeout"
+        );
+        assert_eq!(up.received().len(), 1, "cancelled query was retried");
+    }
+}
+
+#[test]
 fn invalid_fingerprint_fails_closed_without_creating_a_socket() {
     let dir = private_tempdir();
     let sock = dir.path().join("f.sock");

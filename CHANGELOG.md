@@ -4,7 +4,28 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [0.1.0-alpha.1] - 2026-10-26
+## [0.1.0-alpha.2] - unreleased candidate
+
+- Tightened SSH configuration scanning: LF-only text, ASCII keywords,
+  unambiguous Include arguments and conservative locale-independent globs.
+  Fixes CR-delimited Include commands missed by alpha.1's scan.
+- Refused hostname canonicalization and state-dependent Match criteria so
+  the real connection cannot activate configuration omitted by the probe.
+- The alpha.1 build was cancelled before GitHub Release publication. Its
+  historical source tag remains and is superseded.
+- One cancellable deadline covers nonblocking upstream connection, FIFO queue
+  wait and all request/reply bytes; a trickling agent cannot restart it.
+- Bounded connection/request/signing budgets, four concurrent upstream
+  exchanges, destination-bound duplicate-attempt suppression and aggregated logs.
+- Rejected RSA signature flags on non-RSA keys and disabled host-key checking
+  on destination/proxy hops. Checked socket ancestors as well as the leaf parent.
+- Refused legacy RSA/SHA-1 (`ssh-rsa`) signing. RSA sign requests must name
+  exactly one of rsa-sha2-256/512, and upstream signatures must use the
+  requested algorithm. **Compatibility change:** clients or servers that only
+  accept `ssh-rsa` signatures (OpenSSH < 7.2) fail through SigSieve; there is
+  no opt-out. RSA keys themselves keep working with SHA-2.
+
+## [0.1.0-alpha.1] - 2026-10-26 (superseded source candidate)
 
 First public experimental preview. Not independently audited; see
 [limitations](docs/LIMITATIONS.md) before use.

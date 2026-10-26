@@ -62,6 +62,7 @@ with stated gaps; **N/A** = not a SigSieve property.
 | 4 | Direct `SIGN_REQUEST` for a hidden key is denied | Tested (E2E) | raw `SIGN_REQUEST` with flags 0/2/4 for each hidden key in `forwarded_agent_is_filtered_end_to_end` |
 | 5 | Allowed identities work without exposing others | Tested (E2E) | `authorized_signing_is_delegated_for_each_key_type`, allowed sign + second hop in E2E |
 | 6 | Certificates, alternative encodings, duplicates, unusual flags do not bypass | Tested | `identity_substitution_and_encoding_tricks_are_rejected`, `malformed_sign_requests_are_not_forwarded`, `duplicate_allowlist_entries_and_duplicate_upstream_keys_appear_once`, `rejects_malformed_and_unsupported_blobs` |
+| 6a | No legacy RSA/SHA-1 signature passes: RSA requests need exactly one SHA-2 flag, other key types none, and the returned signature must use the requested algorithm | Tested (real OpenSSH) | `signature_algorithms_exclude_rsa_sha1_and_foreign_flags`, `rsa_requires_exactly_one_sha2_flag`, `signatures_with_an_unrequested_algorithm_are_refused`, `rsa_userauth_must_name_a_sha2_algorithm`, `rsa_sha1_signing_is_refused_while_sha2_works` |
 
 ### Agent integrity
 

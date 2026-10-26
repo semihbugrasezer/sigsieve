@@ -133,7 +133,7 @@ pub(crate) fn verify_ssh_plan(
             ));
         }
     }
-    check_no_local_commands(cfg, "")?;
+    check_static_config(cfg, "")?;
     for (k, v) in cfg {
         if k == "identityagent" || k == "forwardagent" {
             continue;
@@ -150,14 +150,22 @@ pub(crate) fn verify_ssh_plan(
     Ok(())
 }
 
-/// LocalCommand and KnownHostsCommand run arbitrary programs with the
-/// session's environment (ssh re-exports the login agent to LocalCommand), so
-/// neither may be enabled on the destination or on any proxy hop.
-fn check_no_local_commands(cfg: &[(String, String)], hop: &str) -> Result<(), String> {
+/// Refuse local programs and hostname canonicalization, which can change the
+/// configuration between the probe and the connection (including on hops).
+fn check_static_config(cfg: &[(String, String)], hop: &str) -> Result<(), String> {
     let has = |key: &str, ok: &[&str]| {
         cfg.iter()
             .any(|(k, v)| k == key && !ok.contains(&v.as_str()))
     };
+    if has(
+        "stricthostkeychecking",
+        &["yes", "true", "ask", "accept-new"],
+    ) {
+        return Err(format!("StrictHostKeyChecking is disabled{hop}; verify the host key and use yes, ask or accept-new (trust on first use)"));
+    }
+    if has("canonicalizehostname", &["no", "false"]) {
+        return Err(format!("CanonicalizeHostname is enabled{hop}; the connection could use a different configuration from ssh -G"));
+    }
     if has("permitlocalcommand", &["no", "false"]) {
         return Err(format!(
             "PermitLocalCommand is enabled{hop}; LocalCommand runs with the unfiltered \
@@ -451,7 +459,7 @@ fn verify_hops(
     {
         return Err(format!("proxy hop keeps port forwardings{hop}"));
     }
-    check_no_local_commands(&hop_cfg, &hop)?;
+    check_static_config(&hop_cfg, &hop)?;
     verify_hops(&hop_cfg, ssh, child_file.as_deref(), probe, seen).map_err(|e| format!("{e}{hop}"))
 }
 

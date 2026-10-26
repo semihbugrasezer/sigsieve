@@ -27,7 +27,7 @@ use std::collections::BTreeSet;
 use std::fmt;
 
 use crate::keys::{parse_public_key, Fingerprint, KeyType};
-use crate::protocol::Reader;
+use crate::protocol::{Reader, SSH_AGENT_RSA_SHA2_256, SSH_AGENT_RSA_SHA2_512};
 
 /// Limits matching OpenSSH's ssh-agent.
 pub const MAX_BINDINGS: usize = 16;
@@ -248,22 +248,14 @@ fn parse_userauth_request<'a>(data: &'a [u8], expected_key: &[u8]) -> Option<Use
     })
 }
 
-/// Whether the signature algorithm named in a userauth request belongs to the
-/// key's type.
+/// Whether the signature algorithm named in a userauth request is one the
+/// proxy would sign with for the key's type (never legacy `ssh-rsa`).
 fn alg_matches(pkalg: &[u8], key: &[u8]) -> bool {
-    let Ok(kind) = parse_public_key(key) else {
-        return false;
-    };
-    let allowed: &[&[u8]] = match kind {
-        KeyType::Ed25519 => &[b"ssh-ed25519"],
-        KeyType::EcdsaP256 => &[b"ecdsa-sha2-nistp256"],
-        KeyType::EcdsaP384 => &[b"ecdsa-sha2-nistp384"],
-        KeyType::EcdsaP521 => &[b"ecdsa-sha2-nistp521"],
-        KeyType::Rsa => &[b"rsa-sha2-256", b"rsa-sha2-512", b"ssh-rsa"],
-        KeyType::SkEd25519 => &[b"sk-ssh-ed25519@openssh.com"],
-        KeyType::SkEcdsaP256 => &[b"sk-ecdsa-sha2-nistp256@openssh.com"],
-    };
-    allowed.contains(&pkalg)
+    parse_public_key(key).is_ok_and(|kind| {
+        [0, SSH_AGENT_RSA_SHA2_256, SSH_AGENT_RSA_SHA2_512]
+            .into_iter()
+            .any(|flags| kind.signature_alg(flags) == Some(pkalg))
+    })
 }
 
 /// Verify an SSH signature blob made by `hostkey` over `data`.
@@ -585,6 +577,75 @@ pub(crate) mod tests {
         assert_eq!(
             Bindings::default().bind(&body),
             Err(BindError::UnsupportedHostKey)
+        );
+    }
+
+    #[test]
+    fn test_alg_matches() {
+        let rsa = base64::Engine::decode(
+            &base64::engine::general_purpose::STANDARD,
+            "AAAAB3NzaC1yc2EAAAADAQABAAABAQDHv5D4WLpHMocNgizCnJBpBSL1aoTF3JhC1tZpjRam4a9GiCh8lL+y/iT+KN+QY3srHhZAwFmsiQRa2Aaxeb47eUDD66y3ZrDRUdz71GwZWJs5nhuMs0OAcT9hKiUZ87pUcfSxtgTLuXruU54JflI1v4tAr+wTiKwG9wk/aKz4iqSoXOtlXEn1rJDbL4J0fJ/nQQUeL0mWkZiNUCbrHcrTIB97Rr6RUCl6ZXbyO1hx39XFlAXScIbkceEBc7Uq3kWpfqyHa6OUtsiUVXZUwEABMQfkUm/DrSxKSqBMbmHylh6+amzldHDxLYg8T51vK02rgvfat8+DpYs8ddghxlxJ",
+        )
+        .unwrap();
+
+        let ed = TestHost::ed(1).public_blob();
+        let p256 = TestHost::p256(1).public_blob();
+        let p384 = TestHost::p384(1).public_blob();
+        let p521 = TestHost::p521(1).public_blob();
+
+        let cases: &[(&[u8], &[u8], bool)] = &[
+            // Matches
+            (b"ssh-ed25519", &ed, true),
+            (b"ecdsa-sha2-nistp256", &p256, true),
+            (b"ecdsa-sha2-nistp384", &p384, true),
+            (b"ecdsa-sha2-nistp521", &p521, true),
+            (b"rsa-sha2-256", &rsa, true),
+            (b"rsa-sha2-512", &rsa, true),
+            // RSA rejects legacy ssh-rsa
+            (b"ssh-rsa", &rsa, false),
+            // Cross-type mismatches
+            (b"ssh-ed25519", &rsa, false),
+            (b"ecdsa-sha2-nistp256", &ed, false),
+            (b"rsa-sha2-256", &p256, false),
+            // Empty key
+            (b"ssh-ed25519", &[], false),
+            // Malformed key
+            (b"ssh-ed25519", b"not-a-key", false),
+            // Empty algorithm
+            (b"", &ed, false),
+            // Certificate algorithms are rejected
+            (b"ssh-ed25519-cert-v01@openssh.com", &ed, false),
+            (b"rsa-sha2-512-cert-v01@openssh.com", &rsa, false),
+        ];
+
+        for (alg, key, expected) in cases {
+            assert_eq!(
+                super::alg_matches(alg, key),
+                *expected,
+                "alg={:?} key.len={}",
+                std::str::from_utf8(alg).unwrap_or("<err>"),
+                key.len()
+            );
+        }
+    }
+
+    #[test]
+    fn rsa_userauth_must_name_a_sha2_algorithm() {
+        let dest = TestHost::p256(2);
+        let allowed = dests(&[&dest]);
+        let rsa = base64::Engine::decode(
+            &base64::engine::general_purpose::STANDARD,
+            "AAAAB3NzaC1yc2EAAAADAQABAAABAQDHv5D4WLpHMocNgizCnJBpBSL1aoTF3JhC1tZpjRam4a9GiCh8lL+y/iT+KN+QY3srHhZAwFmsiQRa2Aaxeb47eUDD66y3ZrDRUdz71GwZWJs5nhuMs0OAcT9hKiUZ87pUcfSxtgTLuXruU54JflI1v4tAr+wTiKwG9wk/aKz4iqSoXOtlXEn1rJDbL4J0fJ/nQQUeL0mWkZiNUCbrHcrTIB97Rr6RUCl6ZXbyO1hx39XFlAXScIbkceEBc7Uq3kWpfqyHa6OUtsiUVXZUwEABMQfkUm/DrSxKSqBMbmHylh6+amzldHDxLYg8T51vK02rgvfat8+DpYs8ddghxlxJ",
+        )
+        .unwrap();
+        let mut b = Bindings::default();
+        b.bind(&dest.bind_body(b"s1", false)).unwrap();
+        let auth = |alg: &[u8]| userauth(b"s1", &rsa, alg, Some(&dest.public_blob()));
+        assert_eq!(b.authorize(&rsa, &auth(b"rsa-sha2-256"), &allowed), Ok(()));
+        assert_eq!(b.authorize(&rsa, &auth(b"rsa-sha2-512"), &allowed), Ok(()));
+        assert_eq!(
+            b.authorize(&rsa, &auth(b"ssh-rsa"), &allowed),
+            Err(Denied::NotUserauth)
         );
     }
 

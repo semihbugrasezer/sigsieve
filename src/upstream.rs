@@ -10,10 +10,13 @@ use std::io;
 use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::sync::atomic::AtomicBool;
+use std::time::{Duration, Instant};
 
 use crate::protocol::{self, Reader, WireError, SSH_AGENTC_REQUEST_IDENTITIES};
 use crate::socket;
+
+static NOT_CANCELLED: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug)]
 pub enum UpstreamError {
@@ -73,7 +76,11 @@ impl Upstream {
         &self.path
     }
 
-    fn connect(&self) -> Result<UnixStream, UpstreamError> {
+    fn connect(
+        &self,
+        deadline: Instant,
+        cancelled: &AtomicBool,
+    ) -> Result<UnixStream, UpstreamError> {
         let meta = std::fs::metadata(&self.path).map_err(UpstreamError::Unreachable)?;
         let me = socket::current_uid();
         if !meta.file_type().is_socket() {
@@ -85,7 +92,8 @@ impl Upstream {
                 meta.uid()
             )));
         }
-        let s = UnixStream::connect(&self.path).map_err(UpstreamError::Unreachable)?;
+        let s = socket::connect_until(&self.path, deadline, cancelled)
+            .map_err(UpstreamError::Unreachable)?;
         // The file check above is racy; the peer credential is not.
         match socket::peer_uid(&s) {
             Ok(uid) if uid == me => {}
@@ -96,21 +104,44 @@ impl Upstream {
             }
             Err(e) => return Err(UpstreamError::Unreachable(e)),
         }
-        s.set_write_timeout(Some(self.timeout))
-            .map_err(UpstreamError::Unreachable)?;
         Ok(s)
     }
 
     /// Send one request and return the raw reply payload.
     pub fn request(&self, payload: &[u8]) -> Result<Vec<u8>, UpstreamError> {
-        let mut s = self.connect()?;
-        protocol::write_frame(&mut s, payload).map_err(UpstreamError::Unreachable)?;
-        protocol::read_frame(&mut s, self.timeout, self.timeout)?.ok_or(UpstreamError::Closed)
+        self.request_until(payload, self.deadline(), &NOT_CANCELLED)
+    }
+
+    pub(crate) fn deadline(&self) -> Instant {
+        // Unrepresentable durations fail closed instead of panicking.
+        Instant::now()
+            .checked_add(self.timeout)
+            .unwrap_or_else(Instant::now)
+    }
+
+    pub(crate) fn request_until(
+        &self,
+        payload: &[u8],
+        deadline: Instant,
+        cancelled: &AtomicBool,
+    ) -> Result<Vec<u8>, UpstreamError> {
+        let mut s = self.connect(deadline, cancelled)?;
+        protocol::write_frame_until(&mut s, payload, deadline, cancelled)
+            .map_err(UpstreamError::Unreachable)?;
+        protocol::read_frame_until(&mut s, deadline, cancelled)?.ok_or(UpstreamError::Closed)
     }
 
     /// Fetch and strictly parse the upstream identity list.
     pub fn identities(&self) -> Result<Vec<Identity>, UpstreamError> {
-        let reply = self.request(&[SSH_AGENTC_REQUEST_IDENTITIES])?;
+        self.identities_cancellable(&NOT_CANCELLED)
+    }
+
+    pub fn identities_cancellable(
+        &self,
+        cancelled: &AtomicBool,
+    ) -> Result<Vec<Identity>, UpstreamError> {
+        let reply =
+            self.request_until(&[SSH_AGENTC_REQUEST_IDENTITIES], self.deadline(), cancelled)?;
         parse_identities_answer(&reply)
     }
 }
@@ -136,6 +167,88 @@ pub fn parse_identities_answer(reply: &[u8]) -> Result<Vec<Identity>, UpstreamEr
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn unrepresentable_timeout_fails_closed() {
+        let deadline = Upstream::new("/unused", Duration::MAX).deadline();
+        assert!(deadline <= Instant::now());
+    }
+
+    #[test]
+    fn trickling_reply_cannot_restart_the_request_deadline() {
+        use std::io::Write;
+        use std::os::unix::net::UnixListener;
+        use std::time::Instant;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("agent.sock");
+        let listener = UnixListener::bind(&path).unwrap();
+        let worker = std::thread::spawn(move || {
+            let (mut s, _) = listener.accept().unwrap();
+            let t = Duration::from_secs(2);
+            protocol::read_frame(&mut s, t, t).unwrap().unwrap();
+            std::thread::sleep(Duration::from_millis(300));
+            let _ = s.write_all(&[0]);
+            std::thread::sleep(Duration::from_millis(300));
+            let _ = s.write_all(&[0, 0, 5, 12, 0, 0, 0, 0]);
+        });
+        let started = Instant::now();
+        let result = Upstream::new(path, Duration::from_millis(400)).identities();
+        let elapsed = started.elapsed();
+        worker.join().unwrap();
+        assert!(
+            result.is_err(),
+            "a late complete reply must not be accepted"
+        );
+        assert!(
+            elapsed < Duration::from_millis(600),
+            "request took {elapsed:?}"
+        );
+    }
+
+    #[test]
+    fn cancellation_stops_a_stalled_upstream_without_retry() {
+        use std::io::Read;
+        use std::os::unix::net::UnixListener;
+        use std::sync::{atomic::Ordering, Arc};
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("agent.sock");
+        let listener = UnixListener::bind(&path).unwrap();
+        let (tx, rx) = std::sync::mpsc::channel();
+        let worker = std::thread::spawn(move || {
+            let (mut s, _) = listener.accept().unwrap();
+            let t = Duration::from_secs(2);
+            protocol::read_frame(&mut s, t, t).unwrap().unwrap();
+            tx.send(()).unwrap();
+            s.set_read_timeout(Some(t)).unwrap();
+            let mut byte = [0];
+            assert_eq!(
+                s.read(&mut byte).unwrap(),
+                0,
+                "cancelled client must disconnect"
+            );
+        });
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let stop = Arc::clone(&cancelled);
+        let trigger = std::thread::spawn(move || {
+            rx.recv_timeout(Duration::from_secs(2)).unwrap();
+            stop.store(true, Ordering::Relaxed);
+        });
+        let upstream = Upstream::new(path, Duration::from_secs(5));
+        let started = Instant::now();
+        let result = upstream.request_until(
+            &[SSH_AGENTC_REQUEST_IDENTITIES],
+            upstream.deadline(),
+            &cancelled,
+        );
+        let elapsed = started.elapsed();
+        trigger.join().unwrap();
+        worker.join().unwrap();
+        assert!(result.unwrap_err().to_string().contains("cancelled"));
+        assert!(
+            elapsed < Duration::from_secs(1),
+            "cancellation took {elapsed:?}"
+        );
+    }
 
     #[test]
     fn identities_answer_parsing_is_strict() {
