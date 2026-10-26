@@ -466,6 +466,32 @@ fn verify_hops(
 #[cfg(test)]
 mod tests {
     use super::proxycommand_is_ssh_relay as relay;
+    use super::same_program;
+    use std::fs;
+    use std::path::Path;
+
+    #[test]
+    fn same_program_compares_resolved_files() {
+        // Paths with a directory component only: PATH is never touched, as
+        // tests run in parallel.
+        let dir = tempfile::tempdir().unwrap();
+        let d = dir.path();
+        fs::create_dir(d.join("sub")).unwrap();
+        fs::write(d.join("ssh"), b"a").unwrap();
+        fs::write(d.join("other"), b"a").unwrap();
+        std::os::unix::fs::symlink(d.join("ssh"), d.join("link")).unwrap();
+        let ssh = d.join("ssh");
+        assert!(same_program(&ssh, &ssh));
+        assert!(same_program(&ssh, &d.join("sub/../ssh")));
+        assert!(same_program(&ssh, &d.join("link")));
+        // Identical contents are not the same program.
+        assert!(!same_program(&ssh, &d.join("other")));
+        // Unresolvable names never match, not even each other.
+        let missing = d.join("missing");
+        assert!(!same_program(&ssh, &missing));
+        assert!(!same_program(&missing, &missing));
+        assert!(!same_program(Path::new(""), Path::new("")));
+    }
 
     #[test]
     fn only_plain_ssh_w_relays_are_accepted() {

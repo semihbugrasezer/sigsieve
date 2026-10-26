@@ -687,3 +687,47 @@ pub fn home_dir() -> Option<PathBuf> {
     let dir = unsafe { CStr::from_ptr(pw.pw_dir) };
     Some(PathBuf::from(dir.to_string_lossy().into_owned()))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn remove_if_same_unlinks_only_the_recorded_inode() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("sock");
+
+        // Same inode: removed.
+        fs::write(&path, b"ours").unwrap();
+        let ours = Inode::of(&path).unwrap();
+        assert!(ours.remove_if_same(&path));
+        assert!(!path.exists());
+
+        // Already gone: nothing to do.
+        let gone = Inode {
+            dev: ours.dev,
+            ino: ours.ino,
+        };
+        assert!(!gone.remove_if_same(&path));
+
+        // Replaced by another file: kept. The original stays linked
+        // elsewhere so its inode number cannot be reused.
+        let original = dir.path().join("original");
+        fs::write(&original, b"ours").unwrap();
+        let recorded = Inode::of(&original).unwrap();
+        fs::write(&path, b"theirs").unwrap();
+        assert!(!recorded.remove_if_same(&path));
+        assert_eq!(fs::read(&path).unwrap(), b"theirs");
+        fs::remove_file(&path).unwrap();
+
+        // Replaced by a symlink to the recorded file: neither is removed.
+        std::os::unix::fs::symlink(&original, &path).unwrap();
+        let recorded = Inode::of(&original).unwrap();
+        assert!(!recorded.remove_if_same(&path));
+        assert!(fs::symlink_metadata(&path)
+            .unwrap()
+            .file_type()
+            .is_symlink());
+        assert_eq!(fs::read(&original).unwrap(), b"ours");
+    }
+}
