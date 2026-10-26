@@ -47,6 +47,15 @@ fn scan(file: &Path, home: &Path, depth: usize) -> Result<(), String> {
     };
     let text = std::str::from_utf8(&text)
         .map_err(|_| format!("{}: cannot verify non-UTF-8 configuration", file.display()))?;
+    if text
+        .bytes()
+        .any(|b| b.is_ascii_control() && !matches!(b, b'\n' | b'\t'))
+    {
+        return Err(format!(
+            "{}: unsupported control character; use LF line endings and tabs/spaces",
+            file.display()
+        ));
+    }
     for (n, line) in text.lines().enumerate() {
         let at = || format!("{}:{}", file.display(), n + 1);
         let line = line.trim_start_matches([' ', '\t']);
@@ -62,6 +71,9 @@ fn scan(file: &Path, home: &Path, depth: usize) -> Result<(), String> {
                 at()
             ));
         }
+        if raw_keyword.is_empty() || !raw_keyword.bytes().all(|b| b.is_ascii_alphabetic()) {
+            return Err(format!("{}: cannot verify a non-ASCII keyword", at()));
+        }
         let bare: String = line
             .chars()
             .filter(|c| !"\"'\\".contains(*c))
@@ -74,6 +86,9 @@ fn scan(file: &Path, home: &Path, depth: usize) -> Result<(), String> {
         let mentions_exec = bare
             .split(|c: char| c.is_whitespace() || "=,!".contains(c))
             .any(|w| w == "exec");
+        let dynamic_match = bare
+            .split(|c: char| c.is_whitespace() || "=,!".contains(c))
+            .any(|w| matches!(w, "canonical" | "final" | "localnetwork"));
         match keyword {
             Some("match") if mentions_exec => {
                 return Err(format!(
@@ -82,9 +97,18 @@ fn scan(file: &Path, home: &Path, depth: usize) -> Result<(), String> {
                     at()
                 ));
             }
+            Some("match") if dynamic_match => {
+                return Err(format!(
+                    "{}: state-dependent Match criteria cannot be verified before connecting",
+                    at()
+                ));
+            }
             Some("include") => {
-                if line.contains(['"', '\'', '\\']) {
-                    return Err(format!("{}: cannot verify a quoted Include", at()));
+                if line.contains(['"', '\'', '\\', '#']) {
+                    return Err(format!(
+                        "{}: cannot verify a quoted, escaped or commented Include",
+                        at()
+                    ));
                 }
                 let args = line[raw_keyword.len()..].trim_start_matches([' ', '\t']);
                 let args = args
@@ -133,6 +157,9 @@ fn resolve_include(arg: &str, home: &Path) -> Result<Vec<PathBuf>, String> {
     if !wild(name) {
         return Ok(vec![path]);
     }
+    if !name.is_ascii() {
+        return Err(format!("cannot verify a non-ASCII Include pattern {arg:?}"));
+    }
     let entries = match fs::read_dir(dir) {
         Ok(e) => e,
         Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
@@ -149,12 +176,14 @@ fn resolve_include(arg: &str, home: &Path) -> Result<Vec<PathBuf>, String> {
     Ok(found)
 }
 
-/// `*` and `?` matching of one path component.
+/// Over-approximate one component: `?` acts as `*` so locale-dependent
+/// multi-byte characters can never hide a file OpenSSH's glob would include.
 fn glob_match(pat: &[u8], s: &[u8]) -> bool {
     match (pat.first(), s.first()) {
         (None, None) => true,
-        (Some(b'*'), _) => glob_match(&pat[1..], s) || (!s.is_empty() && glob_match(pat, &s[1..])),
-        (Some(b'?'), Some(_)) => glob_match(&pat[1..], &s[1..]),
+        (Some(b'*' | b'?'), _) => {
+            glob_match(&pat[1..], s) || (!s.is_empty() && glob_match(pat, &s[1..]))
+        }
         (Some(p), Some(c)) if p == c => glob_match(&pat[1..], &s[1..]),
         _ => false,
     }
@@ -204,6 +233,30 @@ mod tests {
     }
 
     #[test]
+    fn control_characters_cannot_hide_include_arguments() {
+        for separator in ['\r', '\u{b}', '\u{c}'] {
+            for include in [
+                format!("Include{separator}{{d}}/inc\n"),
+                format!("Include {separator}{{d}}/inc\n"),
+                format!("Include = {separator}{{d}}/inc\n"),
+            ] {
+                assert!(check(&[("cfg", &include), ("inc", "Match exec true\n")]).is_err());
+            }
+        }
+    }
+
+    #[test]
+    fn state_dependent_matches_are_refused() {
+        for text in [
+            "Match final all\n",
+            "Match canonical\n",
+            "Match !localnetwork 192.0.2.0/24\n",
+        ] {
+            assert!(check(&[("cfg", text)]).is_err());
+        }
+    }
+
+    #[test]
     fn includes_are_followed() {
         assert!(check(&[("cfg", "Include {d}/inc\n"), ("inc", "Match exec x\n")]).is_err());
         assert!(check(&[
@@ -249,6 +302,9 @@ mod tests {
             "Include {d}/[ab]\n",
             "Include '{d}/x'\n",
             "Include {d}/a\\ b\n",
+            "Include {d}/inc # comment\n",
+            "Include {d}/a#b\n",
+            "Include {d}/é*.conf\n",
         ] {
             assert!(check(&[("cfg", inc)]).is_err(), "{inc:?}");
         }
@@ -272,6 +328,7 @@ mod tests {
     fn glob_matching() {
         assert!(glob_match(b"*.conf", b"a.conf"));
         assert!(glob_match(b"?.c*", b"x.conf"));
+        assert!(glob_match(b"?.conf", "é.conf".as_bytes()));
         assert!(!glob_match(b"*.conf", b"a.conf.bak"));
         assert!(glob_match(b"*", b""));
     }

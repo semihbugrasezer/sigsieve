@@ -33,11 +33,11 @@ fix (where one exists).
 | F-15 | MEDIUM (process) | Fuzz seed corpus git-ignored; CI fuzz test would fail | Fixed |
 | F-16 | LOW (diagnostic) | RSA binding host key reported as "bad signature" instead of "unsupported" | Fixed |
 | F-17 | LOW | Active (non-idle) connections can still saturate an instance | Accepted, documented |
-| F-18 | LOW | No timeout on upstream `connect(2)` (Linux full backlog) | Open, documented |
-| F-19 | LOW | Logging not rate-limited | Open, documented |
-| F-20 | INFO | Only the socket's immediate parent directory is checked | Open, documented |
+| F-18 | LOW | No timeout on upstream `connect(2)` (Linux full backlog) | Implemented: nonblocking connect + whole-exchange deadline; native Linux regression requires current CI |
+| F-19 | LOW | Logging not rate-limited | Fixed: bounded details and suppression summaries; CLI privacy/flood regression |
+| F-20 | INFO | Only the socket's immediate parent directory is checked | Hardened: trusted ancestor ownership/modes; extended ACL and same-uid limits remain |
 | F-21 | LOW | Destination-binding mode: self-test did not prove binding is active | Fixed |
-| F-22 | LOW | Replayed authorized bind+sign sequences trigger upstream signing / Touch ID | Accepted, documented |
+| F-22 | LOW | Replayed authorized bind+sign sequences trigger upstream signing / Touch ID | Mitigated: shared signing budget + bounded duplicate-attempt cache; protocol-wide prevention not claimed |
 | F-23 | INFO | Duplicate bind does not upgrade a forwarding entry to an auth entry | Accepted (matches OpenSSH, fails closed) |
 | F-24 | MEDIUM (process) | Deployment-specific strings committed on the unpushed feature branch | Fixed: this release branch (`clean/core-candidate`) carries clean history only |
 | F-25 | LOW (supply chain) | RUSTSEC-2026-0387: `crypto-bigint` 0.5.5 timing variability (via p256/p384/p521 0.13). Not exploitable here (verification of public data only), but the audit gate failed | Fixed: upgraded to p256/p384/p521 0.14, ed25519-dalek 3, sha2 0.11 (`crypto-bigint` 0.7.6) |
@@ -46,6 +46,9 @@ fix (where one exists).
 | F-28 | INFO | CI installed unpinned cargo-audit/cargo-deny; THIRD_PARTY.md listed crates of another component; no uninstall docs | Fixed |
 | F-29 | HIGH | `connect` verified only the destination's ProxyCommand; a wrapper on a ProxyJump (or relay) hop ran with the unfiltered login agent in its environment and could forward it (C-1) | Fixed: every hop verified |
 | F-30 | MEDIUM | `Match exec` was detected only from `ssh -G -v` output, i.e. after ssh had run the command during connect's verification | Fixed: user ssh_config (and includes) scanned before ssh runs |
+| F-35 | HIGH | CR between an Include keyword and path was treated differently from OpenSSH and hid included Match exec | Fixed in alpha.2: constrained configuration syntax and conservative glob scanning; unit and real-OpenSSH marker regressions |
+| F-36 | LOW (protocol) | Non-RSA identities accepted RSA SHA-2 signature flags at the proxy boundary | Fixed: key-type validation before upstream; red/green mock-agent regression; not an authorization bypass |
+| F-37 | LOW (policy) | connect accepted explicitly disabled host-key verification | Changed: refuse no/off/false on target and hops; red/green real OpenSSH regression |
 | F-34 | HIGH | Missing or failed initial forwarding bind could expose the ordinary-publickey first-hop exception to a remote client | Fixed: hostbound required for every destination-bound signature; initial failure terminal; regression tests |
 | F-33 | LOW (supply chain) | crypto-bigint 0.7.6 was yanked after the earlier local checks; public CI rejected it | Fixed: root and fuzz lockfiles updated to non-yanked 0.7.9 |
 | F-32 | HIGH | SSH pre-scan disagreed with OpenSSH on quoted keywords and Include argument delimiters, permitting Match exec during verification | Fixed: conservative keywords, exact space/tab path parsing, UTF-8 validation; regression tests |
@@ -174,7 +177,11 @@ None of these reviews is a professional independent audit.
   drop requests on evicted connections (`ce53ee7`).
 - **Tests:** `idle_connections_cannot_lock_out_new_clients`, `briefly_paused_connections_are_not_evicted`, `busy_connections_are_not_evicted_and_new_client_is_refused`.
 - **Residual (F-17):** 32 *active* connections still saturate an instance
-  (reproduced); `connect` uses one instance per host.
+  (reproduced); `connect` uses one instance per host. Token budgets now bound
+  connection/request churn and signing attempts. FIFO admission limits upstream
+  I/O to four exchanges, including a deadline for queued requests. These bounds
+  do not identify independent actors behind one forwarded socket or guarantee
+  availability to a legitimate client when that endpoint is compromised.
 
 ### F-07 / F-08 — lifecycle and output hygiene
 - Signals honoured before ssh starts; ssh stopped with SIGTERM then SIGKILL
@@ -212,20 +219,56 @@ contacted, so no Touch ID). Test:
 A malicious remote host with a valid authentication binding to an allowed
 destination can replay captured bind+sign sequences; each produces a useless
 signature over a stale session but may trigger the upstream agent's user
-presence prompt. SigSieve adds no rate limiting; per-use confirmation stays in
-the upstream agent. Documented in LIMITATIONS.
+presence prompt. A shared signing budget now limits attempts to a burst of 32
+and refill of 4/s; the upstream's own confirmation policy still applies.
+Destination-bound requests are hashed after full authorization (flags excluded)
+and attempts remembered across connections, including failed upstream attempts.
+Only 256 digests for up to 300 seconds are kept; there is no cached signature
+response. New sessions, eviction/expiry and a new instance can bypass duplicate
+suppression. This is bounded abuse reduction, not a replay-proof protocol.
+Tests: `production_signing_budget_bounds_a_burst_without_changing_authorization`,
+`destination_bound_duplicates_do_not_reach_upstream_on_another_connection`.
 
 ### F-24 — process — sensitive strings
 A real host alias and a real-looking username were committed in two
 unpushed commits on the feature branch (a doc line, a test vector and a seed
 derived from it). Fixed in the tree (`2a63771`) and the commit scan is now a
-hard gate. **Before any publication, the branch history must be rewritten or
-squashed** (requires maintainer approval); `main` is clean.
+hard gate. Public history was created from a clean Core snapshot; the old
+internal feature history was not pushed. Do not publish those internal branches.
+Existing public history and tags have not been rewritten.
 
-### F-18 / F-19 / F-20 — open, low
-Documented in [LIMITATIONS.md](LIMITATIONS.md); candidates for future work
-(non-blocking connect with deadline, log rate limiting, ancestor checks or
-directory-fd based binding).
+### F-18 / F-19 / F-20 — resource and filesystem hardening
+
+- **F-18:** `socket::connect_until` uses a nonblocking owned descriptor, poll
+  and SO_ERROR for EINPROGRESS, and refuses full-queue Linux AF_UNIX EAGAIN
+  immediately. `Upstream::request_until` uses the same absolute deadline for
+  queue wait, connect, writes and the entire response; partial progress does
+  not extend it. Cancellation is checked between nonblocking operations.
+  Red/green: `trickling_reply_cannot_restart_the_request_deadline`. Native
+  Linux backlog test: `full_unix_listen_queue_cannot_block_upstream_connect`;
+  Linux kernel mechanism separately reproduced in a bounded offline container.
+  Metadata calls/kernel/scheduler stalls remain outside hard real-time bounds.
+- **F-19:** global 16 detail lines/s plus suppression summary; no payloads,
+  session IDs or extension names. Regression: `hostile_requests_produce_bounded_logs_without_payloads`.
+- **F-20:** private leaf plus canonical ancestor ownership/mode checks,
+  permitting trusted sticky temporary directories. Red/green:
+  `writable_ancestor_is_refused_even_with_a_private_socket_parent`.
+  Portable Unix socket bind has no dirfd-relative API. No global fchdir or new
+  privileges were added; same-uid mutation and extended ACL grants remain
+  documented limits rather than claiming complete pathname race immunity.
+
+### F-36 / F-37 — protocol and host-verification policy
+
+RSA SHA-2 flags on ECDSA/Ed25519 formerly reached the mock upstream. They now
+fail locally, as required by RFC 9987; RSA flags and zero-flag non-RSA signing
+remain covered by positive tests. This was a protocol defect, not evidence of
+an authorization bypass. Legacy RSA flag-zero SHA-1 remains upstream-dependent
+for compatibility; no new cryptographic-strength guarantee is made for it.
+
+`connect` formerly accepted `StrictHostKeyChecking=no/off/false`; the real
+OpenSSH dry run demonstrated acceptance. Target and every proxy hop now refuse
+it. `ask`, `yes` and trust-on-first-use `accept-new` are preserved. This is an
+explicit alpha compatibility change; no SSH setting is silently rewritten.
 
 ### F-32 — HIGH — SSH configuration tokenization mismatch
 
@@ -271,3 +314,20 @@ single-binding hostbound requests and normal forwarded E2E flows remain tested.
 Tests: `failed_bind_disables_signing_and_single_hop_requires_hostbound`,
 `failed_initial_binding_cannot_be_replaced_by_an_authentication_bind`, and
 `attacker_holding_a_permitted_host_key_cannot_redirect_forwarded_auth`.
+
+### F-35 — HIGH — keyword delimiter mismatch in alpha.1 candidate
+
+OpenSSH accepts a CR between `Include` and its path (also after whitespace or
+`=`). The scanner used a narrower keyword delimiter and could skip the real
+include. A throwaway `ssh -G` fixture executed the included marker command;
+the new unit regression failed on the candidate.
+
+Alpha.2 rejects control characters except LF/tab before parsing and requires
+ASCII keywords. Include arguments with quotes, escapes or inline comments
+are refused. Wildcard basenames must be ASCII and `?` is over-approximated as
+`*` to avoid locale-dependent false negatives. Tests cover the CR variants
+and require refusal before any marker runs in dry-run and connect modes.
+Hostname canonicalization and state-dependent Match criteria are also refused
+on the destination and every hop, keeping effective configuration independent
+of DNS/network/final-pass changes. The alpha.1 build was cancelled and no
+GitHub Release was published for it.

@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/semihbugrasezer/sigsieve/actions/workflows/ci.yml/badge.svg)](https://github.com/semihbugrasezer/sigsieve/actions/workflows/ci.yml)
 
-**v0.1.0-alpha.1 — experimental preview.** MIT-licensed; no telemetry, accounts or services.
+**v0.1.0-alpha.2 — unreleased experimental candidate.** MIT-licensed; no telemetry, accounts or services.
 
 SigSieve is a small SSH agent proxy written in Rust. It sits between your
 real SSH agent (Secretive, OpenSSH `ssh-agent`, 1Password, …) and a
@@ -131,15 +131,17 @@ Requires a recent stable Rust toolchain (tested with 1.99.1, pinned by
 `rust-toolchain.toml`) and OpenSSH 8.4 or newer.
 
 ```bash
-# From source, into ~/.cargo/bin (pin a release tag)
-cargo install --locked --git https://github.com/semihbugrasezer/sigsieve --tag v0.1.0-alpha.1
-sigsieve --version
-
-# Or from a checkout
+# From a reviewed checkout, into ~/.cargo/bin
 git clone https://github.com/semihbugrasezer/sigsieve
 cd sigsieve
-cargo build --release --locked        # binary: target/release/sigsieve
+git rev-parse HEAD                   # verify CI for this exact revision
+cargo install --locked --path .
+sigsieve --version
 ```
+
+No verified binary release is published yet. The alpha.1 source tag is
+superseded; its release build was cancelled after another configuration flaw
+was found. Wait for verified release artifacts for installation without Rust.
 
 A Homebrew formula (building from source, so no Gatekeeper quarantine) is
 prepared but not published yet. Verified release archives, when available, are listed on the
@@ -269,6 +271,9 @@ sigsieve connect  HOST [--upstream PATH | --secretive] --allow-fingerprint FP...
   `SIGSIEVE_ALLOW` and `SIGSIEVE_DESTINATIONS` supply defaults.
   `SSH_AUTH_SOCK` is never an implicit upstream.
 - `--upstream-timeout SECS` (default 120) covers Touch ID waits.
+- Agent I/O and queue wait share that deadline; cancellation stops initial
+  queries and in-flight proxy I/O. Per-session budgets bound connections,
+  requests, signing attempts and logs; see [resource limits](docs/RESOURCE_LIMITS.md).
 - Exit codes: `0` success, `1` runtime failure or failed check, `2` invalid
   usage/configuration. `connect` returns ssh's exit code once ssh has started.
 - `connect` rules for ssh_config (ProxyCommand, ControlMaster, forwards,
@@ -293,11 +298,13 @@ sigsieve connect  HOST [--upstream PATH | --secretive] --allow-fingerprint FP...
 | `upstream agent unreachable` | The upstream agent is not running (start Secretive) or the path is wrong. |
 | `none of the allowlisted identities is present` | The fingerprint is not in the upstream agent; list keys with step 1 of the quick start. |
 | `refusing to connect: ProxyCommand … cannot be verified` | `connect` allows only plain `ssh -W` relays and `ProxyJump`. Use `ProxyJump`, or `sigsieve run` + plain ssh after checking the tool never forwards an agent. |
+| `unsupported control character` | Use LF line endings in your SSH configuration; move inline Include comments to separate lines. A dedicated `-F` file can avoid unsupported syntax. |
 | `… on proxy hop …` | A jump host's own ssh_config runs a program (ProxyCommand wrapper, LocalCommand, KnownHostsCommand). Fix that host's entry. |
 | `` `Match exec` would run a command `` | Any `Match … exec` in your ssh config (or an included file) is refused before ssh runs. Use `Match host`/`user`, or pass a dedicated `-F` file. |
 | `refusing to replace existing path …` | Another process uses the socket, or SigSieve cannot prove it is a stale one of its own. The message says which; see below. |
 | The jump host rejects your key | Hops do not receive `connect`'s `-o` options: put their `User`, `IdentityFile`, `IdentityAgent` in ssh_config. |
 | More Touch ID prompts than expected | SigSieve adds none; denied requests never reach Secretive. Check Secretive's per-key setting. |
+| `signing budget exhausted or duplicate …` | The session is busy or that destination-bound authentication was already attempted. Start a new SSH authentication session; repeated requests do not automatically retry the agent. |
 
 `sigsieve doctor` checks a setup without connecting; `connect --dry-run`
 prints the verified plan.
@@ -345,6 +352,10 @@ cargo test --release
 Report vulnerabilities privately: [SECURITY.md](SECURITY.md). Known findings
 and their status: [docs/FINDINGS.md](docs/FINDINGS.md). Release gates:
 [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md).
+
+Current engineering review: [SECURITY_AUDIT.md](SECURITY_AUDIT.md),
+[product scope](PRODUCT_STRATEGY.md), [delivery ledger](IMPLEMENTATION_PLAN.md)
+and [executed compatibility report](docs/COMPATIBILITY_REPORT.md).
 
 ## License
 

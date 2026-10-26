@@ -224,6 +224,12 @@ pub fn test_limits() -> Limits {
         frame_timeout: Duration::from_secs(2),
         write_timeout: Duration::from_secs(2),
         evict_after: Duration::from_millis(200),
+        // Throughput/property tests keep their exact authorization assertions;
+        // production budgets are exercised separately with Limits::default().
+        request_rate: 100_000,
+        connection_rate: 100_000,
+        signing_rate: 100_000,
+        ..Limits::default()
     }
 }
 
@@ -243,11 +249,11 @@ pub fn start_proxy_with(
     let path = rt.path().to_path_buf();
     let shutdown = Arc::new(AtomicBool::new(false));
     let flag = Arc::clone(&shutdown);
-    let proxy = Arc::new(Proxy {
+    let proxy = Arc::new(Proxy::new(
         policy,
-        upstream: Upstream::new(upstream, upstream_timeout),
+        Upstream::new(upstream, upstream_timeout),
         limits,
-    });
+    ));
     let thread = thread::spawn(move || {
         proxy::serve(&listener, proxy, &flag).unwrap();
     });

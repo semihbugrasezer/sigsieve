@@ -31,11 +31,16 @@ behind wording that suggests otherwise.
 6. **Remote side:** root and your remote user can use the forwarded socket
    while you are connected.
 7. **No per-request confirmation** in SigSieve; rely on the upstream agent.
-   A malicious remote host with a valid binding to an allowed destination can
-   replay authorized sequences to trigger repeated upstream prompts (no
-   rate limiting).
-8. **Logging** is not rate-limited; a hostile remote host can produce a lot of
-   stderr output. Extension names are truncated to 64 bytes.
+   Signing attempts have a shared budget (32 initially, refilling at 4/s).
+   Destination-bound attempts also suppress exact duplicates across clients:
+   at most 256 SHA256 digests for up to 300 seconds. This is abuse reduction,
+   not protocol-wide replay prevention: new sessions, cache eviction/expiry
+   and new instances can trigger further prompts. Failed attempts are remembered;
+   no signature response is cached and no failed request is automatically retried.
+8. **Logging** emits at most 16 detail lines per second per process, plus a
+   suppression summary on the next window or shutdown. Payloads, session IDs
+   and untrusted extension names are not logged. A blocked stderr destination
+   can still stall a logging thread; log rotation belongs to the caller.
 
 ## `sigsieve connect`
 
@@ -55,6 +60,9 @@ behind wording that suggests otherwise.
 - Requires OpenSSH with `ForwardAgent=<path>` support (8.4+); verified at
   runtime with `ssh -G`. ProxyJump and relays need OpenSSH 8.7+ (`ssh -G`
   must report `sessiontype`); older clients are refused.
+- Configuration scanning accepts LF line endings and ASCII keywords; Include
+  comments must be on separate lines. Quoted/escaped Include paths and
+  non-ASCII wildcard patterns are refused; `?` is scanned conservatively as `*`.
 - X11 forwarding is off in `connect` sessions (`-X`/`-Y` are refused): ssh
   runs `xauth` with the login agent in its environment.
 - `-F` paths must be simple (letters, digits, `/._-`) when a ProxyJump hop
@@ -63,6 +71,11 @@ behind wording that suggests otherwise.
   trusted like ssh itself. Passing `-q` or `-E` to ssh silences the `-v`
   backstop for `Match exec`; the pre-scan of your configuration is the
   primary check.
+- Hostname canonicalization and state-dependent Match criteria (`canonical`,
+  `final`, `localnetwork`) are refused, including on proxy hops.
+- Disabled host verification (`StrictHostKeyChecking=no/off/false`) is refused
+  on the destination and every hop. `accept-new` remains trust on first use;
+  it is not proof that an unknown host key was independently verified.
 - The `ssh -G` check and the real run are two invocations; a same-user change
   to ssh_config in between is out of scope. `ssh -G` does not evaluate DNS
   canonicalization or `Match exec` exactly; the overriding options cannot be
@@ -91,10 +104,21 @@ behind wording that suggests otherwise.
   refused. An allowed client that keeps all slots busy locks out other clients
   of that instance (`connect` uses one instance per host, limiting this to the
   attacker's own session).
-- Connecting to the upstream socket has no timeout (on Linux a hung agent
-  with a full backlog can block client threads, bounded by the connection
-  cap).
-- Only the socket's immediate parent directory is permission-checked.
+- Upstream connections and nonblocking frame I/O share one absolute deadline
+  (default 120 s), including queue wait. At most four upstream exchanges run
+  concurrently; waiting requests are FIFO and bounded by the client cap.
+  SIGINT/TERM/HUP interrupt initial agent queries; stopping a proxy cancels
+  its in-flight I/O. Filesystem metadata calls, kernel stalls and scheduling
+  delays cannot be given hard real-time deadlines by this implementation.
+- Defaults also bound accepted connections to a burst of 64/refill 64 per
+  second, requests to 1024/refill 1024 per second globally, and 128/refill 128
+  per second per connection. An exhausted request budget closes the client;
+  an exhausted signing budget returns FAILURE. Clients behind one forwarding
+  socket share these budgets; an attacker can still deny that session service.
+- Socket ancestors must belong to root/current uid and reject group/other
+  write access unless sticky; the leaf parent must belong to the current uid
+  and reject all group/other write access. POSIX mode checks do not assess
+  arbitrary extended ACL grants. Same-uid replacement remains out of scope.
 - `status` treats a reused PID as running (it also checks that the socket
   answers and exposes only recorded keys).
 - Socket paths must fit the OS limit (104 bytes on macOS).

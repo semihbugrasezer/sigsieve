@@ -485,7 +485,7 @@ ssh-add -d {p}/ci.pub >/dev/null 2>&1; echo "REMOVE-ONE rc=$?"
     assert_eq!(marker(&out, "HOP-ALLOWED"), "0", "{out}");
     assert!(out.contains("hop-ok"), "{out}");
     assert!(
-        err.contains("rejected extension request \"session-bind@openssh.com\""),
+        err.contains("rejected unsupported extension request"),
         "{err}"
     );
     // 6. A hop that needs the hidden key fails.
@@ -496,7 +496,8 @@ ssh-add -d {p}/ci.pub >/dev/null 2>&1; echo "REMOVE-ONE rc=$?"
     assert_eq!(env.upstream_listing().lines().count(), 3);
     // 8. Raw protocol attacker who knows the hidden public keys: every sign
     //    request for a hidden key is refused (5 = SSH_AGENT_FAILURE) and the
-    //    proxy logged the denial; the allowed key still signs (14).
+    //    proxy logs the denial or an aggregate when the log budget is full;
+    //    the allowed key still signs (14).
     if py.is_some() {
         for name in ["admin", "legacy"] {
             for flags in [0, 2, 4] {
@@ -511,7 +512,8 @@ ssh-add -d {p}/ci.pub >/dev/null 2>&1; echo "REMOVE-ONE rc=$?"
         assert!(out.contains("RAW-SIGN-ci-0 type=14"), "{out}");
         for fp in [&admin_fp, &legacy_fp] {
             assert!(
-                err.contains(&format!("denied sign request for non-allowlisted key {fp}")),
+                err.contains(&format!("denied sign request for non-allowlisted key {fp}"))
+                    || err.contains("suppressed"),
                 "{err}"
             );
         }

@@ -9,6 +9,9 @@ use std::time::{Duration, Instant};
 use common::*;
 use sigsieve::protocol::{self, put_string, put_u32};
 use sigsieve::proxy::Limits;
+use sigsieve::{
+    binding::Bindings, keys::Fingerprint, policy::Policy, proxy::Proxy, upstream::Upstream,
+};
 
 #[test]
 fn exposes_only_the_approved_identity_among_three() {
@@ -87,6 +90,186 @@ fn authorized_signing_is_delegated_for_each_key_type() {
         .map(|(k, f)| sign_request(k, b"session-id-and-userauth-request", *f))
         .collect();
     assert_eq!(up.sign_requests(), expected);
+}
+
+#[test]
+fn rsa_signature_flags_are_rejected_for_non_rsa_keys() {
+    let up = MockAgent::start(three_identities(), Mode::Normal);
+    let p = start_proxy(&up.path, &[ECDSA_CI_FP, ED_PERSONAL_FP]);
+    for key in [blob(ECDSA_CI), blob(ED_PERSONAL)] {
+        for flags in [2, 4, 6] {
+            assert_eq!(
+                request(&p.path, &sign_request(&key, b"synthetic auth", flags)),
+                FAILURE
+            );
+        }
+    }
+    assert!(up.sign_requests().is_empty());
+}
+
+#[test]
+fn production_signing_budget_bounds_a_burst_without_changing_authorization() {
+    let up = MockAgent::start(three_identities(), Mode::Normal);
+    let p = start_proxy_with(
+        &up.path,
+        &[ECDSA_CI_FP],
+        Limits::default(),
+        Duration::from_secs(5),
+    );
+    let mut s = connect(&p.path);
+    let start = Instant::now();
+    for i in 0u32..100 {
+        let response = roundtrip(&mut s, &sign_request(&blob(ECDSA_CI), &i.to_be_bytes(), 0));
+        assert!(response == FAILURE || is_sign_response(&response));
+    }
+    let accepted = up.sign_requests().len();
+    let ceiling = 32 + (start.elapsed().as_secs_f64() * 4.0).ceil() as usize;
+    assert!(
+        accepted <= ceiling,
+        "unbounded signing burst: {accepted} > {ceiling}"
+    );
+    assert!(accepted > 0, "budget must admit ordinary signing");
+    assert_eq!(
+        roundtrip(&mut s, &sign_request(&blob(ED_ADMIN), b"hidden", 0)),
+        FAILURE
+    );
+}
+
+#[test]
+fn production_defaults_allow_a_32_client_session_burst() {
+    let up = MockAgent::start(three_identities(), Mode::Normal);
+    let p = start_proxy_with(
+        &up.path,
+        &[ECDSA_CI_FP],
+        Limits::default(),
+        Duration::from_secs(5),
+    );
+    let clients: Vec<_> = (0..32).map(|_| connect(&p.path)).collect();
+    let workers: Vec<_> = (0u32..)
+        .zip(clients)
+        .map(|(id, mut s)| {
+            thread::spawn(move || {
+                assert_eq!(
+                    roundtrip(&mut s, &[protocol::SSH_AGENTC_REQUEST_IDENTITIES])[..5],
+                    [12, 0, 0, 0, 1]
+                );
+                assert!(is_sign_response(&roundtrip(
+                    &mut s,
+                    &sign_request(&blob(ECDSA_CI), &id.to_be_bytes(), 0)
+                )));
+                assert_eq!(
+                    roundtrip(&mut s, &sign_request(&blob(ED_ADMIN), b"hidden", 0)),
+                    FAILURE
+                );
+            })
+        })
+        .collect();
+    for worker in workers {
+        worker.join().unwrap();
+    }
+    assert_eq!(up.sign_requests().len(), 32);
+}
+
+#[test]
+fn shutdown_disconnects_clients_waiting_for_a_stalled_agent() {
+    let up = MockAgent::start(three_identities(), Mode::Hang);
+    let p = start_proxy_with(
+        &up.path,
+        &[ECDSA_CI_FP],
+        Limits::default(),
+        Duration::from_secs(10),
+    );
+    let mut s = connect(&p.path);
+    protocol::write_frame(&mut s, &sign_request(&blob(ECDSA_CI), b"synthetic", 0)).unwrap();
+    let start = Instant::now();
+    while up.received().is_empty() {
+        assert!(start.elapsed() < Duration::from_secs(3));
+        thread::sleep(Duration::from_millis(10));
+    }
+    let start = Instant::now();
+    drop(p);
+    assert!(read_to_eof(&mut s).is_empty());
+    assert!(start.elapsed() < Duration::from_secs(2));
+    assert_eq!(up.sign_requests().len(), 1);
+}
+
+#[test]
+fn one_connection_cannot_send_an_unbounded_request_burst() {
+    let up = MockAgent::start(three_identities(), Mode::Normal);
+    let p = start_proxy_with(
+        &up.path,
+        &[ECDSA_CI_FP],
+        Limits::default(),
+        Duration::from_secs(5),
+    );
+    let mut s = connect(&p.path);
+    let start = Instant::now();
+    let mut served = 0;
+    for _ in 0..300 {
+        if protocol::write_frame(&mut s, &[99]).is_err() {
+            break;
+        }
+        let t = Duration::from_secs(2);
+        match protocol::read_frame(&mut s, t, t) {
+            Ok(Some(response)) => {
+                assert_eq!(response, FAILURE);
+                served += 1;
+            }
+            Ok(None) | Err(_) => break,
+        }
+    }
+    let ceiling = 128 + (start.elapsed().as_secs_f64() * 128.0).ceil() as usize;
+    assert!(
+        served <= ceiling,
+        "unbounded request burst: {served} > {ceiling}"
+    );
+    assert!(up.received().is_empty());
+}
+
+#[test]
+fn destination_bound_duplicates_do_not_reach_upstream_on_another_connection() {
+    let mut seed = protocol::Reader::new(include_bytes!("../fuzz/seeds/session_bind/sequence"));
+    let first = seed.string().unwrap();
+    let last = seed.string().unwrap();
+    let key = seed.string().unwrap();
+    let auth = seed.string().unwrap();
+    seed.finish().unwrap();
+    let destination = Fingerprint::of_blob(protocol::Reader::new(last).string().unwrap());
+    let (policy, _) = Policy::from_fingerprints(&[Fingerprint::of_blob(key).to_string()]).unwrap();
+    let policy = policy
+        .with_destinations(&[destination.to_string()])
+        .unwrap();
+    for mode in [Mode::Normal, Mode::Failure] {
+        let up = MockAgent::start(three_identities(), mode);
+        let proxy = Proxy::new(
+            policy.clone(),
+            Upstream::new(&up.path, Duration::from_secs(2)),
+            Limits::default(),
+        );
+        for connection in 0..2 {
+            let mut bindings = Bindings::default();
+            for body in [first, last] {
+                let mut request = vec![protocol::SSH_AGENTC_EXTENSION];
+                put_string(&mut request, b"session-bind@openssh.com");
+                request.extend_from_slice(body);
+                assert_eq!(
+                    proxy.handle_request(&request, &mut bindings),
+                    Some(vec![protocol::SSH_AGENT_SUCCESS])
+                );
+            }
+            let request = sign_request(key, auth, 0);
+            let response = proxy.handle_request(&request, &mut bindings).unwrap();
+            assert_eq!(
+                is_sign_response(&response),
+                connection == 0 && matches!(mode, Mode::Normal)
+            );
+        }
+        assert_eq!(
+            up.sign_requests().len(),
+            1,
+            "duplicate attempt reached upstream ({mode:?})"
+        );
+    }
 }
 
 #[test]
@@ -666,6 +849,7 @@ mod hostile_client {
                         r.string().unwrap();
                         let flags = r.u32().unwrap();
                         prop_assert_eq!(flags & !protocol::ALLOWED_SIGN_FLAGS, 0);
+                        prop_assert!(flags == 0, "the only allowed property-test identity is ECDSA");
                         prop_assert!(r.finish().is_ok());
                     }
                     t => prop_assert!(false, "upstream received type {}", t),

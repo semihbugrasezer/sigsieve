@@ -499,6 +499,33 @@ fn connect_verifies_every_proxy_hop() {
         format!("Host target\n  KnownHostsCommand {w}\n"),
         "KnownHostsCommand is set",
     );
+    refused(
+        "canonicalize",
+        "Host target\n  CanonicalizeHostname yes\n".into(),
+        "CanonicalizeHostname",
+    );
+    refused(
+        "hop-canonicalize",
+        "Host target\n  ProxyJump bastion\nHost bastion\n  CanonicalizeHostname yes\n".into(),
+        "CanonicalizeHostname",
+    );
+    for setting in ["no", "off", "false"] {
+        refused(
+            &format!("unsafe-hostkey-{setting}"),
+            format!("Host target\n  StrictHostKeyChecking {setting}\n"),
+            "StrictHostKeyChecking",
+        );
+    }
+    refused(
+        "unsafe-hop-hostkey",
+        "Host target\n  ProxyJump bastion\nHost bastion\n  StrictHostKeyChecking no\n".into(),
+        "StrictHostKeyChecking",
+    );
+    refused(
+        "match-final",
+        "Match final all\n  User test\n".into(),
+        "state-dependent Match",
+    );
     // Match exec runs a program while ssh evaluates its configuration.
     refused(
         "match-exec",
@@ -526,6 +553,17 @@ fn connect_verifies_every_proxy_hop() {
         format!("\"Include\"{}\n", d.join("inc-exec").display()),
         "quoted or escaped keyword",
     );
+    for (name, directive) in [
+        ("cr-include-keyword", "Include\r"),
+        ("cr-include-argument", "Include \r"),
+        ("cr-include-equals", "Include = \r"),
+    ] {
+        refused(
+            name,
+            format!("{directive}{}\n", d.join("inc-exec").display()),
+            "unsupported control character",
+        );
+    }
     write_cfg(
         &d.join("inc=payload"),
         &format!("Match exec \"{}\"\n", wrapper.display()),

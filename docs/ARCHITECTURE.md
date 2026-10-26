@@ -13,6 +13,7 @@ keeps control flow and state easy to audit.
 | `policy.rs` | immutable allowlist + optional destination set | the authorization inputs |
 | `binding.rs` | verified `session-bind` state per connection; destination authorization of sign requests; host-key signature verification (Ed25519/ECDSA via RustCrypto) | parses + verifies untrusted bytes |
 | `proxy.rs` | `handle_request` (the only dispatcher), per-connection loop with binding state, accept loop with poll(2), connection registry with idle eviction | enforces policy |
+| `proxy/resources.rs` (private) | shared token budgets, FIFO upstream concurrency permits, bounded digest cache and log accounting | bounds abuse; never authorizes a key or caches a signature |
 | `upstream.rs` | fresh, uid-checked connection to the real agent per request; strict reply parsing | talks to the trusted agent |
 | `socket.rs` | private dir creation, bind, permission checks, peer uid, inode-checked cleanup, `poll`, signals to child; **all `unsafe`** (documented OS calls) | OS |
 | `ssh.rs` | effective SSH options and recursive proxy-hop verification | trusted local SSH client, user configuration |
@@ -36,9 +37,10 @@ sequenceDiagram
         P->>P: verify host-key signature over session id; apply OpenSSH binding rules
         P-->>C: SUCCESS / FAILURE (never forwarded)
     else SIGN_REQUEST
-        P->>P: strict parse; key allowlisted? flags ⊆ {2,4}?
+        P->>P: strict parse; key allowlisted? flags valid for this key type?
         P->>P: [binding on] userauth for latest auth binding to allowed host key?
         alt authorized
+            P->>P: signing budget + duplicate check; FIFO concurrency permit
             P->>U: identical bytes (new connection, no retry)
             U-->>P: SIGN_RESPONSE / FAILURE
             P-->>C: validated response or FAILURE
@@ -86,3 +88,19 @@ unsupported for binding).
 
 Runtime dependencies are listed in [Cargo.toml](../Cargo.toml). CI checks
 both dependency advisories and the license/source policy in `deny.toml`.
+
+## Resource ownership
+
+`Proxy::new` fixes the policy, upstream and limits together; callers cannot
+mutate them after creating the associated budgets. Runtime and request fuzzing
+use the same guarded `Proxy::handle_request` entry point. Only validated,
+authorized operations enter the upstream queue. Its wait and the whole exchange
+share one deadline; permits release on every return/panic through RAII.
+
+The socket helper creates nonblocking, close-on-exec upstream descriptors
+(atomic flags on Linux, immediate CLOEXEC setup on macOS as in std). Apple
+SO_NOSIGPIPE is explicitly preserved. Nonblocking connect never retries a Linux
+full-backlog EAGAIN; genuine in-progress connections use poll and SO_ERROR.
+See [RESOURCE_REFERENCES.md](RESOURCE_REFERENCES.md) for the OS evidence and
+remaining filesystem/scheduler limits. No async runtime, background daemon,
+global cwd changes or new runtime dependency was introduced.
