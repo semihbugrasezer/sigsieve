@@ -15,6 +15,7 @@
 
 use std::fs;
 use std::net::{TcpListener, TcpStream};
+use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Output, Stdio};
 use std::thread;
@@ -189,10 +190,19 @@ fn setup_with_dest_key(dest_key: &[&str]) -> Option<Env> {
     else {
         return skip_or_fail("sshd not found");
     };
-    let dir = tempfile::Builder::new().prefix("ss").tempdir().unwrap();
+    let dir = tempfile::Builder::new()
+        .prefix("ss")
+        .permissions(fs::Permissions::from_mode(0o700))
+        .tempdir()
+        .unwrap();
     let d = dir.path().to_path_buf();
+    // Owner-only whatever the umask: SigSieve refuses a group-writable
+    // runtime directory (rt) as an unsafe socket ancestor.
     for sub in ["k", "p", "rt"] {
-        fs::create_dir(d.join(sub)).unwrap();
+        fs::DirBuilder::new()
+            .mode(0o700)
+            .create(d.join(sub))
+            .unwrap();
     }
 
     // Upstream agent with three disposable keys.
