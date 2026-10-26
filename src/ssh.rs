@@ -457,7 +457,12 @@ fn verify_hops(
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+    use std::os::unix::fs::symlink;
+    use tempfile::Builder;
+
     use super::proxycommand_is_ssh_relay as relay;
+    use super::same_program;
 
     #[test]
     fn only_plain_ssh_w_relays_are_accepted() {
@@ -479,5 +484,32 @@ mod tests {
         ] {
             assert!(!relay(bad), "{bad:?}");
         }
+    }
+
+    #[test]
+    fn same_program_compares_resolved_paths() {
+        let dir = Builder::new().tempdir_in(".").unwrap();
+        let dir_path = dir.path();
+
+        let file1 = dir_path.join("file1");
+        let file2 = dir_path.join("file2");
+        let sym1 = dir_path.join("sym1");
+
+        // Create two distinct files
+        fs::write(&file1, "1").unwrap();
+        fs::write(&file2, "2").unwrap();
+
+        // Create a symlink to file1
+        symlink("file1", &sym1).unwrap();
+
+        // Absolute and relative path to the same file
+        assert!(same_program(&file1, &file1.canonicalize().unwrap()));
+        // Symlink and the file it points to
+        assert!(same_program(&sym1, &file1));
+        // Two distinct files
+        assert!(!same_program(&file1, &file2));
+        // Missing paths
+        let missing = dir_path.join("missing");
+        assert!(!same_program(&file1, &missing));
     }
 }
