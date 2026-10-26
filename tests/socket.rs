@@ -99,6 +99,29 @@ fn group_or_world_writable_parent_is_refused() {
 }
 
 #[test]
+fn writable_ancestor_is_refused_even_with_a_private_socket_parent() {
+    let dir = private_tempdir();
+    let ancestor = dir.path().join("shared");
+    let parent = ancestor.join("private");
+    fs::create_dir(&ancestor).unwrap();
+    fs::create_dir(&parent).unwrap();
+    fs::set_permissions(&parent, Permissions::from_mode(0o700)).unwrap();
+    for mode in [0o770, 0o777] {
+        fs::set_permissions(&ancestor, Permissions::from_mode(mode)).unwrap();
+        let result = RuntimeSocket::bind(Some(&parent.join("agent.sock")));
+        assert!(
+            result.is_err(),
+            "unsafe ancestor mode {mode:o} was accepted"
+        );
+        assert!(check_private_dir(&parent).is_err());
+        assert_eq!(fs::read_dir(&parent).unwrap().count(), 0);
+    }
+    // Sticky directories prevent another uid from renaming our child entry.
+    fs::set_permissions(&ancestor, Permissions::from_mode(0o1777)).unwrap();
+    assert!(RuntimeSocket::bind(Some(&parent.join("agent.sock"))).is_ok());
+}
+
+#[test]
 fn replaced_socket_is_not_deleted_on_cleanup() {
     let dir = private_tempdir();
     let path = dir.path().join("agent.sock");

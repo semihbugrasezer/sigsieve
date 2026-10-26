@@ -83,6 +83,9 @@ pub enum Mode {
     Oversized,
     /// Answers sign requests with the wrong message type.
     WrongType,
+    /// Like `Normal`, but ignores the flags and signs with legacy `ssh-rsa`
+    /// (SHA-1), as an outdated or hostile upstream might.
+    LegacySignature,
 }
 
 pub struct MockAgent {
@@ -175,15 +178,24 @@ fn mock_conn(mut s: UnixStream, ids: &[(Vec<u8>, String)], mode: Mode, rx: &Mute
                 protocol::SSH_AGENTC_SIGN_REQUEST => identities_answer(ids),
                 _ => identities_answer(ids),
             },
-            Mode::Normal => match req[0] {
+            Mode::Normal | Mode::LegacySignature => match req[0] {
                 protocol::SSH_AGENTC_REQUEST_IDENTITIES => identities_answer(ids),
                 protocol::SSH_AGENTC_SIGN_REQUEST => {
-                    let key = sigsieve::protocol::Reader::new(&req[1..])
-                        .string()
-                        .unwrap()
-                        .to_vec();
+                    let mut r = sigsieve::protocol::Reader::new(&req[1..]);
+                    let key = r.string().unwrap().to_vec();
+                    r.string().unwrap();
+                    let flags = r.u32().unwrap();
+                    // Name the algorithm as a real agent would: the flag picks
+                    // the RSA hash, other key types sign with their own name.
+                    let key_alg = sigsieve::protocol::Reader::new(&key).string().unwrap();
+                    let alg: &[u8] = match (mode, key_alg, flags) {
+                        (Mode::LegacySignature, _, _) => b"ssh-rsa",
+                        (_, b"ssh-rsa", 0x02) => b"rsa-sha2-256",
+                        (_, b"ssh-rsa", 0x04) => b"rsa-sha2-512",
+                        (_, a, _) => a,
+                    };
                     let mut sig = Vec::new();
-                    put_string(&mut sig, b"mock-sig");
+                    put_string(&mut sig, alg);
                     put_string(&mut sig, Fingerprint::of_blob(&key).to_string().as_bytes());
                     let mut out = vec![protocol::SSH_AGENT_SIGN_RESPONSE];
                     put_string(&mut out, &sig);
@@ -224,6 +236,12 @@ pub fn test_limits() -> Limits {
         frame_timeout: Duration::from_secs(2),
         write_timeout: Duration::from_secs(2),
         evict_after: Duration::from_millis(200),
+        // Throughput/property tests keep their exact authorization assertions;
+        // production budgets are exercised separately with Limits::default().
+        request_rate: 100_000,
+        connection_rate: 100_000,
+        signing_rate: 100_000,
+        ..Limits::default()
     }
 }
 
@@ -243,11 +261,11 @@ pub fn start_proxy_with(
     let path = rt.path().to_path_buf();
     let shutdown = Arc::new(AtomicBool::new(false));
     let flag = Arc::clone(&shutdown);
-    let proxy = Arc::new(Proxy {
+    let proxy = Arc::new(Proxy::new(
         policy,
-        upstream: Upstream::new(upstream, upstream_timeout),
+        Upstream::new(upstream, upstream_timeout),
         limits,
-    });
+    ));
     let thread = thread::spawn(move || {
         proxy::serve(&listener, proxy, &flag).unwrap();
     });

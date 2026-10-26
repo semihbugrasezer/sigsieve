@@ -152,8 +152,9 @@ one instance per host (`connect` does).
 
 ### Host key substitution / trust failures
 
-SigSieve does not change host key verification; `connect --dry-run` reports
-`StrictHostKeyChecking` and warns for `no`/`accept-new`. In mode B a forged
+SigSieve does not rewrite host key verification settings; `connect` refuses
+`StrictHostKeyChecking=no` on the target and every hop, and `--dry-run`
+reports the effective value. In mode B a forged
 destination cannot produce a valid binding for an allowed host key.
 
 ### Unexpected termination, partial failures, cleanup races

@@ -19,7 +19,7 @@ after 300 s.
 |---|---|---|---|
 | 11 | `REQUEST_IDENTITIES` | must be exactly 1 byte; upstream reply strictly parsed and rebuilt with allowlisted, well-formed, de-duplicated keys | yes (listing only) |
 | 12 | `IDENTITIES_ANSWER` | only accepted *from* upstream, as above | — |
-| 13 | `SIGN_REQUEST` | `string key, string data, uint32 flags`, no trailing bytes; key must be supported and allowlisted; flags ⊆ {`0x02` rsa-sha2-256, `0x04` rsa-sha2-512}; mode B additionally requires destination authorization (§2); reply must be `SIGN_RESPONSE` with one non-empty signature, else `FAILURE` | only if authorized; byte-exact |
+| 13 | `SIGN_REQUEST` | `string key, string data, uint32 flags`, no trailing bytes; key must be supported and allowlisted; RSA requires exactly one of `0x02` rsa-sha2-256 / `0x04` rsa-sha2-512 (zero = legacy SHA-1 is refused), all other key types require zero flags; mode B additionally requires destination authorization (§2); reply must be `SIGN_RESPONSE` with one signature whose algorithm is exactly the requested one, else `FAILURE` | only if authorized and admitted by resource budgets; byte-exact |
 | 14 | `SIGN_RESPONSE` | validated as above | — |
 | 5 / 6 / 28 | `FAILURE` / `SUCCESS` / `EXTENSION_FAILURE` | generated locally | — |
 | 17, 25 | add identity (constrained) | `FAILURE` | never |
@@ -37,7 +37,7 @@ after 300 s.
 |---|---|---|
 | `ssh-ed25519` | 32-byte key | tested, incl. real `ssh-agent` |
 | `ecdsa-sha2-nistp256/384/521` | curve name matches, uncompressed point (65/97/133 bytes) | P-256 tested incl. real agents (Secretive keys are P-256); 384/521 unit-tested |
-| `ssh-rsa` | canonical mpints; `e` odd, > 1; `n` odd, 1024–16384 bits; SHA-1 (flag 0) passes through if the upstream allows it | tested incl. `rsa-sha2-512` via real `ssh-keygen -Y sign` |
+| `ssh-rsa` | canonical mpints; `e` odd, > 1; `n` odd, 1024–16384 bits; signs only with `rsa-sha2-256`/`-512`, SHA-1 refused | tested with real `ssh-keygen -Y sign` and `ssh-keygen -s -U -t` (SHA-2 works, `ssh-rsa` refused) |
 | `sk-ssh-ed25519@openssh.com`, `sk-ecdsa-sha2-nistp256@openssh.com` | structural | **untested with hardware** |
 | `*-cert-v01@openssh.com` | unsupported | hidden, cannot sign |
 
@@ -78,10 +78,10 @@ all checks pass. `connect --dry-run` performs everything except starting ssh.
 | `PermitLocalCommand yes` | **refused** | ssh exports the login agent to `LocalCommand` | disable it for that host |
 | `IdentityAgent` set in ssh_config | kept (login uses it) | preserve your login configuration | — |
 | `IdentityAgent` unset, `SSH_AUTH_SOCK`, `$SSH_AUTH_SOCK`, `${SSH_AUTH_SOCK}` | login agent passed as `IdentityAgent=${SIGSIEVE_LOGIN_AGENT}`; ssh's `SSH_AUTH_SOCK` set to the filtered socket | ProxyCommand children and `${SSH_AUTH_SOCK}` expansions then see the filtered agent | — |
-| `StrictHostKeyChecking` | unchanged; reported by `--dry-run` with warnings for `no`/`accept-new` | host key verification is SSH's job | pass `-- -o StrictHostKeyChecking=yes` |
+| `StrictHostKeyChecking` | `no/off/false` refused on destination and hops; `yes`, `ask`, `accept-new` preserved and reported | refuse explicitly disabled verification; `accept-new` still trusts the first key | use a verified known_hosts entry with `yes` |
 | option value mentions the upstream/login agent path (any remaining option except `IdentityAgent`) | refused | heuristic backstop | — |
 | X11 forwarding (`-X`, `-Y`) | **refused**; `ForwardX11=no` forced and verified | prevents ssh from running xauth with the login agent | plain ssh outside `connect` |
-| Canonicalization-dependent `Match` | not fully evaluated by `ssh -G` | the overriding options above cannot be changed by it; forwards are cleared regardless | — |
+| `CanonicalizeHostname`, `Match canonical`, `Match final`, `Match localnetwork` | **refused** (destination and proxy hops) | configuration must remain the same between `ssh -G` and the connection | static `Host` / `Match host` rules, or a dedicated `-F` file |
 
 ### Tools
 
@@ -90,3 +90,13 @@ all checks pass. `connect --dry-run` performs everything except starting ssh.
 | `ssh` via `sigsieve connect` | tested end to end (real `ssh`/`sshd`) |
 | `scp`, `sftp`, `git` **on the remote host**, using the forwarded agent | standard agent protocol; second-hop `ssh` tested; `scp`/`sftp`/`git` themselves not separately tested |
 | local `scp`/`sftp`/`git` through a filtered agent | use `sigsieve run` and pass `-o ForwardAgent=<socket> -o ControlPath=none` (e.g. via `GIT_SSH_COMMAND`); not automated by `connect` |
+
+### Conservative configuration syntax
+
+The pre-scan is deliberately narrower than OpenSSH. Use UTF-8 with LF line
+endings and ASCII option names. CRLF, embedded control characters (except
+newlines/tabs), quoted/escaped keywords, and quoted, escaped or inline-commented
+Include lines are refused. Put Include comments on separate lines. Literal
+Unicode paths are supported; wildcard basenames must be ASCII. `?` is scanned
+as `*`, so the scan may inspect additional files and refuse a configuration
+OpenSSH would accept. Use a dedicated `-F` file when these restrictions matter.
