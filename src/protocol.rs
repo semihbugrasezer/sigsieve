@@ -33,8 +33,11 @@ pub const SSH_AGENTC_ADD_SMARTCARD_KEY_CONSTRAINED: u8 = 26;
 pub const SSH_AGENTC_EXTENSION: u8 = 27;
 pub const SSH_AGENT_EXTENSION_FAILURE: u8 = 28;
 
-/// Signature flags we pass through: `SSH_AGENT_RSA_SHA2_256` and `_512`.
-pub const ALLOWED_SIGN_FLAGS: u32 = 0x02 | 0x04;
+pub const SSH_AGENT_RSA_SHA2_256: u32 = 0x02;
+pub const SSH_AGENT_RSA_SHA2_512: u32 = 0x04;
+/// Signature flags we pass through. An RSA request must carry exactly one;
+/// other key types must carry none (see `KeyType::signature_alg`).
+pub const ALLOWED_SIGN_FLAGS: u32 = SSH_AGENT_RSA_SHA2_256 | SSH_AGENT_RSA_SHA2_512;
 
 #[derive(Debug)]
 pub enum WireError {

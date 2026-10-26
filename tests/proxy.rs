@@ -108,6 +108,44 @@ fn rsa_signature_flags_are_rejected_for_non_rsa_keys() {
 }
 
 #[test]
+fn rsa_requires_exactly_one_sha2_flag() {
+    let mut ids = three_identities();
+    ids.push((blob(RSA_LEGACY), RSA_LEGACY_COMMENT.into()));
+    let up = MockAgent::start(ids, Mode::Normal);
+    let p = start_proxy(&up.path, &[RSA_LEGACY_FP]);
+    // 0 asks for legacy ssh-rsa (SHA-1); 6 names two hashes at once.
+    for flags in [0, 0x01, 0x06, 0x08] {
+        assert_eq!(
+            request(&p.path, &sign_request(&blob(RSA_LEGACY), b"auth", flags)),
+            FAILURE,
+            "flags {flags:#x}"
+        );
+    }
+    assert!(up.sign_requests().is_empty());
+}
+
+#[test]
+fn signatures_with_an_unrequested_algorithm_are_refused() {
+    // An upstream that ignores the flags and answers with ssh-rsa (SHA-1),
+    // or with an algorithm foreign to the key, gets nothing through.
+    let mut ids = three_identities();
+    ids.push((blob(RSA_LEGACY), RSA_LEGACY_COMMENT.into()));
+    let up = MockAgent::start(ids, Mode::LegacySignature);
+    let p = start_proxy(&up.path, &[ECDSA_CI_FP, RSA_LEGACY_FP]);
+    for (key, flags) in [
+        (blob(RSA_LEGACY), 0x02),
+        (blob(RSA_LEGACY), 0x04),
+        (blob(ECDSA_CI), 0),
+    ] {
+        assert_eq!(
+            request(&p.path, &sign_request(&key, b"auth", flags)),
+            FAILURE
+        );
+    }
+    assert_eq!(up.sign_requests().len(), 3);
+}
+
+#[test]
 fn production_signing_budget_bounds_a_burst_without_changing_authorization() {
     let up = MockAgent::start(three_identities(), Mode::Normal);
     let p = start_proxy_with(

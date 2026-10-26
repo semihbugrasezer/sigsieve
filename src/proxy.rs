@@ -25,7 +25,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use crate::binding::Bindings;
-use crate::keys::{parse_public_key, Fingerprint, KeyType};
+use crate::keys::{parse_public_key, Fingerprint};
 use crate::policy::Policy;
 use crate::protocol::{self, Reader, WireError};
 use crate::socket;
@@ -223,14 +223,15 @@ fn sign(req: &[u8], proxy: &Proxy, bindings: &Bindings) -> Vec<u8> {
         ));
         return protocol::failure();
     }
-    if flags & !protocol::ALLOWED_SIGN_FLAGS != 0
-        || (flags != 0 && !matches!(parse_public_key(blob), Ok(KeyType::Rsa)))
-    {
+    let Some(alg) = parse_public_key(blob)
+        .ok()
+        .and_then(|kind| kind.signature_alg(flags))
+    else {
         log(format_args!(
-            "rejected sign request with unsupported flags {flags:#x}"
+            "rejected sign request with flags {flags:#x}: invalid for the key type, or legacy RSA/SHA-1"
         ));
         return protocol::failure();
-    }
+    };
     if let Some(destinations) = policy.destinations() {
         if let Err(reason) = bindings.authorize(blob, data, destinations) {
             log(format_args!(
@@ -252,10 +253,12 @@ fn sign(req: &[u8], proxy: &Proxy, bindings: &Bindings) -> Vec<u8> {
     // The request was fully parsed with no trailing bytes, so forwarding it
     // verbatim forwards exactly the fields that were authorized.
     match proxy.upstream_request(req) {
-        Ok(resp) if is_valid_sign_response(&resp) => resp,
+        Ok(resp) if is_valid_sign_response(&resp, alg) => resp,
         Ok(resp) => {
             if resp.first() != Some(&protocol::SSH_AGENT_FAILURE) {
-                log(format_args!("upstream returned an invalid sign response"));
+                log(format_args!(
+                    "upstream returned an invalid sign response or an unrequested signature algorithm"
+                ));
             }
             protocol::failure()
         }
@@ -266,10 +269,14 @@ fn sign(req: &[u8], proxy: &Proxy, bindings: &Bindings) -> Vec<u8> {
     }
 }
 
-fn is_valid_sign_response(resp: &[u8]) -> bool {
+/// A single signature whose algorithm is exactly the one requested, so an
+/// upstream that ignores the flags cannot return a legacy `ssh-rsa` (SHA-1)
+/// signature through SigSieve.
+fn is_valid_sign_response(resp: &[u8], alg: &[u8]) -> bool {
     let mut r = Reader::new(resp);
     matches!(r.u8(), Ok(protocol::SSH_AGENT_SIGN_RESPONSE))
-        && r.string().is_ok_and(|sig| !sig.is_empty())
+        && r.string()
+            .is_ok_and(|sig| Reader::new(sig).string().is_ok_and(|a| a == alg))
         && r.finish().is_ok()
 }
 
@@ -500,11 +507,27 @@ mod tests {
 
     #[test]
     fn sign_response_validation() {
-        assert!(is_valid_sign_response(&[14, 0, 0, 0, 1, 9]));
-        assert!(!is_valid_sign_response(&[14, 0, 0, 0, 0]));
-        assert!(!is_valid_sign_response(&[14, 0, 0, 0, 1, 9, 9]));
-        assert!(!is_valid_sign_response(&[12, 0, 0, 0, 0]));
-        assert!(!is_valid_sign_response(&[]));
+        let response = |alg: &[u8], trailing: &[u8]| {
+            let mut sig = Vec::new();
+            protocol::put_string(&mut sig, alg);
+            protocol::put_string(&mut sig, b"signature bytes");
+            let mut out = vec![protocol::SSH_AGENT_SIGN_RESPONSE];
+            protocol::put_string(&mut out, &sig);
+            out.extend_from_slice(trailing);
+            out
+        };
+        let alg = b"rsa-sha2-512";
+        assert!(is_valid_sign_response(&response(alg, b""), alg));
+        assert!(!is_valid_sign_response(&response(alg, &[9]), alg));
+        assert!(!is_valid_sign_response(&response(b"ssh-rsa", b""), alg));
+        assert!(!is_valid_sign_response(
+            &response(b"rsa-sha2-256", b""),
+            alg
+        ));
+        assert!(!is_valid_sign_response(&[14, 0, 0, 0, 1, 9], alg));
+        assert!(!is_valid_sign_response(&[14, 0, 0, 0, 0], alg));
+        assert!(!is_valid_sign_response(&[12, 0, 0, 0, 0], alg));
+        assert!(!is_valid_sign_response(&[], alg));
     }
 
     #[test]

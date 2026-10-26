@@ -49,6 +49,7 @@ fix (where one exists).
 | F-35 | HIGH | CR between an Include keyword and path was treated differently from OpenSSH and hid included Match exec | Fixed in alpha.2: constrained configuration syntax and conservative glob scanning; unit and real-OpenSSH marker regressions |
 | F-36 | LOW (protocol) | Non-RSA identities accepted RSA SHA-2 signature flags at the proxy boundary | Fixed: key-type validation before upstream; red/green mock-agent regression; not an authorization bypass |
 | F-37 | LOW (policy) | connect accepted explicitly disabled host-key verification | Changed: refuse no/off/false on target and hops; red/green real OpenSSH regression |
+| F-38 | LOW (policy) | Legacy RSA/SHA-1 (`ssh-rsa`, flag 0) signing passed through when the upstream allowed it | Fixed: exactly one SHA-2 flag required for RSA, returned algorithm checked; real OpenSSH regression |
 | F-34 | HIGH | Missing or failed initial forwarding bind could expose the ordinary-publickey first-hop exception to a remote client | Fixed: hostbound required for every destination-bound signature; initial failure terminal; regression tests |
 | F-33 | LOW (supply chain) | crypto-bigint 0.7.6 was yanked after the earlier local checks; public CI rejected it | Fixed: root and fuzz lockfiles updated to non-yanked 0.7.9 |
 | F-32 | HIGH | SSH pre-scan disagreed with OpenSSH on quoted keywords and Include argument delimiters, permitting Match exec during verification | Fixed: conservative keywords, exact space/tab path parsing, UTF-8 validation; regression tests |
@@ -262,13 +263,29 @@ Existing public history and tags have not been rewritten.
 RSA SHA-2 flags on ECDSA/Ed25519 formerly reached the mock upstream. They now
 fail locally, as required by RFC 9987; RSA flags and zero-flag non-RSA signing
 remain covered by positive tests. This was a protocol defect, not evidence of
-an authorization bypass. Legacy RSA flag-zero SHA-1 remains upstream-dependent
-for compatibility; no new cryptographic-strength guarantee is made for it.
+an authorization bypass. Legacy RSA flag-zero SHA-1 was left upstream-dependent
+here; F-38 closes it.
 
 `connect` formerly accepted `StrictHostKeyChecking=no/off/false`; the real
 OpenSSH dry run demonstrated acceptance. Target and every proxy hop now refuse
 it. `ask`, `yes` and trust-on-first-use `accept-new` are preserved. This is an
 explicit alpha compatibility change; no SSH setting is silently rewritten.
+
+### F-38 — LOW — legacy RSA/SHA-1 signing
+
+An RSA sign request with flags 0 asks for an `ssh-rsa` (SHA-1) signature, and
+real `ssh-agent` produces one; `ssh-keygen -s -U -t ssh-rsa` demonstrated it
+through SigSieve. The proxy now derives the one acceptable signature algorithm
+from key type and flags (`KeyType::signature_alg`): RSA needs exactly one of
+rsa-sha2-256/512, other types none. The upstream reply must use that algorithm,
+so an agent that ignores the flags cannot return SHA-1 either, and
+destination-bound userauth no longer accepts `ssh-rsa`. There is no silent
+fallback or legacy switch; OpenSSH has disabled `ssh-rsa` by default since 8.8.
+Compatibility cost: peers accepting only `ssh-rsa` (OpenSSH < 7.2) cannot use
+RSA keys through SigSieve. Regressions: `rsa_requires_exactly_one_sha2_flag`,
+`signatures_with_an_unrequested_algorithm_are_refused`,
+`rsa_userauth_must_name_a_sha2_algorithm` and real OpenSSH
+`rsa_sha1_signing_is_refused_while_sha2_works` (upstream control signs SHA-1).
 
 ### F-32 — HIGH — SSH configuration tokenization mismatch
 

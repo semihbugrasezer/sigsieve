@@ -88,8 +88,10 @@ behind wording that suggests otherwise.
 ## Functional
 
 - OpenSSH certificates are not supported as identities (hidden, cannot sign).
-- RSA keys < 1024 bits are rejected. SHA-1 `ssh-rsa` signatures (flag 0) pass
-  through if the upstream allows them.
+- RSA keys < 1024 bits are rejected. RSA signing requires `rsa-sha2-256` or
+  `rsa-sha2-512`; legacy SHA-1 `ssh-rsa` signatures are refused, so peers that
+  accept only `ssh-rsa` (OpenSSH < 7.2 and similar) cannot authenticate with an
+  RSA key through SigSieve. There is deliberately no legacy switch.
 - `sk-` (FIDO) identities are parsed but untested with hardware.
 - No agent extensions are supported except verified `session-bind` in
   destination-binding mode.

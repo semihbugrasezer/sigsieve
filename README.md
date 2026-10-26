@@ -289,7 +289,7 @@ sigsieve connect  HOST [--upstream PATH | --secretive] --allow-fingerprint FP...
 | OpenSSH `ssh-agent`, `ssh`, `sshd` | tested end to end |
 | Secretive (ECDSA P-256) | user-assisted real test passed (listing, hidden-key refusal, `connect`); signing and destination binding with Secretive not yet run |
 | 1Password SSH agent | standard protocol; untested |
-| Identity key types | Ed25519, ECDSA P-256/384/521, RSA (≥1024, rsa-sha2-*), `sk-` (untested with hardware); certificates unsupported |
+| Identity key types | Ed25519, ECDSA P-256/384/521, RSA (≥1024; `rsa-sha2-256`/`-512` only, legacy SHA-1 `ssh-rsa` signatures refused), `sk-` (untested with hardware); certificates unsupported |
 
 ## Troubleshooting
 
@@ -352,10 +352,6 @@ cargo test --release
 Report vulnerabilities privately: [SECURITY.md](SECURITY.md). Known findings
 and their status: [docs/FINDINGS.md](docs/FINDINGS.md). Release gates:
 [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md).
-
-Current engineering review: [SECURITY_AUDIT.md](SECURITY_AUDIT.md),
-[product scope](PRODUCT_STRATEGY.md), [delivery ledger](IMPLEMENTATION_PLAN.md)
-and [executed compatibility report](docs/COMPATIBILITY_REPORT.md).
 
 ## License
 

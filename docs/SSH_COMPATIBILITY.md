@@ -19,7 +19,7 @@ after 300 s.
 |---|---|---|---|
 | 11 | `REQUEST_IDENTITIES` | must be exactly 1 byte; upstream reply strictly parsed and rebuilt with allowlisted, well-formed, de-duplicated keys | yes (listing only) |
 | 12 | `IDENTITIES_ANSWER` | only accepted *from* upstream, as above | — |
-| 13 | `SIGN_REQUEST` | `string key, string data, uint32 flags`, no trailing bytes; key must be supported and allowlisted; RSA flags ⊆ {`0x02` rsa-sha2-256, `0x04` rsa-sha2-512}, all other key types require zero flags; mode B additionally requires destination authorization (§2); reply must be `SIGN_RESPONSE` with one non-empty signature, else `FAILURE` | only if authorized and admitted by resource budgets; byte-exact |
+| 13 | `SIGN_REQUEST` | `string key, string data, uint32 flags`, no trailing bytes; key must be supported and allowlisted; RSA requires exactly one of `0x02` rsa-sha2-256 / `0x04` rsa-sha2-512 (zero = legacy SHA-1 is refused), all other key types require zero flags; mode B additionally requires destination authorization (§2); reply must be `SIGN_RESPONSE` with one signature whose algorithm is exactly the requested one, else `FAILURE` | only if authorized and admitted by resource budgets; byte-exact |
 | 14 | `SIGN_RESPONSE` | validated as above | — |
 | 5 / 6 / 28 | `FAILURE` / `SUCCESS` / `EXTENSION_FAILURE` | generated locally | — |
 | 17, 25 | add identity (constrained) | `FAILURE` | never |
@@ -37,7 +37,7 @@ after 300 s.
 |---|---|---|
 | `ssh-ed25519` | 32-byte key | tested, incl. real `ssh-agent` |
 | `ecdsa-sha2-nistp256/384/521` | curve name matches, uncompressed point (65/97/133 bytes) | P-256 tested incl. real agents (Secretive keys are P-256); 384/521 unit-tested |
-| `ssh-rsa` | canonical mpints; `e` odd, > 1; `n` odd, 1024–16384 bits; SHA-1 (flag 0) passes through if the upstream allows it | tested incl. `rsa-sha2-512` via real `ssh-keygen -Y sign` |
+| `ssh-rsa` | canonical mpints; `e` odd, > 1; `n` odd, 1024–16384 bits; signs only with `rsa-sha2-256`/`-512`, SHA-1 refused | tested with real `ssh-keygen -Y sign` and `ssh-keygen -s -U -t` (SHA-2 works, `ssh-rsa` refused) |
 | `sk-ssh-ed25519@openssh.com`, `sk-ecdsa-sha2-nistp256@openssh.com` | structural | **untested with hardware** |
 | `*-cert-v01@openssh.com` | unsupported | hidden, cannot sign |
 

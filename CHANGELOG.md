@@ -19,7 +19,11 @@ The project follows [Semantic Versioning](https://semver.org/).
   exchanges, destination-bound duplicate-attempt suppression and aggregated logs.
 - Rejected RSA signature flags on non-RSA keys and disabled host-key checking
   on destination/proxy hops. Checked socket ancestors as well as the leaf parent.
-- Added security/product/delivery reports and executed compatibility evidence.
+- Refused legacy RSA/SHA-1 (`ssh-rsa`) signing. RSA sign requests must name
+  exactly one of rsa-sha2-256/512, and upstream signatures must use the
+  requested algorithm. **Compatibility change:** clients or servers that only
+  accept `ssh-rsa` signatures (OpenSSH < 7.2) fail through SigSieve; there is
+  no opt-out. RSA keys themselves keep working with SHA-2.
 
 ## [0.1.0-alpha.1] - 2026-10-26 (superseded source candidate)
 
