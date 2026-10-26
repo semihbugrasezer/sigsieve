@@ -1,0 +1,19 @@
+tests/e2e_sshd.rs
+  s_211cc592f3418f::t_28929072fbf37b 18,193-197,199-200,202-205
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e9306629dda7aa48238ff3e1939079cd1e06d067",
+  "prompts": {},
+  "sessions": {
+    "s_211cc592f3418f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "828f2ed6-2d53-45e4-b19e-2d6b5d5f6c84",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <semih.b.sezer@gmail.com>"
+    }
+  }
+}
