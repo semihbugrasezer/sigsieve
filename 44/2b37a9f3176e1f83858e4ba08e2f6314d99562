@@ -1,0 +1,45 @@
+CHANGELOG.md
+  s_211cc592f3418f::t_12de96d82b790c 22-26
+README.md
+  s_211cc592f3418f::t_cb2c8b00564686 292
+docs/FINDINGS.md
+  s_211cc592f3418f::t_24c86706bdd94b 52,266-267,274-289
+docs/LIMITATIONS.md
+  s_211cc592f3418f::t_81e8b63b74c593 91-94
+docs/SECURITY_MODEL.md
+  s_211cc592f3418f::t_dc3bfb3f1ebc94 65
+docs/SSH_COMPATIBILITY.md
+  s_211cc592f3418f::t_d9fab6a50aeafa 22,40
+docs/THREAT_MODEL.md
+  s_211cc592f3418f::t_ab14aded8130cc 155-157
+src/binding.rs
+  s_211cc592f3418f::t_eed59740578a7d 30,251-252,254-258,583-602
+src/keys.rs
+  s_211cc592f3418f::t_031dee138ea45a 15,90-108,248-270
+src/protocol.rs
+  s_211cc592f3418f::t_816aa5f17d4b8e 36-40
+src/proxy.rs
+  s_211cc592f3418f::t_9e569bac9cc9ad 28,226-229,231,234,256,259-261,272-275,278-279,510-530
+tests/common/mod.rs
+  s_211cc592f3418f::t_18bfcd75965d47 86-88,181,184-196,198
+tests/openssh.rs
+  s_211cc592f3418f::t_eea75d5972fb74 195-235
+tests/proxy.rs
+  s_211cc592f3418f::t_d7d4156cc00ccc 111-148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "442b37a9f3176e1f83858e4ba08e2f6314d99562",
+  "prompts": {},
+  "sessions": {
+    "s_211cc592f3418f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "828f2ed6-2d53-45e4-b19e-2d6b5d5f6c84",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <semih.b.sezer@gmail.com>"
+    }
+  }
+}
