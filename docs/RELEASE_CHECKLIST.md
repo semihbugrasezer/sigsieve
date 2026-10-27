@@ -46,6 +46,11 @@ These remain explicit limitations of the alpha, not passing tests:
 1. Verify and commit the reviewed Core snapshot. Keep unpublished feature
    branches and their history outside the first public snapshot.
 2. Push the reviewed source to the public repository and inspect its exact-SHA CI.
+   Run the **Release rehearsal** workflow on that commit: it builds both
+   targets as `release.yml` does, checks that packaging is byte-identical
+   twice, that the binary embeds no runner paths and the archive contents,
+   and smoke-tests the extracted binary with `doctor` against a real
+   `ssh-agent`. It creates no tag, release or attestation.
 3. Tag the accepted candidate. `release.yml` gates, builds deterministic
    macOS arm64 and Linux x86_64 archives, creates checksums and records provenance.
 4. Download artifacts and verify checksums and `gh attestation verify` results.
