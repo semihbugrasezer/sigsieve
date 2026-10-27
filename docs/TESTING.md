@@ -94,7 +94,27 @@ the generated seeds with `cargo test --lib write_fuzz_seeds -- --ignored`.
 Without nightly, the targets still build on stable
 (`cargo build --release --manifest-path fuzz/Cargo.toml`) and can be run
 **uninstrumented** (blind mutation from the seeds), which is what the project
-has done so far.
+used for its historical pre-publication libFuzzer runs below.
+
+### Recorded coverage-guided smoke run
+
+On 2026-10-27, [run 40501046044](https://github.com/semihbugrasezer/sigsieve/actions/runs/40501046044)
+completed all four targets with a 60 s budget each, `nightly-2026-10-15`,
+`cargo-fuzz 0.12.0`, libFuzzer and AddressSanitizer. Logs show loaded inline
+coverage counters and PC tables. PR head:
+`5a83811d8d413b10c1b3f3a6226cf66849fc2e74`; tested merge revision:
+`380d68c612ccbadc380b3f046052dcc276c54ad2`.
+
+| Target | Executions | Final libFuzzer `cov` | Result |
+|---|---|---|---|
+| `requests` | 469,159 | 1,676 | completed; no crash reported |
+| `session_bind` | 282,221 | 2,154 | completed; no crash reported |
+| `key_blob` | 1,624,379 | 491 | completed; no crash reported |
+| `upstream_reply` | 2,774,089 | 103 | completed; no crash reported |
+
+These counters are libFuzzer's reported coverage units, not a percentage of
+program coverage. This is short smoke evidence for that revision, not a
+sustained campaign, a result for later commits or proof of no vulnerabilities.
 
 ## Historical results (pre-publication, 2026-10-24)
 

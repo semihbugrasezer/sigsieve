@@ -134,7 +134,7 @@ a new candidate.
 | Real OpenSSH | Real `ssh-agent`, `ssh` and throwaway `sshd` tests in CI on macOS arm64 and Linux x86_64/aarch64; inspect [CI for your exact commit](https://github.com/semihbugrasezer/sigsieve/actions/workflows/ci.yml). |
 | Real Secretive (ECDSA P-256) | One recorded user-assisted session: listing, hidden-key refusal and filtered forwarding. Allowed-key signing, destination binding and device-owner confirmation of Touch ID observations remain pending. [Recorded results](docs/SECRETIVE_INTEGRATION.md#recorded-real-device-results). |
 | Git hosts | 2026-10-27 advertisement measurements: GitHub advertises hostbound authentication (end-to-end unverified); GitLab.com and Bitbucket Cloud do not. [Measurements and caveats](docs/SSH_COMPATIBILITY.md#git-hosting-services). |
-| Fuzzing | Stable corpus mutation and historical uninstrumented libFuzzer runs; coverage-guided fuzzing is a separate, pending validation. [Method and limits](docs/TESTING.md#coverage-guided-fuzzing). |
+| Fuzzing | Stable corpus mutation, historical uninstrumented runs and a recorded 60 s/target instrumented libFuzzer smoke run. Sustained campaigns remain outstanding. [Run and limits](docs/TESTING.md#recorded-coverage-guided-smoke-run). |
 | Other integrations | 1Password and physical FIDO keys untested; SSH identity certificates unsupported. [Key types and protocol matrix](docs/SSH_COMPATIBILITY.md). |
 | Distribution | Packaging and provenance workflow prepared; no verified published archives. [Release gates](docs/RELEASE_CHECKLIST.md). |
 
