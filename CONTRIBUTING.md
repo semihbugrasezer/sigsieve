@@ -50,7 +50,10 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ## Pull requests
 
 - Keep PRs focused, and describe the security impact.
-- Update `CHANGELOG.md` under "Unreleased".
+- `main` is protected: changes land only through pull requests, and the four
+  CI checks (`supply-chain` and the macOS, Linux x86_64 and Linux arm64
+  `test` jobs) must pass on a branch that is up to date with `main`.
+- Update `CHANGELOG.md` in the topmost section that is not yet released.
 - By contributing you agree that your work is licensed under the MIT license.
 
 Please follow our [Code of Conduct](CODE_OF_CONDUCT.md).

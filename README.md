@@ -17,6 +17,19 @@ allow, and can optionally restrict where an allowed identity may authenticate.
 > and [limitations](docs/LIMITATIONS.md) before relying on it, and keep normal
 > SSH access available as a fallback.
 
+### What has been checked, and how
+
+| Evidence | Status |
+|---|---|
+| Automated tests | full suite on every pull request (macOS, Linux x86_64 and arm64), including real `ssh` → throwaway `sshd` sessions with raw-protocol attackers |
+| Real OpenSSH | `ssh`, `ssh-agent`, `sshd` end to end in CI (OpenSSH 9.6 on Ubuntu 24.04, plus macOS) and locally (10.3) |
+| Real Secretive (owner-run) | listing, hidden-key refusal and `connect` passed; signing with the allowed key and destination binding **not yet run** |
+| Git hosts | GitHub.com advertises hostbound authentication (not yet verified end to end); GitLab.com and Bitbucket Cloud do not ([details](docs/SSH_COMPATIBILITY.md#git-hosting-services)) |
+| Fuzzing | seed replay and bounded mutation in CI; coverage-guided (libFuzzer) **not yet run** |
+| Code review | AI-assisted reviews; every finding and fix is in [docs/FINDINGS.md](docs/FINDINGS.md) |
+| Independent security audit | **none** |
+| Release binaries | **none published**; build from source |
+
 ## The problem
 
 `ssh -A` forwards your *whole* agent. Every host you forward to can list all
@@ -35,6 +48,8 @@ upstream agent (3 keys) ──► SigSieve ──► filtered socket (1 key) ─
   needs no agent forwarding at all; nothing is exposed to the bastion.
 - **You use OpenSSH's own `ssh-agent`.** `ssh-add -h` (OpenSSH 8.9+) adds keys
   with destination constraints enforced by the agent itself.
+- **Your keys are ordinary files.** Start a second `ssh-agent`, load only the
+  key the remote host needs, and forward that agent.
 - **You only need to pick a key per host.** `IdentityAgent`,
   `IdentityFile` and `IdentitiesOnly` in ssh_config do that.
 - **Filtering by key comment is enough.** [ssh-agent-filter](https://git.tiwe.de/ssh-agent-filter.git/about/)
@@ -43,7 +58,7 @@ upstream agent (3 keys) ──► SigSieve ──► filtered socket (1 key) ─
 SigSieve is for the remaining case: you really need a forwarded agent on a
 remote machine (e.g. `git` over SSH from a build host), and your agent cannot
 constrain keys itself — for example Secretive / Secure Enclave, whose keys
-also cannot be exported into a second, smaller agent. Other agents
+cannot be exported into a second, smaller agent either. Other agents
 may work through the same protocol, but consult the compatibility table below.
 
 ## What SigSieve enforces (tested)
@@ -96,34 +111,9 @@ OpenSSH extensions, and differences from OpenSSH destination constraints.
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    subgraph Local machine
-        UA["Upstream agent<br/>(Secretive / ssh-agent / 1Password)"]
-        subgraph SigSieve
-            UP["upstream.rs<br/>fresh uid-checked connection per request"]
-            PX["proxy.rs<br/>authorize every request"]
-            PO["policy.rs<br/>allowlist + destinations"]
-            BD["binding.rs<br/>verified session binds"]
-            PR["protocol.rs + keys.rs<br/>strict parsing"]
-            SO["socket.rs<br/>private socket, peer uid"]
-        end
-        SSH["OpenSSH client"]
-    end
-    R["Remote host<br/>(forwarded agent, untrusted)"]
-
-    UA <-- "list / authorized sign only" --> UP
-    UP <--> PX
-    PX --- PO
-    PX --- BD
-    PX --- PR
-    PX <--> SO
-    SSH -- "ForwardAgent=&lt;filtered socket&gt;" --> SO
-    SSH -- "IdentityAgent (login, unchanged)" --> UA
-    R <-- "agent channel" --> SSH
-```
-
-More: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+One Rust binary, no daemon, no network service: it connects to your agent's
+socket and offers a filtered socket. Modules, request flow and the `connect`
+lifecycle are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Installation
 
