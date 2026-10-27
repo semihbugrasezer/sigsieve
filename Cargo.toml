@@ -10,7 +10,7 @@ keywords = ["ssh", "ssh-agent", "security", "agent-forwarding"]
 categories = ["command-line-utilities", "cryptography"]
 
 [dependencies]
-base64 = "0.22"
+base64 = "0.23"
 clap = { version = "4", features = ["derive", "env"] }
 # Host-key signature verification for session-bind (destination binding).
 # Verification only; SigSieve never holds private keys.
@@ -20,7 +20,7 @@ p256 = { version = "0.14", default-features = false, features = ["ecdsa", "std"]
 p384 = { version = "0.14", default-features = false, features = ["ecdsa", "std"] }
 p521 = { version = "0.14", default-features = false, features = ["ecdsa", "std"] }
 sha2 = "0.11"
-signal-hook = "0.3"
+signal-hook = "0.4"
 
 [dev-dependencies]
 proptest = "1"
