@@ -2,8 +2,14 @@
 
 [Secretive](https://github.com/maxgoedjen/secretive) stores SSH keys in the
 Secure Enclave (ECDSA P-256) and serves them through an SSH agent socket.
-SigSieve sits in front of that socket. It never sees private keys, and every
-signature is still produced inside the Secure Enclave by Secretive.
+SigSieve sits in front of that socket and never sees private keys. Allowed
+signing requests are delegated to Secretive; its key storage and user-presence
+policy remain in control. Real allowed-key signing through SigSieve has not
+yet been verified; see the [recorded results](#recorded-real-device-results).
+
+For installation and a first session, start with the
+[usage guide](USAGE.md). The procedure below is a device verification check,
+not a record that every step has passed.
 
 ## Socket location
 
@@ -23,9 +29,11 @@ authentication caching. SigSieve does not change this:
   contacted, so it never triggers a prompt and is never signed.
 - A request for an allowed key is passed to Secretive unchanged. It may or
   may not prompt, depending on Secretive.
-- `doctor` and `connect` self-tests only list keys and send a sign request
-  for a *synthetic* key that SigSieve itself rejects. They do not cause
-  Secretive prompts.
+- `doctor` and `connect` self-tests list keys and send a sign request for a
+  *synthetic* key that SigSieve rejects. With destination binding they also
+  probe an unbound allowed-key request, which SigSieve must reject locally.
+  These probes do not ask Secretive to sign; device-owner confirmation of
+  the observed prompt behaviour remains pending.
 
 For forwarding, use a key that requires authentication, so each remote
 signature needs your presence.
@@ -34,12 +42,13 @@ signature needs your presence.
 
 `scripts/agent-integration-check.sh` runs the procedure below in one go. It
 writes only to a private temporary directory, prints only the allowed key's
-fingerprint plus counts of the others, and changes no configuration:
+fingerprint plus counts of the others, and changes no configuration. Set
+`fp` from the [usage guide](USAGE.md#choose-your-upstream-agent) first:
 
 ```bash
-cargo build --release
+cargo build --release --locked
 scripts/agent-integration-check.sh --sigsieve target/release/sigsieve \
-  --allow SHA256:<allowed>                 # default upstream: Secretive
+  --allow "$fp"                 # default upstream: Secretive
 # add --sign-allowed to also sign a test message with the allowed key
 # (Touch ID may prompt). No prompt is expected without it.
 ```
@@ -48,57 +57,23 @@ If Secretive prompts for authentication during the hidden-key step, deny it
 and report a bug: those requests must be rejected by SigSieve before they
 reach Secretive.
 
-## Controlled verification procedure (manual)
+## Owner-assisted verification
 
-Run these yourself. They change no configuration: no `~/.ssh/config` edits,
-no Secretive settings, no server changes.
+Use the script above after choosing `fp` as described in the usage guide.
+It uses a private temporary directory and sends raw hidden-key signing
+requests; a listing-only tool may refuse a hidden key without ever testing
+sign authorization. Check the allowed fingerprint and do not share raw output.
 
-1. **Public listing only** (no signing):
+Run the default check first. To test allowed-key signing, add `--sign-allowed`
+to the same command. This asks the real agent to sign a test message and
+verifies the signature, so Secretive may request user presence. Deny any
+unexpected prompt. Record the OS, SigSieve commit, Secretive/OpenSSH versions,
+which checks passed and your prompt observations, without key or host details.
 
-   ```bash
-   S=~/Library/Containers/com.maxgoedjen.Secretive.SecretAgent/Data/socket.ssh
-   SSH_AUTH_SOCK=$S ssh-add -l          # note the fingerprint to allow
-   sigsieve doctor --secretive --allow-fingerprint SHA256:<allowed>
-   ```
-
-   Expect `Approved identities: 1/1`, `Hidden identities: N (not shown)`, and
-   `Filtering: verified`.
-
-2. **Filtered listing:**
-
-   ```bash
-   sigsieve run --secretive --allow-fingerprint SHA256:<allowed> &
-   # use the printed path:
-   SSH_AUTH_SOCK=<printed path> ssh-add -l    # exactly one line
-   ```
-
-3. **Hidden key cannot sign** (no Touch ID prompt expected):
-
-   ```bash
-   SSH_AUTH_SOCK=$S ssh-add -L | grep '<hidden key comment>' > /tmp/hidden.pub
-   echo test > /tmp/msg
-   SSH_AUTH_SOCK=<printed path> ssh-keygen -Y sign -n test -f /tmp/hidden.pub /tmp/msg
-   # expected: failure, no /tmp/msg.sig, no Touch ID prompt
-   ```
-
-   Note: `ssh-keygen` checks the agent's listing first and may not send a
-   sign request at all for an unlisted key. The automated script sends a raw
-   `SIGN_REQUEST` instead, which is the stronger test.
-
-4. **Allowed key can sign** (Touch ID prompt possible):
-
-   ```bash
-   SSH_AUTH_SOCK=$S ssh-add -L | grep '<allowed key comment>' > /tmp/allowed.pub
-   SSH_AUTH_SOCK=<printed path> ssh-keygen -Y sign -n test -f /tmp/allowed.pub /tmp/msg
-   ssh-keygen -Y check-novalidate -n test -f /tmp/allowed.pub -s /tmp/msg.sig < /tmp/msg
-   ```
-
-5. **Stop and confirm cleanup:** `kill %1` (or Ctrl-C), then check that the
-   printed socket path no longer exists.
-
-6. **Normal access is unaffected:** `ssh <host>` without SigSieve still works.
-
-Steps 3–4 write only to `/tmp`. Delete those files afterwards.
+For filtered forwarding, follow [Check, preview, connect](USAGE.md#check-preview-connect).
+After exiting, confirm the filtered socket is gone and ordinary SSH still
+works. Do not mark allowed-key signing, destination binding or Touch ID as
+verified unless you observed those specific steps on the device.
 
 ## Destination binding with Secretive
 

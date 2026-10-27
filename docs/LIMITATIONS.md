@@ -132,8 +132,9 @@ behind wording that suggests otherwise.
 
 - Linux x86_64 passed a previous CI run. Only a green CI run for the exact
   release commit establishes current platform coverage; see the release notes.
-- Coverage-guided fuzzing (cargo-fuzz on nightly) has not been run; only
-  stable mutation fuzzing and uninstrumented libFuzzer runs.
+- Coverage-guided fuzzing has a recorded 60 s/target instrumented smoke run;
+  sustained campaigns remain outstanding. See the
+  [run and its limits](TESTING.md#recorded-coverage-guided-smoke-run).
 - No independent external security review.
 - Real Secretive testing is limited to one user-assisted session (listing,
   hidden-key refusal, connect to one host).

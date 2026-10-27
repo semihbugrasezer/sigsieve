@@ -4,6 +4,16 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Made README a shorter product entry point with fair OpenSSH alternatives,
+  explicit alpha/distribution status and separate review, test and device evidence.
+- Moved operational examples, CLI reference, troubleshooting and recovery to
+  `docs/USAGE.md`, including an explicit OpenSSH agent path and reversal of
+  manual SSH configuration edits.
+- Clarified first contributions, alpha support and dependency review; corrected
+  stale logging/recovery evidence and unverified Secretive compatibility claims.
+
 ## [0.1.0-alpha.2] - unreleased candidate
 
 - Tightened SSH configuration scanning: LF-only text, ASCII keywords,
