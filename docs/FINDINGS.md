@@ -55,6 +55,7 @@ fix (where one exists).
 | F-33 | LOW (supply chain) | crypto-bigint 0.7.6 was yanked after the earlier local checks; public CI rejected it | Fixed: root and fuzz lockfiles updated to non-yanked 0.7.9 |
 | F-32 | HIGH | SSH pre-scan disagreed with OpenSSH on quoted keywords and Include argument delimiters, permitting Match exec during verification | Fixed: conservative keywords, exact space/tab path parsing, UTF-8 validation; regression tests |
 | F-31 | HIGH | Review of F-29/F-30: a relay's own `-F` was ignored for its nested hops; hop forwardings were not checked; quoting (`e'x'ec`) hid `Match exec`; X11 forwarding ran xauth with the login agent; unsafe `-F` paths reached ssh's ProxyJump shell command; concurrent stale-socket recovery could have two winners | Fixed (details below) |
+| F-40 | LOW (availability) | A slow downstream reader could keep a reply write going indefinitely: SO_SNDTIMEO restarts on every partial transfer | Fixed: nonblocking reply writes under one whole-reply deadline; red/green regression |
 
 
 ### Review scope
@@ -66,6 +67,22 @@ register and executable regression tests supersede earlier review summaries.
 None of these reviews is a professional independent audit.
 
 ## Details
+
+### F-40 — LOW — slow reader extends the downstream write timeout
+
+Replies were written with a blocking `write_all` and `SO_SNDTIMEO`. That
+timeout bounds each wait for buffer space, and BSD/macOS restarts it whenever
+the peer drains a little, so a client reading a few bytes at a time kept one
+large reply (for example an identity list with a long comment) in progress
+indefinitely. The connection stayed non-idle and could not be evicted, holding
+one of the instance's client slots: the same outcome as F-17, without needing
+a request. Found by an independent review of the resource code; the first
+fix attempt (a deadline around blocking writes) was disproved by the test.
+Fix: replies are written nonblocking by `write_frame_until` under one deadline
+of `write_timeout` for the whole reply. Regression:
+`slow_reader_cannot_extend_the_reply_write_deadline` (250 KB reply, client
+reading 1 KB every 50 ms) received the whole reply before the fix and is cut
+off after about one second with it.
 
 ### F-01 — HIGH — ControlMaster reuse
 - **Component:** `src/cli.rs` (`connect`).
