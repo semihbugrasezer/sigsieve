@@ -32,3 +32,9 @@ body:
       label: Steps to reproduce (with redacted output)
     validations:
       required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `sigsieve doctor` with the same options (redacted)
+      description: It lists the approved and hidden key counts and the checks that failed; nothing is signed with a real key.
+      render: text
