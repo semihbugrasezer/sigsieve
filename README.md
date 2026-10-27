@@ -1,364 +1,156 @@
 # SigSieve
 
-**Your keys. Your rules.**
+**Forward the SSH identities a remote host needs, while keeping your existing agent.**
 
-[![CI](https://github.com/semihbugrasezer/sigsieve/actions/workflows/ci.yml/badge.svg)](https://github.com/semihbugrasezer/sigsieve/actions/workflows/ci.yml)
+SigSieve is a local SSH agent proxy for macOS and Linux. It filters forwarded
+identities by SHA256 fingerprint and can optionally restrict authentication
+to approved destination host keys. Signing stays in your existing agent:
+there is no private-key export, replacement agent or key migration.
 
-**v0.1.0-alpha.2 — unreleased experimental candidate.** MIT-licensed; no telemetry, accounts or services.
-
-SigSieve is a small SSH agent proxy written in Rust. It sits between your
-real SSH agent (Secretive, OpenSSH `ssh-agent`, 1Password, …) and a
-**forwarded agent on a remote machine**. It exposes only the identities you
-allow, and can optionally restrict where an allowed identity may authenticate.
+Its main use case is forwarding a **non-exportable, hardware-backed identity**
+from Secretive's Secure Enclave when you need SSH authentication on a remote
+build or development host. OpenSSH connects normally; SigSieve controls the
+agent socket it forwards.
 
 > [!WARNING]
-> **Experimental security software. Not independently audited.** Read the
-> [security model](docs/SECURITY_MODEL.md), [threat model](docs/THREAT_MODEL.md)
-> and [limitations](docs/LIMITATIONS.md) before relying on it, and keep normal
-> SSH access available as a fallback.
+> **Experimental security software. Not independently audited.**
+> `0.1.0-alpha.2` is an unreleased source candidate; there are no verified
+> binary releases or published Homebrew installation yet. Real Secretive
+> signing and destination binding remain unverified. Read the
+> [security model](docs/SECURITY_MODEL.md) and [limitations](docs/LIMITATIONS.md)
+> before relying on it, and keep ordinary SSH access available.
 
-### What has been checked, and how
+Free, MIT-licensed and local-first. No SaaS, accounts, telemetry or mandatory
+cloud infrastructure.
 
-| Evidence | Status |
+## Do you need it?
+
+Use SigSieve when a remote process needs your forwarded agent, but should
+have access to only a subset of its identities. Hardware backing prevents
+key extraction; it does not prevent a compromised remote host from requesting
+signatures through a forwarded socket.
+
+| Your need | Consider first |
 |---|---|
-| Automated tests | full suite on every pull request (macOS, Linux x86_64 and arm64), including real `ssh` → throwaway `sshd` sessions with raw-protocol attackers |
-| Real OpenSSH | `ssh`, `ssh-agent`, `sshd` end to end in CI (OpenSSH 9.6 on Ubuntu 24.04, plus macOS) and locally (10.3) |
-| Real Secretive (owner-run) | listing, hidden-key refusal and `connect` passed; signing with the allowed key and destination binding **not yet run** |
-| Git hosts | GitHub.com advertises hostbound authentication (not yet verified end to end); GitLab.com and Bitbucket Cloud do not ([details](docs/SSH_COMPATIBILITY.md#git-hosting-services)) |
-| Fuzzing | seed replay and bounded mutation in CI; coverage-guided (libFuzzer) **not yet run** |
-| Code review | AI-assisted reviews; every finding and fix is in [docs/FINDINGS.md](docs/FINDINGS.md) |
-| Independent security audit | **none** |
-| Release binaries | **none published**; build from source |
-
-## The problem
-
-`ssh -A` forwards your *whole* agent. Every host you forward to can list all
-your keys and ask your agent to sign with any of them while you are
-connected. Hardware-backed keys (Secure Enclave, FIDO) cannot be copied, but
-a compromised server can still *use* them, including privileged keys that
-were never meant for that machine.
+| Reach a target through a bastion | [ProxyJump](https://man.openbsd.org/ssh_config#ProxyJump) (`ssh -J bastion target`); the bastion needs no forwarded agent. |
+| Forward only selected keys that you can load into another agent | A separate OpenSSH `ssh-agent` containing just those keys. Non-exportable Secretive identities cannot be copied into it. |
+| Restrict keys loaded into OpenSSH's agent | Native [destination constraints](https://www.openssh.org/agent-restrict.html) (`ssh-add -h`, OpenSSH 8.9+); they also support path/user constraints that SigSieve does not. |
+| Select the identity for your own SSH login | `IdentityFile`, `IdentityAgent`, `IdentitiesOnly`; login selection alone does not filter a forwarded agent. |
+| Forward selected identities from an existing agent such as Secretive | SigSieve; no change to where keys live or which agent signs. |
 
 ```text
-upstream agent (3 keys) ──► SigSieve ──► filtered socket (1 key) ──► ssh -o ForwardAgent=… ──► remote host
+Existing agent → SigSieve → filtered socket → OpenSSH → remote process
+ (all keys)                  (allowed keys)
 ```
 
-## When you don't need SigSieve
+## Protection and limits
 
-- **You only hop through a bastion.** `ProxyJump` (`ssh -J bastion target`)
-  needs no agent forwarding at all; nothing is exposed to the bastion.
-- **You use OpenSSH's own `ssh-agent`.** `ssh-add -h` (OpenSSH 8.9+) adds keys
-  with destination constraints enforced by the agent itself.
-- **Your keys are ordinary files.** Start a second `ssh-agent`, load only the
-  key the remote host needs, and forward that agent.
-- **You only need to pick a key per host.** `IdentityAgent`,
-  `IdentityFile` and `IdentitiesOnly` in ssh_config do that.
-- **Filtering by key comment is enough.** [ssh-agent-filter](https://git.tiwe.de/ssh-agent-filter.git/about/)
-  (`afssh`) does that, without destination binding.
-
-SigSieve is for the remaining case: you really need a forwarded agent on a
-remote machine (e.g. `git` over SSH from a build host), and your agent cannot
-constrain keys itself — for example Secretive / Secure Enclave, whose keys
-cannot be exported into a second, smaller agent either. Other agents
-may work through the same protocol, but consult the compatibility table below.
-
-## What SigSieve enforces (tested)
-
-| Property | Default (identity filtering) | With `--allow-destination` (destination binding) |
+| | Identity filtering (default) | Optional destination binding |
 |---|---|---|
-| Remote host sees only allowlisted keys | ✅ tested | ✅ tested |
-| Non-allowlisted keys cannot sign, even with a known public key | ✅ tested | ✅ tested |
-| Agent mutations, lock/unlock, PKCS#11, unknown messages refused | ✅ tested | ✅ tested |
-| An allowed key can only authenticate to approved servers | ❌ any server that trusts it | ✅ only servers with the allowed host keys (cryptographically verified) |
-| An allowed key can sign arbitrary data | ⚠️ yes | ❌ no: SSH user authentication only |
-| Protection against a compromised local machine or upstream agent | ❌ out of scope | ❌ out of scope |
+| Keys visible and usable remotely | Allowlisted identities only | Allowlisted identities only |
+| What an allowed key may sign | Arbitrary data; any server that trusts it | SSH hostbound authentication to allowed destination host keys only |
+| Mutations, lock/unlock, PKCS#11, unknown operations | Refused locally | Refused locally |
 
-"Tested" means automated tests, many over real OpenSSH (`ssh` → throwaway
-`sshd`) with raw-protocol attackers in the remote session. Details and test
-names: [docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md).
+**An allowed key remains usable by a compromised remote host while you are
+connected**, including at allowed destinations in binding mode. SigSieve
+does not protect a compromised local account or upstream agent, replace SSH
+host-key verification, or add per-use confirmation. Secretive controls its
+own authentication policy and Touch ID prompts.
 
-**Filtering limits which keys a remote host can use. It never makes an
-allowed key safe to hand to a compromised host.** Destination binding narrows
-where the allowed key works. While you are connected, a compromised host can
-still use it to authenticate to the allowed destinations.
+Destination binding requires compatible OpenSSH clients/servers and
+Ed25519/ECDSA host keys. It restricts host keys, not usernames or intermediate
+hops, and refuses non-authentication signing such as `git commit -S` through
+the forwarded agent. Consult [compatibility](docs/SSH_COMPATIBILITY.md)
+before using it with a Git hosting service.
 
-## Features
+## Install from source
 
-- **Default deny**: nothing is exposed unless its SHA256 fingerprint is
-  allowlisted. An invalid entry stops startup.
-- **Authorization at signature time** from the requested key blob itself.
-  Comments and listing history are never trusted.
-- **Destination binding** (opt-in): verifies `session-bind@openssh.com`
-  host-key signatures (Ed25519/ECDSA) and only signs user-authentication
-  requests bound to an allowed destination. It uses OpenSSH's session-binding
-  and hostbound-authentication protocols; SigSieve enforces the destination
-  policy itself. Ordinary `publickey` requests are refused in this mode.
-- **No mutation, no extension passthrough**: everything except listing and
-  authorized signing is answered locally.
-- **No private keys**: signing stays in the upstream agent, so Secretive's
-  Secure Enclave and Touch ID policy still apply. Denied requests never reach
-  it.
-- **Hardened sockets**: private 0700 directory, peer-uid checks, never
-  replaces or deletes files it did not create, bounded frames, connections
-  and time.
-- **`sigsieve connect`** starts ssh with only the filtered socket forwarded.
-  It disables connection sharing and forwardings for the session, refuses
-  unverifiable ProxyCommands, verifies the effective configuration with
-  `ssh -G`, and cleans up. `--dry-run` shows the plan without connecting.
-- No accounts, telemetry or config files; remote connections use your OpenSSH client.
+Current installation requires Rust (the checkout pins 1.99.1) and OpenSSH
+8.4+; ProxyJump/relay sessions require 8.7+. Tested platforms are macOS arm64
+and Linux x86_64/aarch64. Planned binary targets are macOS arm64 and Linux
+x86_64; Linux aarch64 is source-only. No Windows or Intel macOS validation
+is claimed.
 
-The [protocol references](docs/REFERENCES.md) explain the RFC 9987 foundation,
-OpenSSH extensions, and differences from OpenSSH destination constraints.
-
-## Architecture
-
-One Rust binary, no daemon, no network service: it connects to your agent's
-socket and offers a filtered socket. Modules, request flow and the `connect`
-lifecycle are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
-## Installation
-
-Supported: macOS arm64 and Linux x86_64 (see [Compatibility](#compatibility)).
-Requires a recent stable Rust toolchain (tested with 1.99.1, pinned by
-`rust-toolchain.toml`) and OpenSSH 8.4 or newer.
+Planned Linux archives use the Ubuntu 24.04 / glibc 2.39 baseline; build from
+source on older distributions.
 
 ```bash
-# From a reviewed checkout, into ~/.cargo/bin
 git clone https://github.com/semihbugrasezer/sigsieve
 cd sigsieve
-git rev-parse HEAD                   # verify CI for this exact revision
+git rev-parse HEAD                   # inspect CI for this exact revision
 cargo install --locked --path .
 sigsieve --version
 ```
 
-No verified binary release is published yet. The alpha.1 source tag is
-superseded; its release build was cancelled after another configuration flaw
-was found. Wait for verified release artifacts for installation without Rust.
+Ensure `~/.cargo/bin` is on your PATH. There is no published `brew install`
+command yet. The alpha.1 source tag is superseded; its release build was
+cancelled. Future archives must pass the
+[release checklist](docs/RELEASE_CHECKLIST.md), including checksums, license
+notices, native smoke tests and provenance verification, before appearing on
+[Releases](https://github.com/semihbugrasezer/sigsieve/releases).
 
-A Homebrew formula (building from source, so no Gatekeeper quarantine) is
-prepared but not published yet. Verified release archives, when available, are listed on the
-[Releases page](https://github.com/semihbugrasezer/sigsieve/releases).
-Linux binary archives require glibc 2.39 or newer (Ubuntu 24.04 baseline);
-build from source on older distributions.
-SigSieve installs no services and changes no system or ssh configuration.
+## First session with Secretive (macOS)
 
-## Quick start (Secretive, about five minutes)
+Start Secretive and list its public fingerprints locally:
 
 ```bash
-# 1. Find the fingerprint of the key the remote host may use
-SSH_AUTH_SOCK=~/Library/Containers/com.maxgoedjen.Secretive.SecretAgent/Data/socket.ssh ssh-add -l
-
-# 2. Check the setup: which keys would be exposed, which stay hidden
-#    (hidden keys are not printed; nothing is signed with a real key)
-sigsieve doctor --secretive --allow-fingerprint SHA256:AbC…
-
-# 3. Preview, then open a session that forwards only that key
-sigsieve connect build-host --secretive --allow-fingerprint SHA256:AbC… --dry-run
-sigsieve connect build-host --secretive --allow-fingerprint SHA256:AbC…
-
-# 4. On build-host: only the allowed key is visible
-ssh-add -l
+SSH_AUTH_SOCK="$HOME/Library/Containers/com.maxgoedjen.Secretive.SecretAgent/Data/socket.ssh" ssh-add -l
 ```
 
-`connect` starts a filtered agent for the session, runs ssh with only that
-agent forwarded (connection sharing and port forwardings off), verifies
-ssh's effective configuration, including every ProxyJump hop, and cleans up
-when ssh exits. Your login still uses your normal agent.
-
-## Using it from ssh_config (stable socket)
-
-For plain `ssh` without `sigsieve connect`, run the filtered agent on a
-fixed path and point `ForwardAgent` at it:
+Replace the entire placeholder below with the fingerprint of the one key
+the remote host may use. Replace `build-host` with your SSH alias, whose
+host key you have already verified and saved in known_hosts.
 
 ```bash
-mkdir -m 700 ~/.sigsieve                  # must be private: SigSieve checks
-sigsieve run --secretive --allow-fingerprint SHA256:AbC… \
-  --socket ~/.sigsieve/agent.sock         # keep it running (e.g. a terminal tab)
-```
-
-```sshconfig
-Host build-host
-  # OpenSSH 8.4+: forward this socket only
-  ForwardAgent ~/.sigsieve/agent.sock
-  # a shared master connection would forward its own, unfiltered agent
-  ControlPath none
-```
-
-Put any `-o ForwardAgent=…` on the ssh command line first: ssh uses the first
-value it sees. `connect` does all of this for you and verifies it.
-An annotated configuration is in [examples/ssh_config](examples/ssh_config).
-
-Check it with `sigsieve status --socket ~/.sigsieve/agent.sock`. If the
-process was killed, the next `sigsieve run` on that path takes the socket
-over when it can prove it was left by the dead instance (see
-[Uninstall and recovery](#uninstall-and-recovery)). There is no launchd or
-systemd unit; keep it in the foreground or in a terminal multiplexer.
-
-**Through a bastion:** `ProxyJump` works with `connect`; the bastion needs no
-agent and each hop is verified:
-
-```sshconfig
-Host build-host
-  ProxyJump bastion
-```
-
-**Destination binding** (the forwarded key may only log in to servers you
-name, onward from the build host). This requires a destination supporting
-OpenSSH hostbound authentication. Of the three Git services measured on
-2026-10-27, only GitHub.com advertised it, and its acceptance is not yet
-verified end to end; GitLab.com and Bitbucket Cloud did not, so use identity
-filtering alone for them
-([measurements](docs/SSH_COMPATIBILITY.md#git-hosting-services)):
-
-```bash
-ssh-keyscan -t ed25519 destination.example | ssh-keygen -lf -
-# Verify this fingerprint through the destination operator's trusted channel.
-sigsieve connect build-host --secretive --allow-fingerprint SHA256:AbC… \
-  --allow-destination "SHA256:REPLACE_WITH_VERIFIED_HOST_KEY_FINGERPRINT"
-```
-
-Two consequences of destination binding to know before you enable it:
-
-- **Commit signing through the forwarded agent stops working**: `git commit -S`
-  with an SSH signing key (or `ssh-keygen -Y sign`) is not an authentication,
-  so it is refused. This is intentional.
-- **The restriction is per host key, not per user**: the remote side may log
-  in to an allowed destination as any user the key is authorized for. This
-  does not matter for Git hosts (always `git@`) but does for a shared bastion.
-
-## Other agents (ssh-agent, 1Password, …)
-
-```bash
-# 1. Pick the key to expose
-SSH_AUTH_SOCK=/path/to/agent.sock ssh-add -l
-
-# 2. Check everything (no hidden keys are printed, nothing is signed)
-sigsieve doctor --upstream /path/to/agent.sock --allow-fingerprint SHA256:AbC…
-
-# 3. Preview the connection plan, then connect
-sigsieve connect ci-vps --upstream /path/to/agent.sock --allow-fingerprint SHA256:AbC… --dry-run
-sigsieve connect ci-vps --upstream /path/to/agent.sock --allow-fingerprint SHA256:AbC… \
+fp='SHA256:REPLACE_WITH_YOUR_KEY_FINGERPRINT'
+sigsieve doctor --secretive --allow-fingerprint "$fp"
+sigsieve connect build-host --secretive --allow-fingerprint "$fp" \
+  --dry-run -- -o StrictHostKeyChecking=yes
+sigsieve connect build-host --secretive --allow-fingerprint "$fp" \
   -- -o StrictHostKeyChecking=yes
-
-# Optional: also restrict where the key may authenticate from the remote host
-# (host key fingerprint of the server the remote host should reach)
-sigsieve connect ci-vps --upstream /path/to/agent.sock --allow-fingerprint SHA256:AbC… \
-  --allow-destination "SHA256:REPLACE_WITH_VERIFIED_HOST_KEY_FINGERPRINT"
 ```
 
-## Secretive (macOS)
+`doctor` checks filtering locally; `--dry-run` verifies the connection plan
+without opening a session or signing with a real key. When connected, remote
+`ssh-add -l` should show only the allowed identity. Exit SSH to stop forwarding
+and clean up. Your login still uses your normal agent. `connect` disables
+connection sharing, port forwarding and X11 for that session.
 
-`--secretive` uses Secretive's socket
-(`~/Library/Containers/com.maxgoedjen.Secretive.SecretAgent/Data/socket.ssh`):
+For **Linux/OpenSSH ssh-agent**, optional destination binding, stable sockets,
+CLI options, common errors and returning to ordinary SSH, follow the
+[usage and troubleshooting guide](docs/USAGE.md). For device testing, see
+[Secretive integration](docs/SECRETIVE_INTEGRATION.md).
 
-```bash
-sigsieve doctor  --secretive --allow-fingerprint SHA256:AbC…
-sigsieve connect ci-vps --secretive --allow-fingerprint SHA256:AbC…
-scripts/agent-integration-check.sh --sigsieve target/release/sigsieve --allow SHA256:AbC…
-```
+## Evidence and compatibility
 
-Whether a signature prompts for Touch ID depends on Secretive's per-key
-setting and macOS caching. SigSieve neither adds nor removes prompts. Denied
-requests never reach Secretive. See
-[docs/SECRETIVE_INTEGRATION.md](docs/SECRETIVE_INTEGRATION.md).
+These are distinct kinds of evidence, not security certifications. Test
+results apply to the revision exercised; a green older run does not validate
+a new candidate.
 
-## CLI
-
-```text
-sigsieve run      [--upstream PATH | --secretive] [--allow-fingerprint FP]... [--allow-destination HK]... [--socket PATH]
-sigsieve doctor   [--upstream PATH | --secretive] [--allow-fingerprint FP]... [--allow-destination HK]... [--socket PATH]
-sigsieve status   [--socket PATH]          (default: $SSH_AUTH_SOCK)
-sigsieve connect  HOST [--upstream PATH | --secretive] --allow-fingerprint FP... [--allow-destination HK]...
-                  [--dry-run] [--ssh PATH] [-- SSH_ARGS...]
-```
-
-- Lists are repeatable or comma-separated. `SIGSIEVE_UPSTREAM`,
-  `SIGSIEVE_ALLOW` and `SIGSIEVE_DESTINATIONS` supply defaults.
-  `SSH_AUTH_SOCK` is never an implicit upstream.
-- `--upstream-timeout SECS` (default 120) covers Touch ID waits.
-- Agent I/O and queue wait share that deadline; cancellation stops initial
-  queries and in-flight proxy I/O. Per-session budgets bound connections,
-  requests, signing attempts and logs; see [resource limits](docs/RESOURCE_LIMITS.md).
-- Exit codes: `0` success, `1` runtime failure or failed check, `2` invalid
-  usage/configuration. `connect` returns ssh's exit code once ssh has started.
-- `connect` rules for ssh_config (ProxyCommand, ControlMaster, forwards,
-  IdentityAgent, …): [docs/SSH_COMPATIBILITY.md](docs/SSH_COMPATIBILITY.md).
-
-## Compatibility
-
-| | Status |
+| Evidence | Current scope |
 |---|---|
-| macOS arm64 | tested locally (OpenSSH 10.3) |
-| Linux x86_64 | release target; Ubuntu 24.04 CI requires debug/release tests, real sshd, peer-uid rejection and umask 0002 |
-| Linux aarch64 | included in CI; source builds only, no binary archive |
-| OpenSSH `ssh-agent`, `ssh`, `sshd` | tested end to end |
-| Secretive (ECDSA P-256) | user-assisted real test passed (listing, hidden-key refusal, `connect`); signing and destination binding with Secretive not yet run |
-| 1Password SSH agent | standard protocol; untested |
-| Git hosts, destination binding | GitHub.com advertises `publickey-hostbound` (end-to-end unverified); GitLab.com and Bitbucket Cloud do not: identity filtering only ([details](docs/SSH_COMPATIBILITY.md#git-hosting-services)) |
-| Identity key types | Ed25519, ECDSA P-256/384/521, RSA (≥1024; `rsa-sha2-256`/`-512` only, legacy SHA-1 `ssh-rsa` signatures refused), `sk-` (untested with hardware); certificates unsupported |
+| Code review | Internal AI-assisted reviews in separate contexts; [findings and residual risks](docs/FINDINGS.md). No independent external audit. |
+| Automated tests | Parsers, policy, adversarial agents, lifecycle and resource limits; [test layers and historical results](docs/TESTING.md). |
+| Real OpenSSH | Real `ssh-agent`, `ssh` and throwaway `sshd` tests in CI on macOS arm64 and Linux x86_64/aarch64; inspect [CI for your exact commit](https://github.com/semihbugrasezer/sigsieve/actions/workflows/ci.yml). |
+| Real Secretive (ECDSA P-256) | One recorded user-assisted session: listing, hidden-key refusal and filtered forwarding. Allowed-key signing, destination binding and device-owner confirmation of Touch ID observations remain pending. [Recorded results](docs/SECRETIVE_INTEGRATION.md#recorded-real-device-results). |
+| Git hosts | 2026-10-27 advertisement measurements: GitHub advertises hostbound authentication (end-to-end unverified); GitLab.com and Bitbucket Cloud do not. [Measurements and caveats](docs/SSH_COMPATIBILITY.md#git-hosting-services). |
+| Fuzzing | Stable corpus mutation, historical uninstrumented runs and a recorded 60 s/target instrumented libFuzzer smoke run. Sustained campaigns remain outstanding. [Run and limits](docs/TESTING.md#recorded-coverage-guided-smoke-run). |
+| Other integrations | 1Password and physical FIDO keys untested; SSH identity certificates unsupported. [Key types and protocol matrix](docs/SSH_COMPATIBILITY.md). |
+| Distribution | Packaging and provenance workflow prepared; no verified published archives. [Release gates](docs/RELEASE_CHECKLIST.md). |
 
-## Troubleshooting
+## Learn more and contribute
 
-| Message | Meaning and fix |
-|---|---|
-| `upstream agent unreachable` | The upstream agent is not running (start Secretive) or the path is wrong. |
-| `none of the allowlisted identities is present` | The fingerprint is not in the upstream agent; list keys with step 1 of the quick start. |
-| `refusing to connect: ProxyCommand … cannot be verified` | `connect` allows only plain `ssh -W` relays and `ProxyJump`. Use `ProxyJump`, or `sigsieve run` + plain ssh after checking the tool never forwards an agent. |
-| `unsupported control character` | Use LF line endings in your SSH configuration; move inline Include comments to separate lines. A dedicated `-F` file can avoid unsupported syntax. |
-| `… on proxy hop …` | A jump host's own ssh_config runs a program (ProxyCommand wrapper, LocalCommand, KnownHostsCommand). Fix that host's entry. |
-| `` `Match exec` would run a command `` | Any `Match … exec` in your ssh config (or an included file) is refused before ssh runs. Use `Match host`/`user`, or pass a dedicated `-F` file. |
-| `refusing to replace existing path …` | Another process uses the socket, or SigSieve cannot prove it is a stale one of its own. The message says which; see below. |
-| The jump host rejects your key | Hops do not receive `connect`'s `-o` options: put their `User`, `IdentityFile`, `IdentityAgent` in ssh_config. |
-| Destination-bound `git` to GitHub fails on the remote host | The remote host's ssh may have picked GitHub's RSA host key, which cannot bind. On the **remote host**, add `HostKeyAlgorithms ssh-ed25519,ecdsa-sha2-nistp256` for `github.com` in `~/.ssh/config`, or make sure its `known_hosts` has GitHub's Ed25519 key. `doctor` cannot check the remote host. |
-| More Touch ID prompts than expected | SigSieve adds none; denied requests never reach Secretive. Check Secretive's per-key setting. |
-| `signing budget exhausted or duplicate …` | The session is busy or that destination-bound authentication was already attempted. Start a new SSH authentication session; repeated requests do not automatically retry the agent. |
+- **Use it:** [usage, troubleshooting and uninstall](docs/USAGE.md),
+  [Secretive](docs/SECRETIVE_INTEGRATION.md), [example ssh_config](examples/ssh_config).
+- **Evaluate it:** [threat model](docs/THREAT_MODEL.md),
+  [security model and test evidence](docs/SECURITY_MODEL.md),
+  [limitations](docs/LIMITATIONS.md), [resource limits](docs/RESOURCE_LIMITS.md).
+- **Understand it:** [architecture](docs/ARCHITECTURE.md),
+  [protocol references](docs/REFERENCES.md).
+- **Contribute:** [setup and first contributions](CONTRIBUTING.md),
+  [testing](docs/TESTING.md), [changelog](CHANGELOG.md),
+  [Code of Conduct](CODE_OF_CONDUCT.md).
+- **Report a problem:** use a [bug report](https://github.com/semihbugrasezer/sigsieve/issues/new/choose)
+  with redacted output. Report vulnerabilities privately via [SECURITY.md](SECURITY.md).
 
-`sigsieve doctor` checks a setup without connecting; `connect --dry-run`
-prints the verified plan.
-
-## Uninstall and recovery
-
-SigSieve installs nothing system-wide: no daemons or launch agents, no
-configuration files, and no changes to `~/.ssh/config`, your agent or
-Secretive. Your normal SSH access never depends on it.
-
-1. Stop running instances with Ctrl-C or `kill -TERM <pid>`. They remove
-   their socket and state file on exit. `connect` sessions clean up when ssh
-   exits.
-2. After a crash or `kill -9`, the socket and state file are left behind.
-   The next `sigsieve run --socket` on the same path takes them over only
-   if it can prove they belong to the dead instance (the state file records
-   that exact socket, its pid is gone and nothing listens), and says so.
-   Otherwise it refuses and explains why. To clean up by hand, confirm
-   nothing uses the socket, then remove it:
-
-   ```bash
-   sigsieve status --socket /path/to/agent.sock   # must report NOT RUNNING
-   rm /path/to/agent.sock /path/to/agent.sock.state
-   rmdir "$(dirname /path/to/agent.sock)"          # only for sigsieve-XXXX temp dirs
-   ```
-
-3. Remove the binary: `cargo uninstall sigsieve` (if installed with
-   `cargo install`), or delete the file you copied.
-4. If you forwarded manually, stop passing `-o ForwardAgent=<socket>`. Plain
-   `ssh host` works exactly as before.
-
-## Development
-
-See [docs/TESTING.md](docs/TESTING.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
-
-```bash
-cargo fmt --all -- --check
-cargo clippy --all-targets --all-features -- -D warnings
-SIGSIEVE_REQUIRE_SSHD=1 cargo test --all-targets
-cargo test --release
-```
-
-## Security
-
-Report vulnerabilities privately: [SECURITY.md](SECURITY.md). Known findings
-and their status: [docs/FINDINGS.md](docs/FINDINGS.md). Release gates:
-[docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md).
-
-## License
-
-[MIT](LICENSE)
+[MIT license](LICENSE). Binary distributions include [third-party notices](docs/THIRD_PARTY.md).
