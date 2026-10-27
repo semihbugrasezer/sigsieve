@@ -42,7 +42,8 @@ upstream agent (3 keys) ──► SigSieve ──► filtered socket (1 key) ─
 
 SigSieve is for the remaining case: you really need a forwarded agent on a
 remote machine (e.g. `git` over SSH from a build host), and your agent cannot
-constrain keys itself — for example Secretive / Secure Enclave. Other agents
+constrain keys itself — for example Secretive / Secure Enclave, whose keys
+also cannot be exported into a second, smaller agent. Other agents
 may work through the same protocol, but consult the compatibility table below.
 
 ## What SigSieve enforces (tested)
@@ -212,7 +213,10 @@ Host build-host
 
 **Destination binding** (the forwarded key may only log in to servers you
 name, onward from the build host). This requires a destination supporting
-OpenSSH hostbound authentication; an arbitrary Git/SSH service may not support it:
+OpenSSH hostbound authentication. Of the large Git hosts, only GitHub.com
+advertises it, and that is not yet verified end to end; GitLab.com and
+Bitbucket Cloud do not, so use identity filtering alone for them
+([measurements](docs/SSH_COMPATIBILITY.md#git-hosting-services)):
 
 ```bash
 ssh-keyscan -t ed25519 destination.example | ssh-keygen -lf -
@@ -220,6 +224,15 @@ ssh-keyscan -t ed25519 destination.example | ssh-keygen -lf -
 sigsieve connect build-host --secretive --allow-fingerprint SHA256:AbC… \
   --allow-destination "SHA256:REPLACE_WITH_VERIFIED_HOST_KEY_FINGERPRINT"
 ```
+
+Two consequences of destination binding to know before you enable it:
+
+- **Commit signing through the forwarded agent stops working**: `git commit -S`
+  with an SSH signing key (or `ssh-keygen -Y sign`) is not an authentication,
+  so it is refused. This is intentional.
+- **The restriction is per host key, not per user**: the remote side may log
+  in to an allowed destination as any user the key is authorized for. This
+  does not matter for Git hosts (always `git@`) but does for a shared bastion.
 
 ## Other agents (ssh-agent, 1Password, …)
 
@@ -289,6 +302,7 @@ sigsieve connect  HOST [--upstream PATH | --secretive] --allow-fingerprint FP...
 | OpenSSH `ssh-agent`, `ssh`, `sshd` | tested end to end |
 | Secretive (ECDSA P-256) | user-assisted real test passed (listing, hidden-key refusal, `connect`); signing and destination binding with Secretive not yet run |
 | 1Password SSH agent | standard protocol; untested |
+| Git hosts, destination binding | GitHub.com advertises `publickey-hostbound` (end-to-end unverified); GitLab.com and Bitbucket Cloud do not: identity filtering only ([details](docs/SSH_COMPATIBILITY.md#git-hosting-services)) |
 | Identity key types | Ed25519, ECDSA P-256/384/521, RSA (≥1024; `rsa-sha2-256`/`-512` only, legacy SHA-1 `ssh-rsa` signatures refused), `sk-` (untested with hardware); certificates unsupported |
 
 ## Troubleshooting
@@ -303,6 +317,7 @@ sigsieve connect  HOST [--upstream PATH | --secretive] --allow-fingerprint FP...
 | `` `Match exec` would run a command `` | Any `Match … exec` in your ssh config (or an included file) is refused before ssh runs. Use `Match host`/`user`, or pass a dedicated `-F` file. |
 | `refusing to replace existing path …` | Another process uses the socket, or SigSieve cannot prove it is a stale one of its own. The message says which; see below. |
 | The jump host rejects your key | Hops do not receive `connect`'s `-o` options: put their `User`, `IdentityFile`, `IdentityAgent` in ssh_config. |
+| Destination-bound `git` to GitHub fails on the remote host | The remote host's ssh may have picked GitHub's RSA host key, which cannot bind. On the **remote host**, add `HostKeyAlgorithms ssh-ed25519,ecdsa-sha2-nistp256` for `github.com` in `~/.ssh/config`, or make sure its `known_hosts` has GitHub's Ed25519 key. `doctor` cannot check the remote host. |
 | More Touch ID prompts than expected | SigSieve adds none; denied requests never reach Secretive. Check Secretive's per-key setting. |
 | `signing budget exhausted or duplicate …` | The session is busy or that destination-bound authentication was already attempted. Start a new SSH authentication session; repeated requests do not automatically retry the agent. |
 
