@@ -1,0 +1,28 @@
+# Monthly, grouped version updates; nothing is merged automatically and
+# every update goes through the normal review and required CI checks.
+# Security updates (enabled in the repository settings) are separate:
+# Dependabot opens them as soon as an advisory applies, not on this schedule,
+# and they are not grouped with the version updates below.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directories: ["/", "/fuzz"]
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+    groups:
+      cargo:
+        applies-to: version-updates
+        patterns: ["*"]
+
+  # Actions are pinned to full commit SHAs; Dependabot updates the SHA.
+  # Keep the "# owner/action vX.Y.Z" comment above each `uses:` in step.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1
+    groups:
+      actions:
+        applies-to: version-updates
+        patterns: ["*"]
