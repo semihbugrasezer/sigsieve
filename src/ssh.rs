@@ -480,10 +480,12 @@ mod tests {
         fs::write(d.join("ssh"), b"a").unwrap();
         fs::write(d.join("other"), b"a").unwrap();
         std::os::unix::fs::symlink(d.join("ssh"), d.join("link")).unwrap();
+        std::os::unix::fs::symlink("ssh", d.join("relative-link")).unwrap();
         let ssh = d.join("ssh");
         assert!(same_program(&ssh, &ssh));
         assert!(same_program(&ssh, &d.join("sub/../ssh")));
         assert!(same_program(&ssh, &d.join("link")));
+        assert!(same_program(&ssh, &d.join("relative-link")));
         // Identical contents are not the same program.
         assert!(!same_program(&ssh, &d.join("other")));
         // Unresolvable names never match, not even each other.
