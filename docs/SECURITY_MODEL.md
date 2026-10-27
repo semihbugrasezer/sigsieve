@@ -10,6 +10,14 @@ guarantee. Read [THREAT_MODEL.md](THREAT_MODEL.md) for attackers and
 > breaks (several were additionally mutation-checked: the test was shown to
 > fail with the protection removed).
 
+These labels describe executable checks, not a proof that all malformed
+inputs or configurations are safe. Real OpenSSH tests use throwaway agents
+and servers; they do not establish Secretive device behaviour. Review history,
+automated tests, device observations and an independent audit are separate
+evidence categories. See [TESTING.md](TESTING.md) for run provenance and
+[SECRETIVE_INTEGRATION.md](SECRETIVE_INTEGRATION.md#recorded-real-device-results)
+for the limited device record.
+
 ## Two modes
 
 | | Identity filtering (default) | Destination binding (`--allow-destination`) |
@@ -21,11 +29,12 @@ guarantee. Read [THREAT_MODEL.md](THREAT_MODEL.md) for attackers and
 | `session-bind@openssh.com` | rejected (not forwarded) | verified and recorded per connection (not forwarded) |
 | Works with servers lacking `publickey-hostbound` | yes | no; hostbound authentication is required for every signature |
 
-Destination binding is enforced **inside SigSieve**, so it works with upstream
-agents that have no destination-constraint support (for example Secretive).
-It mirrors the checks of OpenSSH's own `ssh-agent` (`ssh-agent.c`:
-`process_ext_session_bind`, `parse_userauth_request`, `identity_permitted`,
-`process_sign_request2`), verified against
+Destination binding is enforced **inside SigSieve**; the upstream agent does
+not need to implement destination constraints. This is intended to support
+agents such as Secretive, but real Secretive signing and destination binding
+remain unverified. SigSieve uses OpenSSH's session-binding and hostbound
+authentication protocols with its own final-host-key policy; it does not
+implement OpenSSH's path or username constraints. Protocol references:
 [PROTOCOL.agent](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.agent)
 and [agent-restrict](https://www.openssh.org/agent-restrict.html).
 
@@ -71,7 +80,7 @@ with stated gaps; **N/A** = not a SigSieve property.
 | 7 | No add/remove/lock/unlock/PKCS#11/constrained add | Tested (E2E) | `agent_mutations_are_rejected_and_never_forwarded`, `ssh-add -D/-d` in E2E and `real_ssh_agent_listing_signing_and_mutations` |
 | 8 | Unknown operations fail closed | Tested | `unknown_operations_are_rejected`, `non_forwarded_operations_fail_locally` (all 256 types) |
 | 9 | No extension creates an alternate signing path | Tested (E2E) | `extensions_including_session_bind_are_rejected_and_not_forwarded`; in binding mode `session-bind` only adds verified state that can only *restrict* signing |
-| 10 | Malformed input never panics, allocates unboundedly, hangs or bypasses | Tested | frame cap before allocation, deadlines, proptests, `tests/fuzz_corpus.rs`, libFuzzer smoke runs (see [TESTING.md](TESTING.md)) |
+| 10 | Malformed frames and invalid protocol inputs are rejected under size, time and resource limits | Tested (bounded cases) | frame cap before allocation, deadlines, proptests, `tests/fuzz_corpus.rs`; historical uninstrumented libFuzzer runs are not coverage-guided evidence (see [TESTING.md](TESTING.md)) |
 
 ### Connection isolation
 
@@ -81,17 +90,17 @@ with stated gaps; **N/A** = not a SigSieve property.
 | 12 | Multiplexing/forwarding configuration cannot expose the unfiltered agent through `connect` | Tested (E2E) / Partial | `existing_control_master_with_full_forwarding_is_not_reused` (fails without the fix), `connect_refuses_unsafe_effective_ssh_configuration`, `connect_with_real_ssh_config_overrides`. Gap: see [SSH_COMPATIBILITY.md](SSH_COMPATIBILITY.md) |
 | 13 | A compromised remote host cannot reach the upstream socket | Tested (E2E) | the remote side only receives the filtered socket; `ForwardAgent` verified with `ssh -G` |
 | 14 | Temporary sockets are owner-only, securely created and removed | Tested | `default_runtime_dir_is_private_and_cleaned_up`, `run_filters_and_cleans_up_on_sigterm_and_sigint`, `terminating_connect_stops_ssh_and_cleans_up`, `ssh_crash_still_cleans_up_and_reports_failure` |
-| 15 | Cleanup never removes unrelated files or sockets | Tested | `replaced_socket_is_not_deleted_on_cleanup`, `existing_socket_is_never_replaced`, `symlink_at_socket_path_is_refused`, `unexpected_files_keep_owned_runtime_dir_in_place`, `killed_process_leaves_socket_that_is_never_auto_deleted` |
+| 15 | Cleanup never removes unrelated files or sockets; stale recovery requires proof of ownership | Tested | `replaced_socket_is_not_deleted_on_cleanup`, `existing_socket_is_never_replaced`, `symlink_at_socket_path_is_refused`, `unexpected_files_keep_owned_runtime_dir_in_place`, `stale_looking_sockets_are_kept_unless_provably_ours`, `killed_process_socket_is_reported_then_recovered` |
 
 ### Secretive protection
 
 | # | Invariant | Status | Evidence |
 |---|---|---|---|
 | 16 | Denied requests are not forwarded upstream | Tested (E2E) | mock-agent receive logs in every denial test; `upstream_only_sees_authorized_traffic` |
-| 17 | Denied requests do not trigger Touch ID | Tested (by 16); real-device confirmation pending | follows from 16 (denied requests never reach the agent). A real Secretive run on 2026-10-24 refused raw hidden-key sign requests; whether any prompt appeared has not yet been confirmed by the device owner |
+| 17 | Policy-denied requests do not reach Secretive to request Touch ID | Derived from tested upstream isolation; device observation pending | follows from 16. A real Secretive run on 2026-10-24 refused raw hidden-key sign requests; whether any prompt appeared has not yet been confirmed by the device owner |
 | 18 | Legitimate local Secretive login keeps working | Tested (E2E) + real check | login-port test authorizes only a hidden key, so login must use the unfiltered login agent; real user-assisted run against a CI host passed |
 | 19 | No private key material is exported, persisted or copied | By construction | SigSieve has no code path that requests or handles private keys; the protocol messages that carry them (types 17/25) are rejected |
-| 20 | Logs do not expose sensitive content and are bounded | Tested | logs contain operation types, public key / host key fingerprints of *denied* requests and denial reasons; never signed data, session identifiers, signatures or untrusted extension names. Hidden keys appear only if the requester supplied them. At most 16 detail lines per second, with a suppression summary (F-19): `hostile_requests_produce_bounded_logs_without_payloads`, `logging_bounds_details_and_aggregates_suppression` |
+| 20 | Proxy logs omit request payloads and bound detailed output | Tested / Partial | `hostile_requests_produce_bounded_logs_without_payloads`; at most 16 detail lines/s per process plus suppression summaries. No signed data, session IDs, signatures or untrusted extension names; denial reasons and requester-supplied public fingerprints may appear. A blocked stderr can still stall a thread; see [LIMITATIONS.md](LIMITATIONS.md) |
 
 ### Destination binding (binding mode)
 

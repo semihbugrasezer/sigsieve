@@ -71,11 +71,15 @@ request; listing history is irrelevant. Tested directly and over real SSH.
 
 ### Repeated and concurrent signing requests
 
-No state is shared between downstream connections except the immutable
-policy. Upstream requests use a fresh connection each and are never retried
-(a retry could cause a second Touch ID prompt — tested). Concurrency is capped
-(32 connections); excess connections are refused or evict a connection idle
-≥ 5 s. Residual: an allowed client can keep all slots busy.
+Binding state is per downstream connection. Clients share the immutable
+policy, connection/request/signing budgets, upstream queue and bounded
+destination-bound duplicate-attempt cache; proxy log limits are per process.
+Upstream requests use a fresh connection each and are never retried (a retry
+could cause a second Touch ID prompt — tested). Concurrency is capped at
+32 clients and four upstream exchanges; excess clients are refused or evict
+a connection idle ≥ 5 s. Residual: an attacker can occupy the active slots
+or consume shared budgets and deny service to this session. See
+[RESOURCE_LIMITS.md](RESOURCE_LIMITS.md) for bounds and remaining limits.
 
 ### Agent extension manipulation
 

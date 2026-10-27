@@ -17,12 +17,28 @@ ports, configured from a temporary directory.
 | Real OpenSSH E2E | `tests/e2e_sshd.rs` | `sigsieve connect` → `ssh` → throwaway `sshd`s: filtering, raw-protocol attackers in the remote session, second hop with `session-bind`, hidden-key hop refused, mutations, ControlMaster regression, destination binding (allowed host OK, other host refused, forged binds rejected) |
 | Fuzzing (stable) | `tests/fuzz_corpus.rs` + `fuzz/seeds` | seed replay + bounded deterministic mutation through `src/fuzzing.rs` entry points |
 | Fuzzing (cargo-fuzz) | `fuzz/` | coverage-guided targets: `requests`, `session_bind`, `key_blob`, `upstream_reply` |
+| Benchmark | `tests/bench.rs` (ignored) | overhead vs. direct agent access |
 
 The session-bind harness processes intact signed bodies as well as a framed
 bind/bind/key/userauth sequence. A regression test requires the committed
 sequence to reach successful authorization before mutation; empty destination
 sets and trailing bytes must then deny it. Stable mutation is not coverage-guided.
-| Benchmark | `tests/bench.rs` (ignored) | overhead vs. direct agent access |
+
+## Interpreting evidence
+
+- **Code-reviewed:** internal AI-assisted review history is in
+  [FINDINGS.md](FINDINGS.md); this is not an independent external audit.
+- **Automatically tested:** use the exact commit's hosted CI, with tool
+  prerequisites enforced. A configured workflow or a skipped test is not a pass.
+- **Real OpenSSH tested:** real processes with throwaway keys and local
+  servers, not proof of another agent's implementation or a hosted Git service.
+- **Real Secretive tested:** only the dated, user-assisted observations in
+  [SECRETIVE_INTEGRATION.md](SECRETIVE_INTEGRATION.md#recorded-real-device-results).
+- **Fuzzed:** distinguish deterministic corpus mutation, uninstrumented
+  libFuzzer execution and instrumented coverage-guided runs. Retain the run
+  revision, toolchain, target, duration and crash results before extending claims.
+- **Independently audited:** not done. Untested integrations remain untested
+  even when they implement the same protocol.
 
 ## Running
 
@@ -78,7 +94,27 @@ the generated seeds with `cargo test --lib write_fuzz_seeds -- --ignored`.
 Without nightly, the targets still build on stable
 (`cargo build --release --manifest-path fuzz/Cargo.toml`) and can be run
 **uninstrumented** (blind mutation from the seeds), which is what the project
-has done so far.
+used for its historical pre-publication libFuzzer runs below.
+
+### Recorded coverage-guided smoke run
+
+On 2026-10-27, [run 40501046044](https://github.com/semihbugrasezer/sigsieve/actions/runs/40501046044)
+completed all four targets with a 60 s budget each, `nightly-2026-10-15`,
+`cargo-fuzz 0.12.0`, libFuzzer and AddressSanitizer. Logs show loaded inline
+coverage counters and PC tables. PR head:
+`5a83811d8d413b10c1b3f3a6226cf66849fc2e74`; tested merge revision:
+`380d68c612ccbadc380b3f046052dcc276c54ad2`.
+
+| Target | Executions | Final libFuzzer `cov` | Result |
+|---|---|---|---|
+| `requests` | 469,159 | 1,676 | completed; no crash reported |
+| `session_bind` | 282,221 | 2,154 | completed; no crash reported |
+| `key_blob` | 1,624,379 | 491 | completed; no crash reported |
+| `upstream_reply` | 2,774,089 | 103 | completed; no crash reported |
+
+These counters are libFuzzer's reported coverage units, not a percentage of
+program coverage. This is short smoke evidence for that revision, not a
+sustained campaign, a result for later commits or proof of no vulnerabilities.
 
 ## Historical results (pre-publication, 2026-10-24)
 
