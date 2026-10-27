@@ -91,7 +91,7 @@ with stated gaps; **N/A** = not a SigSieve property.
 | 17 | Denied requests do not trigger Touch ID | Tested (by 16); real-device confirmation pending | follows from 16 (denied requests never reach the agent). A real Secretive run on 2026-10-24 refused raw hidden-key sign requests; whether any prompt appeared has not yet been confirmed by the device owner |
 | 18 | Legitimate local Secretive login keeps working | Tested (E2E) + real check | login-port test authorizes only a hidden key, so login must use the unfiltered login agent; real user-assisted run against a CI host passed |
 | 19 | No private key material is exported, persisted or copied | By construction | SigSieve has no code path that requests or handles private keys; the protocol messages that carry them (types 17/25) are rejected |
-| 20 | Logs do not expose sensitive content | Partial | logs contain operation types, extension names (≤64 bytes), public key / host key fingerprints of *denied* requests and denial reasons; never signed data, session identifiers or signatures. Hidden keys appear only if the requester supplied them. Not rate-limited |
+| 20 | Logs do not expose sensitive content and are bounded | Tested | logs contain operation types, public key / host key fingerprints of *denied* requests and denial reasons; never signed data, session identifiers, signatures or untrusted extension names. Hidden keys appear only if the requester supplied them. At most 16 detail lines per second, with a suppression summary (F-19): `hostile_requests_produce_bounded_logs_without_payloads`, `logging_bounds_details_and_aggregates_suppression` |
 
 ### Destination binding (binding mode)
 
