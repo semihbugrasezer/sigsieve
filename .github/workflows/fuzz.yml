@@ -1,0 +1,84 @@
+# Coverage-guided fuzzing of the four cargo-fuzz targets with libFuzzer
+# (nightly Rust, AddressSanitizer), starting from the committed seeds in
+# fuzz/seeds. Started by hand with a per-target time budget; also runs briefly
+# on pull requests that change the fuzz targets or this workflow. A crash
+# fails the job; the grown corpus and any crash inputs are kept as workflow
+# artifacts for 14 days (minimize real crashes into fuzz/seeds as regressions).
+name: Fuzz
+
+on:
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: Fuzzing time per target, in seconds
+        type: choice
+        options: ["300", "900", "1800", "3600"]
+        default: "900"
+  pull_request:
+    paths:
+      - .github/workflows/fuzz.yml
+      - fuzz/**
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  # Pinned so runs are comparable; bump deliberately.
+  NIGHTLY: nightly-2026-10-15
+  CARGO_FUZZ: 0.12.0
+
+jobs:
+  fuzz:
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [requests, session_bind, key_blob, upstream_reply]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install nightly and cargo-fuzz
+        run: |
+          rustup toolchain install "$NIGHTLY" --profile minimal
+          cargo "+$NIGHTLY" install --locked "cargo-fuzz@$CARGO_FUZZ"
+      - name: Fuzz ${{ matrix.target }}
+        working-directory: fuzz
+        env:
+          TARGET: ${{ matrix.target }}
+          SECONDS_BUDGET: ${{ inputs.seconds || '60' }}
+        run: |
+          mkdir -p "corpus/$TARGET" artifacts
+          seeds=$(ls "seeds/$TARGET" | wc -l)
+          # New inputs go to corpus/; the committed seeds are read only.
+          # Keep going on a crash so the summary is still written.
+          set +e
+          cargo "+$NIGHTLY" fuzz run "$TARGET" "corpus/$TARGET" "seeds/$TARGET" -- \
+            -max_total_time="$SECONDS_BUDGET" -print_final_stats=1 2>&1 | tee fuzz.log
+          status=${PIPESTATUS[0]}
+          set -e
+          {
+            echo "### $TARGET (${SECONDS_BUDGET}s, $NIGHTLY)"
+            echo
+            echo "- seeds: $seeds; corpus entries added: $(ls "corpus/$TARGET" | wc -l)"
+            echo "- final line: \`$(grep -E '^#[0-9]+[[:space:]]+DONE' fuzz.log | tail -1)\`"
+            grep -E '^stat::(number_of_executed_units|peak_rss_mb|new_units_added)' fuzz.log | sed 's/^/- /'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+      # actions/upload-artifact v7.0.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: fuzz-${{ matrix.target }}
+          path: |
+            fuzz/corpus/${{ matrix.target }}
+            fuzz/artifacts
+            fuzz/fuzz.log
+          if-no-files-found: ignore
+          retention-days: 14
