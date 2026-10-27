@@ -213,9 +213,10 @@ Host build-host
 
 **Destination binding** (the forwarded key may only log in to servers you
 name, onward from the build host). This requires a destination supporting
-OpenSSH hostbound authentication. Of the large Git hosts, only GitHub.com
-advertises it, and that is not yet verified end to end; GitLab.com and
-Bitbucket Cloud do not, so use identity filtering alone for them
+OpenSSH hostbound authentication. Of the three Git services measured on
+2026-10-27, only GitHub.com advertised it, and its acceptance is not yet
+verified end to end; GitLab.com and Bitbucket Cloud did not, so use identity
+filtering alone for them
 ([measurements](docs/SSH_COMPATIBILITY.md#git-hosting-services)):
 
 ```bash
