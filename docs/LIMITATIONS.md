@@ -19,7 +19,10 @@ behind wording that suggests otherwise.
    are not implemented). Usernames are not restricted. Destinations must use
    Ed25519 or ECDSA host keys, and forwarded hops require servers that support
    `publickey-hostbound` (OpenSSH ≥ 8.9); otherwise signing is refused (fails
-   closed). Support by third-party services such as GitHub is unverified.
+   closed). GitHub.com advertises it but is not yet verified end to end;
+   GitLab.com and Bitbucket Cloud do not advertise it (measured 2026-10-27,
+   see [SSH_COMPATIBILITY.md](SSH_COMPATIBILITY.md#git-hosting-services)), so
+   only identity filtering applies to them.
 3. **Destination binding forbids non-authentication signing** with allowed
    keys (e.g. `git commit -S` or `ssh-keygen -Y sign` through the forwarded
    agent). This is intentional.

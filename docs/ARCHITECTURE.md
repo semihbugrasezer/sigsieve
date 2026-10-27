@@ -4,6 +4,35 @@ A single synchronous Rust binary on top of a small library crate. No async
 runtime: one thread per downstream connection, capped by a registry, which
 keeps control flow and state easy to audit.
 
+## Components
+
+```mermaid
+flowchart LR
+    subgraph Local machine
+        UA["Upstream agent<br/>(Secretive / ssh-agent / 1Password)"]
+        subgraph SigSieve
+            UP["upstream.rs<br/>fresh uid-checked connection per request"]
+            PX["proxy.rs<br/>authorize every request"]
+            PO["policy.rs<br/>allowlist + destinations"]
+            BD["binding.rs<br/>verified session binds"]
+            PR["protocol.rs + keys.rs<br/>strict parsing"]
+            SO["socket.rs<br/>private socket, peer uid"]
+        end
+        SSH["OpenSSH client"]
+    end
+    R["Remote host<br/>(forwarded agent, untrusted)"]
+
+    UA <-- "list / authorized sign only" --> UP
+    UP <--> PX
+    PX --- PO
+    PX --- BD
+    PX --- PR
+    PX <--> SO
+    SSH -- "ForwardAgent=&lt;filtered socket&gt;" --> SO
+    SSH -- "IdentityAgent (login, unchanged)" --> UA
+    R <-- "agent channel" --> SSH
+```
+
 ## Modules
 
 | Module | Responsibility | Trust boundary |

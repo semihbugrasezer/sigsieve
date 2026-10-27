@@ -50,8 +50,33 @@ after 300 s.
 | Bindings per connection | ≤ 16; none after an authentication binding |
 | Failed initial binding | terminal for that connection: subsequent binds and restricted signing are refused, even if a remote peer offers a valid binding |
 | Userauth methods | **`publickey-hostbound-v00@openssh.com` always required**; ordinary `publickey` is refused, including on single-binding connections |
-| Server support | `publickey-hostbound` is advertised by OpenSSH ≥ 8.9 servers. Whether a given service (e.g. GitHub) supports it is **not verified** by this project — test with `connect` before relying on it |
+| Server support | `publickey-hostbound` is advertised by OpenSSH ≥ 8.9 servers. For Git hosting services see [below](#git-hosting-services); an advertisement is not proof that a service accepts it, so test with `connect` before relying on it |
 | `restrict-destination` constraints in the upstream agent | not used; keys constrained in an upstream OpenSSH agent refuse to sign through SigSieve (fail closed, tested) |
+
+### Git hosting services
+
+Measured 2026-10-27 from macOS with `OpenSSH_10.3p1`, without offering any
+key (no agent, no identity, no authentication attempt), by checking whether
+the server's `EXT_INFO` advertises `publickey-hostbound@openssh.com`:
+
+| Service | Ed25519 host key | Advertises `publickey-hostbound` | Destination binding |
+|---|---|---|---|
+| github.com | `SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU` | yes | advertised; **not yet verified end to end** |
+| gitlab.com (`GitLab-SSHD`) | `SHA256:eUXGGm1YGsMAS7vkcx6JOJdOGHPem5gQp4taiCfCLB8` | no | not usable; identity filtering only |
+| bitbucket.org | `SHA256:ybgmFkzwOSotHTHLJgHO0QN8L0xErw6vd0VhFA9m3SM` | no | not usable; identity filtering only |
+
+- Server behaviour can change; rerun the check before relying on it:
+  `ssh -vv -T -F /dev/null -o IdentityAgent=none -o PubkeyAuthentication=no git@github.com 2>&1 | grep -i hostbound`.
+- An advertisement does not prove the service accepts hostbound signatures;
+  only a destination-bound `connect` session that authenticates does.
+- Self-managed GitLab behind OpenSSH (instead of `gitlab-sshd`) likely
+  advertises it as OpenSSH ≥ 8.9 does; check your instance.
+- The binding is created by `ssh` on the **remote host**, so its own
+  `known_hosts` and configuration choose the host key. GitHub also offers an
+  RSA host key, which cannot bind; on the remote host prefer
+  `HostKeyAlgorithms ssh-ed25519,ecdsa-sha2-nistp256` for `github.com`, and
+  allow the matching fingerprint(s) with `--allow-destination`. Verify host
+  key fingerprints through the service's published documentation.
 
 ## 2. `sigsieve connect` and ssh client configuration
 
