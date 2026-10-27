@@ -685,12 +685,27 @@ pub fn home_dir() -> Option<PathBuf> {
     }
     // SAFETY: pw_dir is a NUL-terminated string inside `buf`.
     let dir = unsafe { CStr::from_ptr(pw.pw_dir) };
-    Some(PathBuf::from(dir.to_string_lossy().into_owned()))
+    Some(path_from_c(dir))
+}
+
+/// Byte-exact: a non-UTF-8 home must name the same directory ssh uses.
+fn path_from_c(dir: &CStr) -> PathBuf {
+    PathBuf::from(std::ffi::OsStr::from_bytes(dir.to_bytes()))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn home_dir_bytes_are_preserved_exactly() {
+        // A lossy conversion would turn a non-UTF-8 home into a different,
+        // missing path, and the ssh_config pre-scan would skip the real
+        // ~/.ssh/config that ssh reads.
+        let raw = b"/home/caf\xe9\xff";
+        let c = std::ffi::CString::new(&raw[..]).unwrap();
+        assert_eq!(path_from_c(&c).as_os_str().as_bytes(), raw);
+    }
 
     #[test]
     fn remove_if_same_unlinks_only_the_recorded_inode() {

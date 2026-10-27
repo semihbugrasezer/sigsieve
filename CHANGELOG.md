@@ -19,6 +19,8 @@ The project follows [Semantic Versioning](https://semver.org/).
   exchanges, destination-bound duplicate-attempt suppression and aggregated logs.
 - Rejected RSA signature flags on non-RSA keys and disabled host-key checking
   on destination/proxy hops. Checked socket ancestors as well as the leaf parent.
+- Read the home directory byte-exactly, so a non-UTF-8 home no longer makes
+  the ssh_config pre-scan skip the real `~/.ssh/config` (F-39).
 - Refused legacy RSA/SHA-1 (`ssh-rsa`) signing. RSA sign requests must name
   exactly one of rsa-sha2-256/512, and upstream signatures must use the
   requested algorithm. **Compatibility change:** clients or servers that only
