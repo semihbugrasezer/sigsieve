@@ -1,0 +1,104 @@
+# Tag-free rehearsal of the release build: the same build flags, notices
+# script and packaging as release.yml, plus checks that the release workflow
+# does not make: the archive is byte-identical when packaged twice, its
+# checksum verifies, the binary embeds no runner paths, and the extracted
+# binary runs `doctor` against a real ssh-agent. It creates no tag, release or
+# provenance attestation and uploads only short-lived workflow artifacts.
+#
+# Runs when started by hand, and on pull requests that change the release
+# packaging (so a change to it is rehearsed before it can reach a tag).
+name: Release rehearsal
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - .github/workflows/release-rehearsal.yml
+      - scripts/package-release.py
+      - scripts/third-party-notices.py
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  rehearse:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The targets release.yml builds.
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - run: rustup show active-toolchain || rustup toolchain install
+      - name: Build (as release.yml)
+        run: |
+          export RUSTFLAGS="--remap-path-prefix=${GITHUB_WORKSPACE}=/sigsieve --remap-path-prefix=${HOME}/.cargo=/cargo"
+          cargo build --release --locked
+          test "$(rustc -vV | sed -n 's/^host: //p')" = "${{ matrix.target }}"
+      - name: Binary embeds no runner paths
+        run: |
+          for p in "${GITHUB_WORKSPACE}" "${HOME}/.cargo"; do
+            if grep -aqF "$p" target/release/sigsieve; then
+              echo "::error::binary contains $p"; exit 1
+            fi
+          done
+      - name: Third-party notices
+        run: python3 scripts/third-party-notices.py --target "${{ matrix.target }}" THIRD_PARTY_LICENSES.txt
+      - name: Package twice; archives must be identical
+        run: |
+          name="sigsieve-rehearsal-${GITHUB_SHA::12}-${{ matrix.target }}"
+          echo "name=$name" >> "$GITHUB_ENV"
+          export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          mkdir dist
+          python3 scripts/package-release.py "$name"
+          first=$(shasum -a 256 "dist/${name}.tar.gz" | cut -d' ' -f1)
+          rm "dist/${name}.tar.gz"
+          python3 scripts/package-release.py "$name"
+          second=$(shasum -a 256 "dist/${name}.tar.gz" | cut -d' ' -f1)
+          echo "first=$first second=$second"
+          test "$first" = "$second" || { echo "::error::packaging is not deterministic"; exit 1; }
+          cd dist && shasum -a 256 "${name}.tar.gz" > "${name}.tar.gz.sha256" && shasum -a 256 -c "${name}.tar.gz.sha256"
+      - name: Archive contents and smoke test
+        run: |
+          mkdir smoke && tar -xzf "dist/${name}.tar.gz" -C smoke
+          (cd smoke/"$name" && ls -1 | sort) > contents.txt
+          cat contents.txt
+          for f in CHANGELOG.md LICENSE README.md THIRD_PARTY_LICENSES.txt sigsieve; do
+            grep -qx "$f" contents.txt || { echo "::error::archive lacks $f"; exit 1; }
+          done
+          bin="smoke/${name}/sigsieve"
+          test -x "$bin"
+          version=$(cargo metadata --no-deps --locked --format-version 1 \
+            | python3 -c 'import json,sys; print(next(p["version"] for p in json.load(sys.stdin)["packages"] if p["name"]=="sigsieve"))')
+          test "$("$bin" --version)" = "sigsieve ${version}"
+          "$bin" --help > /dev/null
+          # doctor against a real, throwaway ssh-agent with one generated key.
+          d=$(mktemp -d); chmod 700 "$d"
+          eval "$(ssh-agent -s -a "$d/agent.sock")" > /dev/null
+          ssh-keygen -q -t ed25519 -N '' -C sigsieve-smoke -f "$d/key"
+          ssh-add -q "$d/key"
+          fp=$(ssh-keygen -lf "$d/key.pub" | cut -d' ' -f2)
+          "$bin" doctor --upstream "$d/agent.sock" --allow-fingerprint "$fp" | tee doctor.txt
+          grep -q "Filtering: *verified" doctor.txt || { echo "::error::doctor did not verify filtering"; exit 1; }
+          ssh-agent -k > /dev/null
+      # actions/upload-artifact v7.0.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: rehearsal-${{ matrix.target }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
