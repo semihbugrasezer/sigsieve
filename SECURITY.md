@@ -1,15 +1,21 @@
 # Security Policy
 
 SigSieve is experimental security software and has **not** been
-independently audited by a professional security firm. Its reviews so far
-are AI-assisted reviews in separate contexts plus the automated test suite. We take reports seriously and appreciate responsible
-disclosure.
+independently audited. Its reviews so far are internal AI-assisted reviews
+in separate contexts, alongside automated tests. See the
+[evidence and remaining gaps](docs/TESTING.md) and
+[findings register](docs/FINDINGS.md). We take reports seriously and
+appreciate responsible disclosure.
 
 ## Supported versions
 
 | Version | Supported |
 |---|---|
 | 0.1.0-alpha.* (experimental preview) | security reports accepted |
+
+Fixes target `main` and the next alpha. Older prereleases have no promised
+backports; there is no stable or long-term support release yet. Include the
+exact commit when reporting an unreleased build.
 
 ## Reporting a vulnerability
 
