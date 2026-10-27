@@ -1,6 +1,6 @@
 [package]
 name = "sigsieve"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 edition = "2021"
 description = "SSH agent filtering proxy: expose only the identities you trust."
 license = "MIT"

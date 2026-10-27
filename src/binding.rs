@@ -27,7 +27,7 @@ use std::collections::BTreeSet;
 use std::fmt;
 
 use crate::keys::{parse_public_key, Fingerprint, KeyType};
-use crate::protocol::Reader;
+use crate::protocol::{Reader, SSH_AGENT_RSA_SHA2_256, SSH_AGENT_RSA_SHA2_512};
 
 /// Limits matching OpenSSH's ssh-agent.
 pub const MAX_BINDINGS: usize = 16;
@@ -248,22 +248,14 @@ fn parse_userauth_request<'a>(data: &'a [u8], expected_key: &[u8]) -> Option<Use
     })
 }
 
-/// Whether the signature algorithm named in a userauth request belongs to the
-/// key's type.
+/// Whether the signature algorithm named in a userauth request is one the
+/// proxy would sign with for the key's type (never legacy `ssh-rsa`).
 fn alg_matches(pkalg: &[u8], key: &[u8]) -> bool {
-    let Ok(kind) = parse_public_key(key) else {
-        return false;
-    };
-    let allowed: &[&[u8]] = match kind {
-        KeyType::Ed25519 => &[b"ssh-ed25519"],
-        KeyType::EcdsaP256 => &[b"ecdsa-sha2-nistp256"],
-        KeyType::EcdsaP384 => &[b"ecdsa-sha2-nistp384"],
-        KeyType::EcdsaP521 => &[b"ecdsa-sha2-nistp521"],
-        KeyType::Rsa => &[b"rsa-sha2-256", b"rsa-sha2-512", b"ssh-rsa"],
-        KeyType::SkEd25519 => &[b"sk-ssh-ed25519@openssh.com"],
-        KeyType::SkEcdsaP256 => &[b"sk-ecdsa-sha2-nistp256@openssh.com"],
-    };
-    allowed.contains(&pkalg)
+    parse_public_key(key).is_ok_and(|kind| {
+        [0, SSH_AGENT_RSA_SHA2_256, SSH_AGENT_RSA_SHA2_512]
+            .into_iter()
+            .any(|flags| kind.signature_alg(flags) == Some(pkalg))
+    })
 }
 
 /// Verify an SSH signature blob made by `hostkey` over `data`.
@@ -585,6 +577,154 @@ pub(crate) mod tests {
         assert_eq!(
             Bindings::default().bind(&body),
             Err(BindError::UnsupportedHostKey)
+        );
+    }
+
+    #[test]
+    fn alg_matches_accepts_only_each_key_types_own_algorithms() {
+        let rsa = base64::Engine::decode(
+            &base64::engine::general_purpose::STANDARD,
+            "AAAAB3NzaC1yc2EAAAADAQABAAABAQDHv5D4WLpHMocNgizCnJBpBSL1aoTF3JhC1tZpjRam4a9GiCh8lL+y/iT+KN+QY3srHhZAwFmsiQRa2Aaxeb47eUDD66y3ZrDRUdz71GwZWJs5nhuMs0OAcT9hKiUZ87pUcfSxtgTLuXruU54JflI1v4tAr+wTiKwG9wk/aKz4iqSoXOtlXEn1rJDbL4J0fJ/nQQUeL0mWkZiNUCbrHcrTIB97Rr6RUCl6ZXbyO1hx39XFlAXScIbkceEBc7Uq3kWpfqyHa6OUtsiUVXZUwEABMQfkUm/DrSxKSqBMbmHylh6+amzldHDxLYg8T51vK02rgvfat8+DpYs8ddghxlxJ",
+        )
+        .unwrap();
+        // (name, key blob, the algorithms it may sign with)
+        type Case = (&'static str, Vec<u8>, &'static [&'static [u8]]);
+        let keys: [Case; 5] = [
+            ("ed25519", TestHost::ed(1).public_blob(), &[b"ssh-ed25519"]),
+            (
+                "p256",
+                TestHost::p256(2).public_blob(),
+                &[b"ecdsa-sha2-nistp256"],
+            ),
+            (
+                "p384",
+                TestHost::p384(3).public_blob(),
+                &[b"ecdsa-sha2-nistp384"],
+            ),
+            (
+                "p521",
+                TestHost::p521(4).public_blob(),
+                &[b"ecdsa-sha2-nistp521"],
+            ),
+            ("rsa", rsa, &[b"rsa-sha2-256", b"rsa-sha2-512"]),
+        ];
+        let candidates: [&[u8]; 10] = [
+            b"ssh-ed25519",
+            b"ecdsa-sha2-nistp256",
+            b"ecdsa-sha2-nistp384",
+            b"ecdsa-sha2-nistp521",
+            b"rsa-sha2-256",
+            b"rsa-sha2-512",
+            b"ssh-rsa",
+            b"ssh-ed25519-cert-v01@openssh.com",
+            b"sk-ssh-ed25519@openssh.com",
+            b"",
+        ];
+        for (name, key, own) in &keys {
+            for alg in candidates {
+                assert_eq!(
+                    alg_matches(alg, key),
+                    own.contains(&alg),
+                    "{name} with {}",
+                    String::from_utf8_lossy(alg)
+                );
+            }
+        }
+        // Malformed or empty keys match nothing.
+        let mut truncated = keys[0].1.clone();
+        truncated.pop();
+        for bad in [&b""[..], &truncated] {
+            assert!(!alg_matches(b"ssh-ed25519", bad));
+        }
+    }
+
+    #[test]
+    fn verify_hostkey_signature_rejects_edge_cases() {
+        let data = b"session identifier";
+        let hosts = [
+            TestHost::ed(1),
+            TestHost::p256(2),
+            TestHost::p384(3),
+            TestHost::p521(4),
+        ];
+        for h in &hosts {
+            let key = h.public_blob();
+            let sig = h.sign(data);
+            assert_eq!(verify_hostkey_signature(&key, &sig, data), Ok(()));
+            assert_eq!(
+                verify_hostkey_signature(&key, &sig, b"session identifieR"),
+                Err(BindError::BadSignature)
+            );
+        }
+        // ECDSA: zero r or s, and trailing bytes after (r, s).
+        let p = &hosts[1];
+        let key = p.public_blob();
+        let ecdsa = |r: &[u8], s: &[u8], extra: &[u8]| {
+            let mut inner = Vec::new();
+            put_string(&mut inner, r);
+            put_string(&mut inner, s);
+            inner.extend_from_slice(extra);
+            let mut sig = Vec::new();
+            put_string(&mut sig, b"ecdsa-sha2-nistp256");
+            put_string(&mut sig, &inner);
+            sig
+        };
+        let signed = p.sign(data);
+        let mut r = Reader::new(&signed[4 + 19..]);
+        let inner = r.string().unwrap().to_vec();
+        let mut rs = Reader::new(&inner);
+        let (good_r, good_s) = (rs.string().unwrap().to_vec(), rs.string().unwrap().to_vec());
+        assert_eq!(
+            verify_hostkey_signature(&key, &ecdsa(&good_r, &good_s, b""), data),
+            Ok(())
+        );
+        for sig in [
+            ecdsa(&[], &good_s, b""),
+            ecdsa(&good_r, &[], b""),
+            ecdsa(&[0], &good_s, b""),
+            ecdsa(&good_r, &good_s, &[0]),
+        ] {
+            assert_eq!(
+                verify_hostkey_signature(&key, &sig, data),
+                Err(BindError::BadSignature)
+            );
+        }
+        // Ed25519: signature body of the wrong length.
+        let e = &hosts[0];
+        let key = e.public_blob();
+        let signed = e.sign(data);
+        let mut r = Reader::new(&signed[4 + 11..]);
+        let body = r.string().unwrap().to_vec();
+        for len in [63, 65] {
+            let mut b = body.clone();
+            b.resize(len, 0);
+            let mut sig = Vec::new();
+            put_string(&mut sig, b"ssh-ed25519");
+            put_string(&mut sig, &b);
+            assert_eq!(
+                verify_hostkey_signature(&key, &sig, data),
+                Err(BindError::BadSignature)
+            );
+        }
+    }
+
+    #[test]
+    fn rsa_userauth_must_name_a_sha2_algorithm() {
+        let dest = TestHost::p256(2);
+        let allowed = dests(&[&dest]);
+        let rsa = base64::Engine::decode(
+            &base64::engine::general_purpose::STANDARD,
+            "AAAAB3NzaC1yc2EAAAADAQABAAABAQDHv5D4WLpHMocNgizCnJBpBSL1aoTF3JhC1tZpjRam4a9GiCh8lL+y/iT+KN+QY3srHhZAwFmsiQRa2Aaxeb47eUDD66y3ZrDRUdz71GwZWJs5nhuMs0OAcT9hKiUZ87pUcfSxtgTLuXruU54JflI1v4tAr+wTiKwG9wk/aKz4iqSoXOtlXEn1rJDbL4J0fJ/nQQUeL0mWkZiNUCbrHcrTIB97Rr6RUCl6ZXbyO1hx39XFlAXScIbkceEBc7Uq3kWpfqyHa6OUtsiUVXZUwEABMQfkUm/DrSxKSqBMbmHylh6+amzldHDxLYg8T51vK02rgvfat8+DpYs8ddghxlxJ",
+        )
+        .unwrap();
+        let mut b = Bindings::default();
+        b.bind(&dest.bind_body(b"s1", false)).unwrap();
+        let auth = |alg: &[u8]| userauth(b"s1", &rsa, alg, Some(&dest.public_blob()));
+        assert_eq!(b.authorize(&rsa, &auth(b"rsa-sha2-256"), &allowed), Ok(()));
+        assert_eq!(b.authorize(&rsa, &auth(b"rsa-sha2-512"), &allowed), Ok(()));
+        assert_eq!(
+            b.authorize(&rsa, &auth(b"ssh-rsa"), &allowed),
+            Err(Denied::NotUserauth)
         );
     }
 

@@ -15,6 +15,7 @@
 
 use std::fs;
 use std::net::{TcpListener, TcpStream};
+use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Output, Stdio};
 use std::thread;
@@ -189,10 +190,19 @@ fn setup_with_dest_key(dest_key: &[&str]) -> Option<Env> {
     else {
         return skip_or_fail("sshd not found");
     };
-    let dir = tempfile::Builder::new().prefix("ss").tempdir().unwrap();
+    let dir = tempfile::Builder::new()
+        .prefix("ss")
+        .permissions(fs::Permissions::from_mode(0o700))
+        .tempdir()
+        .unwrap();
     let d = dir.path().to_path_buf();
+    // Owner-only whatever the umask: SigSieve refuses a group-writable
+    // runtime directory (rt) as an unsafe socket ancestor.
     for sub in ["k", "p", "rt"] {
-        fs::create_dir(d.join(sub)).unwrap();
+        fs::DirBuilder::new()
+            .mode(0o700)
+            .create(d.join(sub))
+            .unwrap();
     }
 
     // Upstream agent with three disposable keys.
@@ -485,7 +495,7 @@ ssh-add -d {p}/ci.pub >/dev/null 2>&1; echo "REMOVE-ONE rc=$?"
     assert_eq!(marker(&out, "HOP-ALLOWED"), "0", "{out}");
     assert!(out.contains("hop-ok"), "{out}");
     assert!(
-        err.contains("rejected extension request \"session-bind@openssh.com\""),
+        err.contains("rejected unsupported extension request"),
         "{err}"
     );
     // 6. A hop that needs the hidden key fails.
@@ -496,7 +506,8 @@ ssh-add -d {p}/ci.pub >/dev/null 2>&1; echo "REMOVE-ONE rc=$?"
     assert_eq!(env.upstream_listing().lines().count(), 3);
     // 8. Raw protocol attacker who knows the hidden public keys: every sign
     //    request for a hidden key is refused (5 = SSH_AGENT_FAILURE) and the
-    //    proxy logged the denial; the allowed key still signs (14).
+    //    proxy logs the denial or an aggregate when the log budget is full;
+    //    the allowed key still signs (14).
     if py.is_some() {
         for name in ["admin", "legacy"] {
             for flags in [0, 2, 4] {
@@ -511,7 +522,8 @@ ssh-add -d {p}/ci.pub >/dev/null 2>&1; echo "REMOVE-ONE rc=$?"
         assert!(out.contains("RAW-SIGN-ci-0 type=14"), "{out}");
         for fp in [&admin_fp, &legacy_fp] {
             assert!(
-                err.contains(&format!("denied sign request for non-allowlisted key {fp}")),
+                err.contains(&format!("denied sign request for non-allowlisted key {fp}"))
+                    || err.contains("suppressed"),
                 "{err}"
             );
         }

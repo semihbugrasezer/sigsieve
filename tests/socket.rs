@@ -7,7 +7,7 @@ use std::os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt};
 use std::os::unix::net::UnixListener;
 
 use common::private_tempdir;
-use sigsieve::socket::{check_private_dir, check_socket, RuntimeSocket};
+use sigsieve::socket::{check_private_dir, check_socket, peer_uid, RuntimeSocket};
 
 fn mode(p: &std::path::Path) -> u32 {
     fs::symlink_metadata(p).unwrap().mode() & 0o777
@@ -96,6 +96,29 @@ fn group_or_world_writable_parent_is_refused() {
     }
     fs::set_permissions(dir.path(), Permissions::from_mode(0o700)).unwrap();
     assert!(check_private_dir(dir.path()).is_ok());
+}
+
+#[test]
+fn writable_ancestor_is_refused_even_with_a_private_socket_parent() {
+    let dir = private_tempdir();
+    let ancestor = dir.path().join("shared");
+    let parent = ancestor.join("private");
+    fs::create_dir(&ancestor).unwrap();
+    fs::create_dir(&parent).unwrap();
+    fs::set_permissions(&parent, Permissions::from_mode(0o700)).unwrap();
+    for mode in [0o770, 0o777] {
+        fs::set_permissions(&ancestor, Permissions::from_mode(mode)).unwrap();
+        let result = RuntimeSocket::bind(Some(&parent.join("agent.sock")));
+        assert!(
+            result.is_err(),
+            "unsafe ancestor mode {mode:o} was accepted"
+        );
+        assert!(check_private_dir(&parent).is_err());
+        assert_eq!(fs::read_dir(&parent).unwrap().count(), 0);
+    }
+    // Sticky directories prevent another uid from renaming our child entry.
+    fs::set_permissions(&ancestor, Permissions::from_mode(0o1777)).unwrap();
+    assert!(RuntimeSocket::bind(Some(&parent.join("agent.sock"))).is_ok());
 }
 
 #[test]
@@ -254,6 +277,12 @@ fn stale_looking_sockets_are_kept_unless_provably_ours() {
     assert!(refused("symlinked state").contains("not a private regular file"));
     fs::remove_file(&state).unwrap();
 
+    // A private state file that records the socket but names no process.
+    fs::write(&state, format!("socket_id={}:{}\n", ino.dev(), ino.ino())).unwrap();
+    fs::set_permissions(&state, Permissions::from_mode(0o600)).unwrap();
+    assert!(refused("no pid").contains("has no pid"));
+    fs::remove_file(&state).unwrap();
+
     // No state file at all: someone else's socket.
     assert!(refused("no state").contains("no SigSieve state file"));
     fs::remove_file(&path).unwrap();
@@ -281,4 +310,17 @@ fn concurrent_recovery_has_one_winner() {
         .collect();
     let results: Vec<_> = handles.into_iter().map(|h| h.join().unwrap()).collect();
     assert_eq!(results.iter().filter(|r| r.is_ok()).count(), 1);
+}
+
+#[test]
+fn peer_uid_reports_the_connecting_user() {
+    // Compare against the owner of a file this process creates, not against
+    // sigsieve's own uid helper.
+    let dir = private_tempdir();
+    let probe = dir.path().join("probe");
+    fs::write(&probe, b"").unwrap();
+    let me = fs::metadata(&probe).unwrap().uid();
+    let (a, b) = std::os::unix::net::UnixStream::pair().unwrap();
+    assert_eq!(peer_uid(&a).unwrap(), me);
+    assert_eq!(peer_uid(&b).unwrap(), me);
 }

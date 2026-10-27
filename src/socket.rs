@@ -13,10 +13,14 @@ use std::ffi::CStr;
 use std::fs::{self, DirBuilder, OpenOptions, Permissions};
 use std::hash::{BuildHasher, Hasher};
 use std::io::{self, Write};
+use std::os::fd::FromRawFd;
+use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::{DirBuilderExt, FileTypeExt, MetadataExt, OpenOptionsExt, PermissionsExt};
 use std::os::unix::io::AsRawFd;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, Instant};
 
 pub fn current_uid() -> u32 {
     // SAFETY: getuid(2) takes no arguments, touches no memory and cannot fail.
@@ -73,12 +77,21 @@ pub fn peer_uid(s: &UnixStream) -> io::Result<u32> {
 /// Wait until `fd` is readable (e.g. a listener has a pending connection),
 /// for at most `timeout`. Returns `Ok(false)` on timeout.
 pub fn wait_readable(fd: &impl AsRawFd, timeout: std::time::Duration) -> io::Result<bool> {
+    wait_event(fd, libc::POLLIN, timeout)
+}
+
+pub(crate) fn wait_writable(fd: &impl AsRawFd, timeout: Duration) -> io::Result<bool> {
+    wait_event(fd, libc::POLLOUT, timeout)
+}
+
+fn wait_event(fd: &impl AsRawFd, events: libc::c_short, timeout: Duration) -> io::Result<bool> {
     let mut pfd = libc::pollfd {
         fd: fd.as_raw_fd(),
-        events: libc::POLLIN,
+        events,
         revents: 0,
     };
-    let ms = libc::c_int::try_from(timeout.as_millis()).unwrap_or(libc::c_int::MAX);
+    let ms =
+        libc::c_int::try_from(timeout.as_nanos().div_ceil(1_000_000)).unwrap_or(libc::c_int::MAX);
     // SAFETY: `pfd` is a valid, writable pollfd for an fd owned by the caller
     // for the duration of the call, and the count passed is exactly 1.
     let rc = unsafe { libc::poll(&mut pfd, 1, ms) };
@@ -93,6 +106,189 @@ pub fn wait_readable(fd: &impl AsRawFd, timeout: std::time::Duration) -> io::Res
         }
         0 => Ok(false),
         _ => Ok(true),
+    }
+}
+
+/// Remaining I/O wait budget, checked between nonblocking operations.
+pub(crate) fn time_left(deadline: Instant, cancelled: &AtomicBool) -> io::Result<Duration> {
+    if cancelled.load(Ordering::Relaxed) {
+        return Err(io::Error::new(
+            io::ErrorKind::Interrupted,
+            "request cancelled",
+        ));
+    }
+    let left = deadline.saturating_duration_since(Instant::now());
+    if left.is_zero() {
+        return Err(io::Error::new(
+            io::ErrorKind::TimedOut,
+            "request deadline exceeded",
+        ));
+    }
+    Ok(left)
+}
+
+/// Connect without a blocking syscall; keep the stream nonblocking for the
+/// whole request. Linux AF_UNIX EAGAIN means a full queue, not EINPROGRESS.
+pub(crate) fn connect_until(
+    path: &Path,
+    deadline: Instant,
+    cancelled: &AtomicBool,
+) -> io::Result<UnixStream> {
+    time_left(deadline, cancelled)?;
+    // SAFETY: an all-zero sockaddr_un is a valid initialization; fields and
+    // the bounded, NUL-terminated path are filled before passing it to connect.
+    let mut addr: libc::sockaddr_un = unsafe { std::mem::zeroed() };
+    let bytes = path.as_os_str().as_bytes();
+    if bytes.is_empty() || bytes.contains(&0) || bytes.len() >= addr.sun_path.len() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "invalid Unix socket path",
+        ));
+    }
+    addr.sun_family = libc::AF_UNIX as libc::sa_family_t;
+    for (dest, src) in addr.sun_path.iter_mut().zip(bytes) {
+        *dest = *src as libc::c_char;
+    }
+    let len =
+        (std::mem::offset_of!(libc::sockaddr_un, sun_path) + bytes.len() + 1) as libc::socklen_t;
+    #[cfg(any(
+        target_os = "macos",
+        target_os = "ios",
+        target_os = "freebsd",
+        target_os = "openbsd",
+        target_os = "netbsd",
+        target_os = "dragonfly"
+    ))]
+    {
+        addr.sun_len = len as u8;
+    }
+    #[cfg(any(target_os = "linux", target_os = "android"))]
+    let kind = libc::SOCK_STREAM | libc::SOCK_CLOEXEC | libc::SOCK_NONBLOCK;
+    #[cfg(not(any(target_os = "linux", target_os = "android")))]
+    let kind = libc::SOCK_STREAM;
+    // SAFETY: socket takes scalar arguments and returns a new descriptor.
+    let fd = unsafe { libc::socket(libc::AF_UNIX, kind, 0) };
+    if fd < 0 {
+        return Err(io::Error::last_os_error());
+    }
+    // SAFETY: this is the newly created descriptor; the stream becomes its
+    // sole owner and closes it on every following error path.
+    let stream = unsafe { UnixStream::from_raw_fd(fd) };
+    #[cfg(not(any(target_os = "linux", target_os = "android")))]
+    {
+        // SAFETY: the descriptor is owned and open; this sets only CLOEXEC.
+        if unsafe { libc::fcntl(fd, libc::F_SETFD, libc::FD_CLOEXEC) } < 0 {
+            return Err(io::Error::last_os_error());
+        }
+        stream.set_nonblocking(true)?;
+    }
+    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    {
+        let one: libc::c_int = 1;
+        // SAFETY: valid owned fd, pointer to an int and its exact size;
+        // matches std's Apple socket setup before any connection or write.
+        if unsafe {
+            libc::setsockopt(
+                fd,
+                libc::SOL_SOCKET,
+                libc::SO_NOSIGPIPE,
+                (&one as *const libc::c_int).cast(),
+                std::mem::size_of_val(&one) as libc::socklen_t,
+            )
+        } != 0
+        {
+            return Err(io::Error::last_os_error());
+        }
+    }
+    // SAFETY: addr is initialized and lives through the call, len names only
+    // its initialized header/path, and fd is owned and nonblocking.
+    if unsafe { libc::connect(fd, (&addr as *const libc::sockaddr_un).cast(), len) } == 0 {
+        time_left(deadline, cancelled)?;
+        return Ok(stream);
+    }
+    let err = io::Error::last_os_error();
+    if err.raw_os_error() != Some(libc::EINPROGRESS) {
+        return Err(err);
+    }
+    loop {
+        let left = time_left(deadline, cancelled)?;
+        if wait_writable(&stream, left.min(Duration::from_millis(100)))? {
+            if let Some(err) = stream.take_error()? {
+                return Err(err);
+            }
+            time_left(deadline, cancelled)?;
+            return Ok(stream);
+        }
+    }
+}
+
+#[cfg(test)]
+mod deadline_tests {
+    use super::*;
+
+    #[test]
+    fn deadline_socket_is_nonblocking_and_close_on_exec() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("agent.sock");
+        let _listener = UnixListener::bind(&path).unwrap();
+        let stream = connect_until(
+            &path,
+            Instant::now() + Duration::from_secs(1),
+            &AtomicBool::new(false),
+        )
+        .unwrap();
+        // SAFETY: fcntl reads flags on a descriptor owned by stream.
+        let fd_flags = unsafe { libc::fcntl(stream.as_raw_fd(), libc::F_GETFD) };
+        // SAFETY: fcntl reads status flags on the same open descriptor.
+        let status_flags = unsafe { libc::fcntl(stream.as_raw_fd(), libc::F_GETFL) };
+        assert_ne!(fd_flags & libc::FD_CLOEXEC, 0);
+        assert_ne!(status_flags & libc::O_NONBLOCK, 0);
+        #[cfg(any(target_os = "macos", target_os = "ios"))]
+        {
+            let mut value: libc::c_int = 0;
+            let mut len = std::mem::size_of_val(&value) as libc::socklen_t;
+            // SAFETY: writable int and its exact size on an owned descriptor.
+            assert_eq!(
+                unsafe {
+                    libc::getsockopt(
+                        stream.as_raw_fd(),
+                        libc::SOL_SOCKET,
+                        libc::SO_NOSIGPIPE,
+                        (&mut value as *mut libc::c_int).cast(),
+                        &mut len,
+                    )
+                },
+                0
+            );
+            assert_eq!(value, 1);
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn full_unix_listen_queue_cannot_block_upstream_connect() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("agent.sock");
+        let listener = UnixListener::bind(&path).unwrap();
+        // SAFETY: change only this test's listener backlog. Linux permits one
+        // pending connection with backlog zero; nothing accepts it.
+        assert_eq!(unsafe { libc::listen(listener.as_raw_fd(), 0) }, 0);
+        let filler = UnixStream::connect(&path).unwrap();
+        let (tx, rx) = std::sync::mpsc::channel();
+        let worker = std::thread::spawn(move || {
+            let result =
+                crate::upstream::Upstream::new(path, Duration::from_millis(200)).identities();
+            tx.send(matches!(result, Err(crate::upstream::UpstreamError::Unreachable(e)) if e.kind() == io::ErrorKind::WouldBlock)).unwrap();
+        });
+        let result = rx.recv_timeout(Duration::from_secs(1));
+        drop(listener);
+        drop(filler);
+        worker.join().unwrap();
+        assert_eq!(
+            result,
+            Ok(true),
+            "a full socket queue must fail closed immediately"
+        );
     }
 }
 
@@ -140,6 +336,26 @@ pub fn check_private_dir(dir: &Path) -> Result<(), String> {
             dir.display(),
             meta.mode() & 0o7777
         ));
+    }
+    let resolved = fs::canonicalize(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+    if let Some(parent) = resolved.parent() {
+        check_ancestors(parent)?;
+    }
+    Ok(())
+}
+
+/// A trusted sticky directory (e.g. /tmp) protects our entry from other uids.
+fn check_ancestors(dir: &Path) -> Result<(), String> {
+    let me = current_uid();
+    for ancestor in dir.ancestors() {
+        let meta =
+            fs::symlink_metadata(ancestor).map_err(|e| format!("{}: {e}", ancestor.display()))?;
+        if !meta.is_dir()
+            || (meta.uid() != 0 && meta.uid() != me)
+            || (meta.mode() & 0o022 != 0 && meta.mode() & 0o1000 == 0)
+        {
+            return Err(format!("unsafe socket ancestor {}: require root/current-user ownership and no group/other write access, or a sticky directory", ancestor.display()));
+        }
     }
     Ok(())
 }
@@ -418,6 +634,7 @@ fn create_private_temp_dir() -> io::Result<PathBuf> {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("/tmp"));
     let base = fs::canonicalize(&base)?;
+    check_ancestors(&base).map_err(|e| io::Error::new(io::ErrorKind::PermissionDenied, e))?;
     for _ in 0..16 {
         let mut h = RandomState::new().build_hasher();
         h.write_u32(std::process::id());
@@ -468,5 +685,64 @@ pub fn home_dir() -> Option<PathBuf> {
     }
     // SAFETY: pw_dir is a NUL-terminated string inside `buf`.
     let dir = unsafe { CStr::from_ptr(pw.pw_dir) };
-    Some(PathBuf::from(dir.to_string_lossy().into_owned()))
+    Some(path_from_c(dir))
+}
+
+/// Byte-exact: a non-UTF-8 home must name the same directory ssh uses.
+fn path_from_c(dir: &CStr) -> PathBuf {
+    PathBuf::from(std::ffi::OsStr::from_bytes(dir.to_bytes()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn home_dir_bytes_are_preserved_exactly() {
+        // A lossy conversion would turn a non-UTF-8 home into a different,
+        // missing path, and the ssh_config pre-scan would skip the real
+        // ~/.ssh/config that ssh reads.
+        let raw = b"/home/caf\xe9\xff";
+        let c = std::ffi::CString::new(&raw[..]).unwrap();
+        assert_eq!(path_from_c(&c).as_os_str().as_bytes(), raw);
+    }
+
+    #[test]
+    fn remove_if_same_unlinks_only_the_recorded_inode() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("sock");
+
+        // Same inode: removed.
+        fs::write(&path, b"ours").unwrap();
+        let ours = Inode::of(&path).unwrap();
+        assert!(ours.remove_if_same(&path));
+        assert!(!path.exists());
+
+        // Already gone: nothing to do.
+        let gone = Inode {
+            dev: ours.dev,
+            ino: ours.ino,
+        };
+        assert!(!gone.remove_if_same(&path));
+
+        // Replaced by another file: kept. The original stays linked
+        // elsewhere so its inode number cannot be reused.
+        let original = dir.path().join("original");
+        fs::write(&original, b"ours").unwrap();
+        let recorded = Inode::of(&original).unwrap();
+        fs::write(&path, b"theirs").unwrap();
+        assert!(!recorded.remove_if_same(&path));
+        assert_eq!(fs::read(&path).unwrap(), b"theirs");
+        fs::remove_file(&path).unwrap();
+
+        // Replaced by a symlink to the recorded file: neither is removed.
+        std::os::unix::fs::symlink(&original, &path).unwrap();
+        let recorded = Inode::of(&original).unwrap();
+        assert!(!recorded.remove_if_same(&path));
+        assert!(fs::symlink_metadata(&path)
+            .unwrap()
+            .file_type()
+            .is_symlink());
+        assert_eq!(fs::read(&original).unwrap(), b"ours");
+    }
 }

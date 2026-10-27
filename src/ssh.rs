@@ -133,7 +133,7 @@ pub(crate) fn verify_ssh_plan(
             ));
         }
     }
-    check_no_local_commands(cfg, "")?;
+    check_static_config(cfg, "")?;
     for (k, v) in cfg {
         if k == "identityagent" || k == "forwardagent" {
             continue;
@@ -150,14 +150,22 @@ pub(crate) fn verify_ssh_plan(
     Ok(())
 }
 
-/// LocalCommand and KnownHostsCommand run arbitrary programs with the
-/// session's environment (ssh re-exports the login agent to LocalCommand), so
-/// neither may be enabled on the destination or on any proxy hop.
-fn check_no_local_commands(cfg: &[(String, String)], hop: &str) -> Result<(), String> {
+/// Refuse local programs and hostname canonicalization, which can change the
+/// configuration between the probe and the connection (including on hops).
+fn check_static_config(cfg: &[(String, String)], hop: &str) -> Result<(), String> {
     let has = |key: &str, ok: &[&str]| {
         cfg.iter()
             .any(|(k, v)| k == key && !ok.contains(&v.as_str()))
     };
+    if has(
+        "stricthostkeychecking",
+        &["yes", "true", "ask", "accept-new"],
+    ) {
+        return Err(format!("StrictHostKeyChecking is disabled{hop}; verify the host key and use yes, ask or accept-new (trust on first use)"));
+    }
+    if has("canonicalizehostname", &["no", "false"]) {
+        return Err(format!("CanonicalizeHostname is enabled{hop}; the connection could use a different configuration from ssh -G"));
+    }
     if has("permitlocalcommand", &["no", "false"]) {
         return Err(format!(
             "PermitLocalCommand is enabled{hop}; LocalCommand runs with the unfiltered \
@@ -451,18 +459,39 @@ fn verify_hops(
     {
         return Err(format!("proxy hop keeps port forwardings{hop}"));
     }
-    check_no_local_commands(&hop_cfg, &hop)?;
+    check_static_config(&hop_cfg, &hop)?;
     verify_hops(&hop_cfg, ssh, child_file.as_deref(), probe, seen).map_err(|e| format!("{e}{hop}"))
 }
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-    use std::os::unix::fs::symlink;
-    use tempfile::Builder;
-
     use super::proxycommand_is_ssh_relay as relay;
     use super::same_program;
+    use std::fs;
+    use std::path::Path;
+
+    #[test]
+    fn same_program_compares_resolved_files() {
+        // Paths with a directory component only: PATH is never touched, as
+        // tests run in parallel.
+        let dir = tempfile::tempdir().unwrap();
+        let d = dir.path();
+        fs::create_dir(d.join("sub")).unwrap();
+        fs::write(d.join("ssh"), b"a").unwrap();
+        fs::write(d.join("other"), b"a").unwrap();
+        std::os::unix::fs::symlink(d.join("ssh"), d.join("link")).unwrap();
+        let ssh = d.join("ssh");
+        assert!(same_program(&ssh, &ssh));
+        assert!(same_program(&ssh, &d.join("sub/../ssh")));
+        assert!(same_program(&ssh, &d.join("link")));
+        // Identical contents are not the same program.
+        assert!(!same_program(&ssh, &d.join("other")));
+        // Unresolvable names never match, not even each other.
+        let missing = d.join("missing");
+        assert!(!same_program(&ssh, &missing));
+        assert!(!same_program(&missing, &missing));
+        assert!(!same_program(Path::new(""), Path::new("")));
+    }
 
     #[test]
     fn only_plain_ssh_w_relays_are_accepted() {
@@ -484,32 +513,5 @@ mod tests {
         ] {
             assert!(!relay(bad), "{bad:?}");
         }
-    }
-
-    #[test]
-    fn same_program_compares_resolved_paths() {
-        let dir = Builder::new().tempdir_in(".").unwrap();
-        let dir_path = dir.path();
-
-        let file1 = dir_path.join("file1");
-        let file2 = dir_path.join("file2");
-        let sym1 = dir_path.join("sym1");
-
-        // Create two distinct files
-        fs::write(&file1, "1").unwrap();
-        fs::write(&file2, "2").unwrap();
-
-        // Create a symlink to file1
-        symlink("file1", &sym1).unwrap();
-
-        // Absolute and relative path to the same file
-        assert!(same_program(&file1, &file1.canonicalize().unwrap()));
-        // Symlink and the file it points to
-        assert!(same_program(&sym1, &file1));
-        // Two distinct files
-        assert!(!same_program(&file1, &file2));
-        // Missing paths
-        let missing = dir_path.join("missing");
-        assert!(!same_program(&file1, &missing));
     }
 }

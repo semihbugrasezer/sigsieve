@@ -192,6 +192,47 @@ fn real_ssh_agent_listing_signing_and_mutations() {
     assert_eq!(upstream.lines().count(), 3, "{upstream}");
 }
 
+/// Real OpenSSH tools still sign with RSA/SHA-1 (`ssh-rsa`) when asked:
+/// `ssh-keygen -s -U -t` makes the agent sign a certificate with exactly the
+/// named algorithm. The upstream agent accepts all three; through SigSieve
+/// only the SHA-2 algorithms work.
+#[test]
+fn rsa_sha1_signing_is_refused_while_sha2_works() {
+    let Some(fx) = fixture() else { return };
+    let legacy_fp = fingerprint(fx.pubkey("legacy"));
+    let p = start_proxy(&fx.agent.sock, &[&legacy_fp]);
+    let user = fx.dir.path().join("user");
+    ok(Command::new("ssh-keygen")
+        .args(["-q", "-N", "", "-t", "ed25519", "-f"])
+        .arg(&user));
+    let cert = fx.dir.path().join("user-cert.pub");
+    let certify = |sock: &Path, alg: &str| -> bool {
+        let _ = fs::remove_file(&cert);
+        let o = run(Command::new("ssh-keygen")
+            .env("SSH_AUTH_SOCK", sock)
+            .args(["-q", "-U", "-s"])
+            .arg(fx.pubkey("legacy"))
+            .args(["-t", alg, "-I", "sigsieve-test", "-n", "test"])
+            .arg(user.with_extension("pub")));
+        if !o.status.success() {
+            return false;
+        }
+        let shown = ok(Command::new("ssh-keygen").arg("-Lf").arg(&cert));
+        assert!(shown.contains(&format!("(using {alg})")), "{shown}");
+        true
+    };
+    for alg in ["rsa-sha2-256", "rsa-sha2-512", "ssh-rsa"] {
+        assert!(certify(&fx.agent.sock, alg), "upstream control: {alg}");
+    }
+    assert!(certify(&p.path, "rsa-sha2-256"));
+    assert!(certify(&p.path, "rsa-sha2-512"));
+    assert!(
+        !certify(&p.path, "ssh-rsa"),
+        "SHA-1 signed through SigSieve"
+    );
+    assert!(!cert.exists());
+}
+
 /// Regression (from security review): keys added with `ssh-add -h` are
 /// destination-constrained. Requests through SigSieve carry no session
 /// binding, and OpenSSH's agent refuses constrained keys on unbound
@@ -499,6 +540,33 @@ fn connect_verifies_every_proxy_hop() {
         format!("Host target\n  KnownHostsCommand {w}\n"),
         "KnownHostsCommand is set",
     );
+    refused(
+        "canonicalize",
+        "Host target\n  CanonicalizeHostname yes\n".into(),
+        "CanonicalizeHostname",
+    );
+    refused(
+        "hop-canonicalize",
+        "Host target\n  ProxyJump bastion\nHost bastion\n  CanonicalizeHostname yes\n".into(),
+        "CanonicalizeHostname",
+    );
+    for setting in ["no", "off", "false"] {
+        refused(
+            &format!("unsafe-hostkey-{setting}"),
+            format!("Host target\n  StrictHostKeyChecking {setting}\n"),
+            "StrictHostKeyChecking",
+        );
+    }
+    refused(
+        "unsafe-hop-hostkey",
+        "Host target\n  ProxyJump bastion\nHost bastion\n  StrictHostKeyChecking no\n".into(),
+        "StrictHostKeyChecking",
+    );
+    refused(
+        "match-final",
+        "Match final all\n  User test\n".into(),
+        "state-dependent Match",
+    );
     // Match exec runs a program while ssh evaluates its configuration.
     refused(
         "match-exec",
@@ -526,6 +594,17 @@ fn connect_verifies_every_proxy_hop() {
         format!("\"Include\"{}\n", d.join("inc-exec").display()),
         "quoted or escaped keyword",
     );
+    for (name, directive) in [
+        ("cr-include-keyword", "Include\r"),
+        ("cr-include-argument", "Include \r"),
+        ("cr-include-equals", "Include = \r"),
+    ] {
+        refused(
+            name,
+            format!("{directive}{}\n", d.join("inc-exec").display()),
+            "unsupported control character",
+        );
+    }
     write_cfg(
         &d.join("inc=payload"),
         &format!("Match exec \"{}\"\n", wrapper.display()),

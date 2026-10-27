@@ -10,7 +10,7 @@ use crate::binding::{Bindings, Denied};
 use crate::keys::{parse_public_key, Fingerprint};
 use crate::policy::Policy;
 use crate::protocol::{self, Reader};
-use crate::proxy::handle_request;
+use crate::proxy::{Limits, Proxy};
 use crate::upstream::{parse_identities_answer, Upstream};
 
 const SOME_FP: &str = "SHA256:XL3lJQbUZ3vcFR1pKSGm15eWRuVdOR+7STUtaAipzIE";
@@ -26,10 +26,13 @@ pub fn requests(data: &[u8]) {
     let (plain, _) = Policy::from_fingerprints(&[SOME_FP]).unwrap();
     let bound = plain.clone().with_destinations(&[SOME_FP]).unwrap();
     for policy in [&plain, &bound] {
+        let proxy = Proxy::new(policy.clone(), unreachable_upstream(), Limits::default());
         let mut bindings = Bindings::default();
         let mut r = Reader::new(data);
         while let Ok(req) = r.string() {
-            let resp = handle_request(req, policy, &unreachable_upstream(), &mut bindings);
+            let Some(resp) = proxy.handle_request(req, &mut bindings) else {
+                break;
+            };
             assert!(
                 resp == [protocol::SSH_AGENT_FAILURE]
                     || resp == [protocol::SSH_AGENT_EXTENSION_FAILURE]

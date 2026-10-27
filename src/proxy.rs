@@ -20,16 +20,19 @@ use std::io;
 use std::net::Shutdown;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
 use crate::binding::Bindings;
-use crate::keys::Fingerprint;
+use crate::keys::{parse_public_key, Fingerprint};
 use crate::policy::Policy;
 use crate::protocol::{self, Reader, WireError};
 use crate::socket;
-use crate::upstream::Upstream;
+use crate::upstream::{parse_identities_answer, Upstream, UpstreamError};
+
+mod resources;
+use resources::{Budget, LogWindow, Resources};
 
 #[derive(Debug, Clone)]
 pub struct Limits {
@@ -46,6 +49,13 @@ pub struct Limits {
     /// Protects clients pausing briefly between requests (e.g. an ssh login
     /// waiting for the server between listing and signing).
     pub evict_after: Duration,
+    /// Whole-instance request and connection budgets (one second burst).
+    pub request_rate: u32,
+    pub connection_rate: u32,
+    /// Signing attempts per second, with an initial burst of max_clients.
+    pub signing_rate: u32,
+    /// Concurrent upstream exchanges; queued requests share their I/O deadline.
+    pub max_upstream: usize,
 }
 
 impl Default for Limits {
@@ -56,34 +66,80 @@ impl Default for Limits {
             frame_timeout: Duration::from_secs(10),
             write_timeout: Duration::from_secs(10),
             evict_after: Duration::from_secs(5),
+            request_rate: 1024,
+            connection_rate: 64,
+            signing_rate: 4,
+            max_upstream: 4,
         }
     }
 }
 
 pub struct Proxy {
-    pub policy: Policy,
-    pub upstream: Upstream,
-    pub limits: Limits,
+    policy: Policy,
+    upstream: Upstream,
+    limits: Limits,
+    resources: Resources,
+    cancelled: AtomicBool,
 }
 
+static LOG_WINDOW: OnceLock<Mutex<LogWindow>> = OnceLock::new();
+
 fn log(msg: std::fmt::Arguments<'_>) {
-    eprintln!("sigsieve: {msg}");
+    let suppressed = LOG_WINDOW
+        .get_or_init(|| Mutex::new(LogWindow::new(Instant::now())))
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .admit(Instant::now());
+    if let Some(suppressed) = suppressed {
+        if suppressed > 0 {
+            eprintln!(
+                "sigsieve: suppressed {suppressed} repeated events during the previous log window"
+            );
+        }
+        eprintln!("sigsieve: {msg}");
+    }
 }
 
 const SESSION_BIND: &[u8] = b"session-bind@openssh.com";
 
 /// Decide and produce the response payload for one downstream request.
 /// `bindings` is the per-connection session-binding state.
-pub fn handle_request(
-    req: &[u8],
-    policy: &Policy,
-    upstream: &Upstream,
-    bindings: &mut Bindings,
-) -> Vec<u8> {
+impl Proxy {
+    pub fn new(policy: Policy, upstream: Upstream, limits: Limits) -> Self {
+        let resources = Resources::new(&limits);
+        Self {
+            policy,
+            upstream,
+            limits,
+            resources,
+            cancelled: AtomicBool::new(false),
+        }
+    }
+
+    /// None closes a flooding connection; policy denials remain agent FAILURE.
+    pub fn handle_request(&self, req: &[u8], bindings: &mut Bindings) -> Option<Vec<u8>> {
+        if self.cancelled.load(Ordering::Relaxed) || !self.resources.request() {
+            log(format_args!("request budget exhausted; closing client"));
+            return None;
+        }
+        Some(handle_request(req, self, bindings))
+    }
+
+    fn upstream_request(&self, req: &[u8]) -> Result<Vec<u8>, UpstreamError> {
+        let deadline = self.upstream.deadline();
+        let _permit = self
+            .resources
+            .acquire(deadline, &self.cancelled)
+            .map_err(UpstreamError::Unreachable)?;
+        self.upstream.request_until(req, deadline, &self.cancelled)
+    }
+}
+
+fn handle_request(req: &[u8], proxy: &Proxy, bindings: &mut Bindings) -> Vec<u8> {
     match req.first().copied() {
-        Some(protocol::SSH_AGENTC_REQUEST_IDENTITIES) => list_identities(req, policy, upstream),
-        Some(protocol::SSH_AGENTC_SIGN_REQUEST) => sign(req, policy, upstream, bindings),
-        Some(protocol::SSH_AGENTC_EXTENSION) => extension(&req[1..], policy, bindings),
+        Some(protocol::SSH_AGENTC_REQUEST_IDENTITIES) => list_identities(req, proxy),
+        Some(protocol::SSH_AGENTC_SIGN_REQUEST) => sign(req, proxy, bindings),
+        Some(protocol::SSH_AGENTC_EXTENSION) => extension(&req[1..], &proxy.policy, bindings),
         Some(t) => {
             log(format_args!("rejected agent operation type {t}"));
             protocol::failure()
@@ -92,11 +148,14 @@ pub fn handle_request(
     }
 }
 
-fn list_identities(req: &[u8], policy: &Policy, upstream: &Upstream) -> Vec<u8> {
+fn list_identities(req: &[u8], proxy: &Proxy) -> Vec<u8> {
     if req.len() != 1 {
         return protocol::failure();
     }
-    let ids = match upstream.identities() {
+    let ids = match proxy
+        .upstream_request(req)
+        .and_then(|reply| parse_identities_answer(&reply))
+    {
         Ok(ids) => ids,
         Err(e) => {
             log(format_args!("identity request failed: {e}"));
@@ -106,7 +165,7 @@ fn list_identities(req: &[u8], policy: &Policy, upstream: &Upstream) -> Vec<u8> 
     let mut seen = std::collections::HashSet::new();
     let allowed: Vec<_> = ids
         .iter()
-        .filter(|id| policy.allows(&id.blob) && seen.insert(id.blob.as_slice()))
+        .filter(|id| proxy.policy.allows(&id.blob) && seen.insert(id.blob.as_slice()))
         .collect();
     let mut out = vec![protocol::SSH_AGENT_IDENTITIES_ANSWER];
     protocol::put_u32(&mut out, allowed.len() as u32);
@@ -136,12 +195,12 @@ fn extension(body: &[u8], policy: &Policy, bindings: &mut Bindings) -> Vec<u8> {
             }
         };
     }
-    let shown = String::from_utf8_lossy(&name[..name.len().min(64)]);
-    log(format_args!("rejected extension request {shown:?}"));
+    log(format_args!("rejected unsupported extension request"));
     protocol::failure()
 }
 
-fn sign(req: &[u8], policy: &Policy, upstream: &Upstream, bindings: &Bindings) -> Vec<u8> {
+fn sign(req: &[u8], proxy: &Proxy, bindings: &Bindings) -> Vec<u8> {
+    let policy = &proxy.policy;
     let parsed = (|| -> Result<(&[u8], &[u8], u32), WireError> {
         let mut r = Reader::new(&req[1..]);
         let blob = r.string()?;
@@ -164,12 +223,15 @@ fn sign(req: &[u8], policy: &Policy, upstream: &Upstream, bindings: &Bindings) -
         ));
         return protocol::failure();
     }
-    if flags & !protocol::ALLOWED_SIGN_FLAGS != 0 {
+    let Some(alg) = parse_public_key(blob)
+        .ok()
+        .and_then(|kind| kind.signature_alg(flags))
+    else {
         log(format_args!(
-            "rejected sign request with unsupported flags {flags:#x}"
+            "rejected sign request with flags {flags:#x}: invalid for the key type, or legacy RSA/SHA-1"
         ));
         return protocol::failure();
-    }
+    };
     if let Some(destinations) = policy.destinations() {
         if let Err(reason) = bindings.authorize(blob, data, destinations) {
             log(format_args!(
@@ -179,13 +241,24 @@ fn sign(req: &[u8], policy: &Policy, upstream: &Upstream, bindings: &Bindings) -
             return protocol::failure();
         }
     }
+    if !proxy
+        .resources
+        .signature(req, policy.destinations().is_some())
+    {
+        log(format_args!(
+            "signing budget exhausted or duplicate destination-bound attempt; request refused"
+        ));
+        return protocol::failure();
+    }
     // The request was fully parsed with no trailing bytes, so forwarding it
     // verbatim forwards exactly the fields that were authorized.
-    match upstream.request(req) {
-        Ok(resp) if is_valid_sign_response(&resp) => resp,
+    match proxy.upstream_request(req) {
+        Ok(resp) if is_valid_sign_response(&resp, alg) => resp,
         Ok(resp) => {
             if resp.first() != Some(&protocol::SSH_AGENT_FAILURE) {
-                log(format_args!("upstream returned an invalid sign response"));
+                log(format_args!(
+                    "upstream returned an invalid sign response or an unrequested signature algorithm"
+                ));
             }
             protocol::failure()
         }
@@ -196,10 +269,14 @@ fn sign(req: &[u8], policy: &Policy, upstream: &Upstream, bindings: &Bindings) -
     }
 }
 
-fn is_valid_sign_response(resp: &[u8]) -> bool {
+/// A single signature whose algorithm is exactly the one requested, so an
+/// upstream that ignores the flags cannot return a legacy `ssh-rsa` (SHA-1)
+/// signature through SigSieve.
+fn is_valid_sign_response(resp: &[u8], alg: &[u8]) -> bool {
     let mut r = Reader::new(resp);
     matches!(r.u8(), Ok(protocol::SSH_AGENT_SIGN_RESPONSE))
-        && r.string().is_ok_and(|sig| !sig.is_empty())
+        && r.string()
+            .is_ok_and(|sig| Reader::new(sig).string().is_ok_and(|a| a == alg))
         && r.finish().is_ok()
 }
 
@@ -211,6 +288,7 @@ fn serve_client(mut s: UnixStream, proxy: &Proxy, slot: &Slot) {
         return;
     }
     let mut bindings = Bindings::default();
+    let mut budget = Budget::new(128, 128, Instant::now());
     loop {
         slot.set_idle(true);
         let frame = protocol::read_frame(
@@ -225,7 +303,15 @@ fn serve_client(mut s: UnixStream, proxy: &Proxy, slot: &Slot) {
         match frame {
             Ok(None) => return,
             Ok(Some(req)) => {
-                let resp = handle_request(&req, &proxy.policy, &proxy.upstream, &mut bindings);
+                if !budget.take(Instant::now()) {
+                    log(format_args!(
+                        "client request budget exhausted; closing client"
+                    ));
+                    return;
+                }
+                let Some(resp) = proxy.handle_request(&req, &mut bindings) else {
+                    return;
+                };
                 if protocol::write_frame(&mut s, &resp).is_err() {
                     return;
                 }
@@ -355,6 +441,12 @@ pub fn serve(listener: &UnixListener, proxy: Arc<Proxy>, shutdown: &AtomicBool) 
                 continue;
             }
         }
+        if !proxy.resources.connection() {
+            log(format_args!(
+                "connection budget exhausted; closing new connection"
+            ));
+            continue;
+        }
         if stream.set_nonblocking(false).is_err() {
             continue;
         }
@@ -372,6 +464,16 @@ pub fn serve(listener: &UnixListener, proxy: Arc<Proxy>, shutdown: &AtomicBool) 
         if let Err(e) = spawned {
             // The closure (and its Slot) was dropped, releasing the entry.
             log(format_args!("cannot spawn client thread: {e}"));
+        }
+    }
+    proxy.cancelled.store(true, Ordering::Relaxed);
+    for conn in lock(&registry).values() {
+        let _ = conn.stream.shutdown(Shutdown::Both);
+    }
+    if let Some(window) = LOG_WINDOW.get() {
+        let count = window.lock().unwrap_or_else(|e| e.into_inner()).finish();
+        if count > 0 {
+            eprintln!("sigsieve: suppressed {count} repeated events before shutdown");
         }
     }
     Ok(())
@@ -396,19 +498,36 @@ mod tests {
                 continue;
             }
             assert_eq!(
-                handle_request(&[t], &p, &unreachable_upstream(), &mut Bindings::default()),
-                vec![5]
+                Proxy::new(p.clone(), unreachable_upstream(), Limits::default())
+                    .handle_request(&[t], &mut Bindings::default()),
+                Some(vec![5])
             );
         }
     }
 
     #[test]
     fn sign_response_validation() {
-        assert!(is_valid_sign_response(&[14, 0, 0, 0, 1, 9]));
-        assert!(!is_valid_sign_response(&[14, 0, 0, 0, 0]));
-        assert!(!is_valid_sign_response(&[14, 0, 0, 0, 1, 9, 9]));
-        assert!(!is_valid_sign_response(&[12, 0, 0, 0, 0]));
-        assert!(!is_valid_sign_response(&[]));
+        let response = |alg: &[u8], trailing: &[u8]| {
+            let mut sig = Vec::new();
+            protocol::put_string(&mut sig, alg);
+            protocol::put_string(&mut sig, b"signature bytes");
+            let mut out = vec![protocol::SSH_AGENT_SIGN_RESPONSE];
+            protocol::put_string(&mut out, &sig);
+            out.extend_from_slice(trailing);
+            out
+        };
+        let alg = b"rsa-sha2-512";
+        assert!(is_valid_sign_response(&response(alg, b""), alg));
+        assert!(!is_valid_sign_response(&response(alg, &[9]), alg));
+        assert!(!is_valid_sign_response(&response(b"ssh-rsa", b""), alg));
+        assert!(!is_valid_sign_response(
+            &response(b"rsa-sha2-256", b""),
+            alg
+        ));
+        assert!(!is_valid_sign_response(&[14, 0, 0, 0, 1, 9], alg));
+        assert!(!is_valid_sign_response(&[14, 0, 0, 0, 0], alg));
+        assert!(!is_valid_sign_response(&[12, 0, 0, 0, 0], alg));
+        assert!(!is_valid_sign_response(&[], alg));
     }
 
     #[test]
@@ -423,13 +542,9 @@ mod tests {
             let mut req = vec![protocol::SSH_AGENTC_EXTENSION];
             protocol::put_string(&mut req, name);
             assert_eq!(
-                handle_request(
-                    &req,
-                    &policy,
-                    &unreachable_upstream(),
-                    &mut Bindings::default()
-                ),
-                vec![expected]
+                Proxy::new(policy.clone(), unreachable_upstream(), Limits::default())
+                    .handle_request(&req, &mut Bindings::default()),
+                Some(vec![expected])
             );
         }
     }
@@ -440,7 +555,7 @@ mod tests {
         #[test]
         fn arbitrary_requests_fail_closed(data in proptest::collection::vec(any::<u8>(), 0..300)) {
             let (p, _) = Policy::from_fingerprints::<&str>(&[]).unwrap();
-            prop_assert_eq!(handle_request(&data, &p, &unreachable_upstream(), &mut Bindings::default()), vec![5]);
+            prop_assert_eq!(Proxy::new(p, unreachable_upstream(), Limits::default()).handle_request(&data, &mut Bindings::default()), Some(vec![5]));
         }
     }
 }
