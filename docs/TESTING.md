@@ -70,8 +70,13 @@ unprivileged. Missing prerequisites → skip with a message, or failure with
 
 ### Coverage-guided fuzzing
 
-Requires a nightly toolchain and `cargo-fuzz` (not used by the project so
-far):
+The **Fuzz** GitHub Actions workflow (`.github/workflows/fuzz.yml`) runs all
+four targets with libFuzzer and AddressSanitizer on a pinned nightly,
+starting from `fuzz/seeds`. Start it from the Actions tab with a time budget
+per target (300 s to 1 h); it also runs for 60 s on pull requests that change
+`fuzz/`. A crash fails the job; the grown corpus and crash inputs are kept as
+artifacts for 14 days, and the job summary records executions and new
+coverage units. Locally it needs a nightly toolchain and `cargo-fuzz`:
 
 ```bash
 rustup toolchain install nightly
