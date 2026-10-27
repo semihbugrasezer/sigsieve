@@ -1,0 +1,19 @@
+docs/SECURITY_MODEL.md
+  s_211cc592f3418f::t_9c89c35dc84704 94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "03efac614c5cfa8e98853e805dc85d0d610bef4e",
+  "prompts": {},
+  "sessions": {
+    "s_211cc592f3418f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "828f2ed6-2d53-45e4-b19e-2d6b5d5f6c84",
+        "model": "unknown"
+      },
+      "human_author": "Semih Buğra Sezer <17555579+semihbugrasezer@users.noreply.github.com>"
+    }
+  }
+}
