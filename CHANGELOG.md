@@ -24,6 +24,8 @@ The project follows [Semantic Versioning](https://semver.org/).
   requested algorithm. **Compatibility change:** clients or servers that only
   accept `ssh-rsa` signatures (OpenSSH < 7.2) fail through SigSieve; there is
   no opt-out. RSA keys themselves keep working with SHA-2.
+- Bounded each downstream reply by one write deadline; a slow reader can no
+  longer hold a connection by draining a large reply a little at a time (F-40).
 
 ## [0.1.0-alpha.1] - 2026-10-26 (superseded source candidate)
 

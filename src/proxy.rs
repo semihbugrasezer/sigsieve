@@ -282,6 +282,8 @@ fn is_valid_sign_response(resp: &[u8], alg: &[u8]) -> bool {
 
 /// Serve one downstream connection until EOF, error, timeout or eviction.
 fn serve_client(mut s: UnixStream, proxy: &Proxy, slot: &Slot) {
+    // Bounds the blocking write of a final error reply; normal replies use
+    // the nonblocking, whole-reply deadline below.
     if s.set_write_timeout(Some(proxy.limits.write_timeout))
         .is_err()
     {
@@ -312,7 +314,17 @@ fn serve_client(mut s: UnixStream, proxy: &Proxy, slot: &Slot) {
                 let Some(resp) = proxy.handle_request(&req, &mut bindings) else {
                     return;
                 };
-                if protocol::write_frame(&mut s, &resp).is_err() {
+                // One deadline for the whole reply. Nonblocking, because a
+                // blocking write's SO_SNDTIMEO restarts whenever the client
+                // reads a little, so a slow reader could hold it forever.
+                let deadline = Instant::now() + proxy.limits.write_timeout;
+                let sent = s
+                    .set_nonblocking(true)
+                    .and_then(|()| {
+                        protocol::write_frame_until(&mut s, &resp, deadline, &proxy.cancelled)
+                    })
+                    .and_then(|()| s.set_nonblocking(false));
+                if sent.is_err() {
                     return;
                 }
             }
