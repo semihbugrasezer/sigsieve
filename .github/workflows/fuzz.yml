@@ -47,7 +47,10 @@ jobs:
       - name: Install nightly and cargo-fuzz
         run: |
           rustup toolchain install "$NIGHTLY" --profile minimal
-          cargo "+$NIGHTLY" install --locked "cargo-fuzz@$CARGO_FUZZ"
+          # The tool itself builds on the pinned stable toolchain; only the
+          # fuzz targets need nightly (its old locked deps fail on nightly).
+          rustup show active-toolchain || rustup toolchain install
+          cargo install --locked "cargo-fuzz@$CARGO_FUZZ"
       - name: Fuzz ${{ matrix.target }}
         working-directory: fuzz
         env:
