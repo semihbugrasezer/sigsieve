@@ -608,7 +608,7 @@ pub(crate) mod tests {
             ),
             ("rsa", rsa, &[b"rsa-sha2-256", b"rsa-sha2-512"]),
         ];
-        let candidates: [&[u8]; 10] = [
+        let candidates: [&[u8]; 11] = [
             b"ssh-ed25519",
             b"ecdsa-sha2-nistp256",
             b"ecdsa-sha2-nistp384",
@@ -617,6 +617,7 @@ pub(crate) mod tests {
             b"rsa-sha2-512",
             b"ssh-rsa",
             b"ssh-ed25519-cert-v01@openssh.com",
+            b"rsa-sha2-512-cert-v01@openssh.com",
             b"sk-ssh-ed25519@openssh.com",
             b"",
         ];
@@ -633,7 +634,7 @@ pub(crate) mod tests {
         // Malformed or empty keys match nothing.
         let mut truncated = keys[0].1.clone();
         truncated.pop();
-        for bad in [&b""[..], &truncated] {
+        for bad in [&b""[..], &truncated, b"not-a-key"] {
             assert!(!alg_matches(b"ssh-ed25519", bad));
         }
     }
