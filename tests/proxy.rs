@@ -824,6 +824,47 @@ fn busy_connections_are_not_evicted_and_new_client_is_refused() {
     }
 }
 
+#[test]
+fn slow_reader_cannot_extend_the_reply_write_deadline() {
+    // A reply larger than the socket buffers, drained a little at a time:
+    // each write makes some progress, so only a deadline for the whole reply
+    // stops a remote client from holding the connection indefinitely.
+    let ids = vec![(blob(ECDSA_CI), "c".repeat(250_000))];
+    let up = MockAgent::start(ids, Mode::Normal);
+    let limits = Limits {
+        write_timeout: Duration::from_millis(500),
+        ..test_limits()
+    };
+    let p = start_proxy_with(&up.path, &[ECDSA_CI_FP], limits, Duration::from_secs(3));
+    let mut s = connect(&p.path);
+    protocol::write_frame(&mut s, &[protocol::SSH_AGENTC_REQUEST_IDENTITIES]).unwrap();
+    s.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+    let mut header = [0u8; 4];
+    s.read_exact(&mut header).unwrap();
+    let declared = u32::from_be_bytes(header) as usize;
+    let mut buf = [0u8; 1024];
+    let mut body = 0;
+    let start = Instant::now();
+    while start.elapsed() < Duration::from_secs(2) {
+        match s.read(&mut buf).unwrap() {
+            0 => break,
+            n => body += n,
+        }
+        thread::sleep(Duration::from_millis(50));
+    }
+    // Then drain quickly: the proxy must have given up and closed.
+    while body < declared {
+        match s.read(&mut buf).expect("connection left open") {
+            0 => break,
+            n => body += n,
+        }
+    }
+    assert!(
+        body < declared,
+        "slow reader received the whole {declared}-byte reply"
+    );
+}
+
 mod hostile_client {
     use super::*;
     use proptest::prelude::*;

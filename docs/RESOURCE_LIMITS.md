@@ -13,7 +13,7 @@ There is no new daemon, privilege, runtime dependency or automatic retry.
 | Authorized signing attempts | 32 burst, refill 4/s | Agent FAILURE; no upstream call |
 | Upstream exchanges | 4 active; FIFO queue bounded by 32 clients | Queue wait shares the request deadline; no unbounded worker/task allocation |
 | Whole upstream request | 120 s, configurable with existing --upstream-timeout | Close upstream and fail; cancellation checked between nonblocking operations |
-| Started downstream frame / write | 10 s / 10 s | Close client |
+| Started downstream frame / whole reply write | 10 s / 10 s | Close client |
 | Idle client | 300 s | Close client |
 | Agent frame | 256 KiB | Reject/close before allocation |
 | Destination-bound duplicate cache | 256 SHA256 digests, at most 300 s | Oldest evicted; repeated attempt refused while remembered |
