@@ -1,0 +1,77 @@
+CHANGELOG.md
+  s_211cc592f3418f::t_4bb2fa4e5b82e6 7-30
+Cargo.lock
+  s_211cc592f3418f::t_60cea4e4e8802c 855
+Cargo.toml
+  s_211cc592f3418f::t_0a7c0552e69eb0 3
+README.md
+  s_211cc592f3418f::t_10fc47cdd3d45b 7,134,137-139,142-145,274-276,292,301,307
+docs/ARCHITECTURE.md
+  s_211cc592f3418f::t_21c322925beba9 16,40,43,91-106
+docs/FINDINGS.md
+  s_211cc592f3418f::t_daed5199912fd0 36-38,40,49-53,182-186,224-232,238-302,348-364
+docs/LIMITATIONS.md
+  s_211cc592f3418f::t_7669177d3839a6 34-43,63-65,74-78,91-94,109-123
+docs/RESOURCE_LIMITS.md
+  s_211cc592f3418f::t_d0d8c355e9d9d8 1-56
+docs/RESOURCE_REFERENCES.md
+  s_211cc592f3418f::t_77f5320720740f 1-153
+docs/SECURITY_MODEL.md
+  s_211cc592f3418f::t_62e1edd8db3837 65
+docs/SSH_COMPATIBILITY.md
+  s_211cc592f3418f::t_cc43f1d9112b60 22,40,81,84,93-102
+docs/THREAT_MODEL.md
+  s_211cc592f3418f::t_29fdb71d7266a4 155-157
+fuzz/Cargo.lock
+  s_211cc592f3418f::t_965b56f6dfa53b 695
+src/binding.rs
+  s_211cc592f3418f::t_85ec55ee0aba7b 30,251-252,254-258,583-730
+src/cli.rs
+  s_211cc592f3418f::t_410b85ee0621a0 320-328,342,456-467,500,713-724,755
+src/fuzzing.rs
+  s_211cc592f3418f::t_cd748373653e3d 13,29,33-35
+src/keys.rs
+  s_211cc592f3418f::t_5cd2fc01a3531e 15,90-108,248-270
+src/protocol.rs
+  s_211cc592f3418f::t_0738bf52a8a19f 10,13-14,36-40,200-206,214,219-223,232-302
+src/proxy.rs
+  s_211cc592f3418f::t_2fbae8e573a39c 23,28,32-35,52-58,69-72,78-82,85-86,88-100,107-138,140-142,151,155-158,168,198,202-203,226-229,231,234,244-252,255-256,259-261,272-275,278-279,291,306-314,444-449,469-478,501-503,510-530,545-547,558
+src/proxy/resources.rs
+  s_211cc592f3418f::t_ad3c572f6f3efc 1-355
+src/socket.rs
+  s_211cc592f3418f::t_9b2a3c05401448 16-17,22-23,80-87,90,93-94,112-294,340-359,637,688-747
+src/ssh.rs
+  s_211cc592f3418f::t_f99ac2ea7c985f 136,153-155,160-168,462,470-494
+src/sshconfig.rs
+  s_211cc592f3418f::t_dd14e31014bcf2 50-58,74-76,89-91,100-105,107-111,160-162,179-180,184-186,235-258,305-307,331
+src/upstream.rs
+  s_211cc592f3418f::t_34fac5445d288a 13-14,19-20,79-83,95-96,112-131,136-144,171-252
+tests/cli.rs
+  s_211cc592f3418f::t_3e67491dc14c6b 106-180
+tests/common/mod.rs
+  s_211cc592f3418f::t_c1f9d2ccd54131 86-88,181,184-196,198,239-244,264,266,268
+tests/e2e_sshd.rs
+  s_211cc592f3418f::t_6d7aef1b33d23b 18,193-197,199-200,202-205,498,509-510,525-526
+tests/openssh.rs
+  s_211cc592f3418f::t_b3b8a3a3072c42 195-235,543-569,597-607
+tests/proxy.rs
+  s_211cc592f3418f::t_624cdee2dffbc0 12-14,95-312,890
+tests/socket.rs
+  s_211cc592f3418f::t_b4b6beff81a4dd 10,101-123,280-285,314-326
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2a2f6366defaf9edb63b9d0fcba4b69aba37bfc6",
+  "prompts": {},
+  "sessions": {
+    "s_211cc592f3418f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "828f2ed6-2d53-45e4-b19e-2d6b5d5f6c84",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <17555579+semihbugrasezer@users.noreply.github.com>"
+    }
+  }
+}
