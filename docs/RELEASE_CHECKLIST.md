@@ -24,6 +24,9 @@ SSH host-key verification and recovery access.
   full CI before building and keeps OIDC attestation separate from compilation.
 - Download the actual release archives, check their SHA256 sums and GitHub
   provenance, inspect license notices and execute at least the native binary.
+- Open the packaged README and CHANGELOG: repository links must point to
+  the exact source commit on GitHub. These online guides require internet
+  access; the executable and bundled license notices remain local files.
 - Publish release notes with the exact commit, CI links, supported platforms,
   checks performed and remaining limitations; mark alpha releases as pre-release.
 

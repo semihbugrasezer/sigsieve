@@ -108,6 +108,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+      - name: Packaging regression (synthetic inputs)
+        run: python3 scripts/test-package-release.py
       - run: rustup show active-toolchain || rustup toolchain install
       # Pinned tool versions for reproducible supply-chain checks.
       - run: cargo install --locked cargo-audit@0.22.2 cargo-deny@0.20.2
