@@ -80,7 +80,10 @@ verified unless you observed those specific steps on the device.
 Secretive has no destination-constraint support of its own. With
 `--allow-destination SHA256:<host key>`, SigSieve enforces destination
 binding before any request reaches Secretive, so a compromised forwarding
-host cannot use the Secretive key for other servers. Get the destination's
+host cannot use the Secretive key for servers other than the allowed
+destinations (it can still authenticate to those while you are connected).
+This is a design claim, tested with OpenSSH's agent but not yet with a real
+Secretive key. Get the destination's
 host key fingerprint from a source you trust (for example
 `ssh-keygen -lf ~/.ssh/known_hosts` after verifying it, or the service's
 published fingerprints). Not yet verified with a real Secretive key.

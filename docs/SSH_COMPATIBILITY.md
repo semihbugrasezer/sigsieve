@@ -36,7 +36,7 @@ after 300 s.
 | Algorithm | Validation | Status |
 |---|---|---|
 | `ssh-ed25519` | 32-byte key | tested, incl. real `ssh-agent` |
-| `ecdsa-sha2-nistp256/384/521` | curve name matches, uncompressed point (65/97/133 bytes) | P-256 tested incl. real agents (Secretive keys are P-256); 384/521 unit-tested |
+| `ecdsa-sha2-nistp256/384/521` | curve name matches, uncompressed point (65/97/133 bytes) | P-256 tested incl. real `ssh-agent`; with Secretive (P-256) only listing and hidden-key refusal are recorded; 384/521 unit-tested |
 | `ssh-rsa` | canonical mpints; `e` odd, > 1; `n` odd, 1024–16384 bits; signs only with `rsa-sha2-256`/`-512`, SHA-1 refused | tested with real `ssh-keygen -Y sign` and `ssh-keygen -s -U -t` (SHA-2 works, `ssh-rsa` refused) |
 | `sk-ssh-ed25519@openssh.com`, `sk-ecdsa-sha2-nistp256@openssh.com` | structural | **untested with hardware** |
 | `*-cert-v01@openssh.com` | unsupported | hidden, cannot sign |

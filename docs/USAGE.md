@@ -49,8 +49,9 @@ sigsieve connect build-host --upstream "$upstream" --allow-fingerprint "$fp" \
   -- -o StrictHostKeyChecking=yes
 ```
 
-`doctor` should report `Approved identities: 1/1`, a count of hidden
-identities (without printing them), `Filtering: verified` and
+`doctor` should report `Approved identities: 1/1 available`, a count of
+hidden identities (without printing them), a `Filtering:` line reporting
+`verified`, and
 `Result: all checks passed`. It lists keys and checks locally rejected
 signing probes; it does not request a real-key signature from your agent.
 With destination binding it also checks that an unbound allowed-key request

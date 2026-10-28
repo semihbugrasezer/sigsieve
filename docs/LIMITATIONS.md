@@ -130,11 +130,12 @@ behind wording that suggests otherwise.
 
 ## Verification gaps (see RELEASE_CHECKLIST.md)
 
-- Linux x86_64 passed a previous CI run. Only a green CI run for the exact
-  release commit establishes current platform coverage; see the release notes.
-- Coverage-guided fuzzing has a recorded 60 s/target instrumented smoke run;
-  sustained campaigns remain outstanding. See the
-  [run and its limits](TESTING.md#recorded-coverage-guided-smoke-run).
+- Public CI covers macOS arm64 and Linux x86_64/arm64. Only a green CI run for
+  the exact release commit establishes current platform coverage; see the
+  release notes.
+- Coverage-guided fuzzing has one recorded one-hour-per-target campaign (no
+  crash) for one revision; longer and continuous campaigns remain outstanding.
+  See the [runs and their limits](TESTING.md#recorded-one-hour-campaign).
 - No independent external security review.
 - Real Secretive testing is limited to one user-assisted session (listing,
   hidden-key refusal, connect to one host).

@@ -17,7 +17,7 @@ check licenses` enforces the allowed set.
 | anstyle-query | 1.1.5 | MIT OR Apache-2.0 |
 | anstyle-wincon | 3.0.11 | MIT OR Apache-2.0 |
 | base16ct | 1.0.0 | Apache-2.0 OR MIT |
-| base64 | 0.22.1 | MIT OR Apache-2.0 |
+| base64 | 0.23.1 | MIT OR Apache-2.0 |
 | base64ct | 1.8.3 | Apache-2.0 OR MIT |
 | block-buffer | 0.12.1 | MIT OR Apache-2.0 |
 | cfg-if | 1.0.5 | MIT OR Apache-2.0 |
@@ -71,7 +71,7 @@ check licenses` enforces the allowed set.
 | serde_derive | 1.0.229 | MIT OR Apache-2.0 |
 | serdect | 0.4.3 | Apache-2.0 OR MIT |
 | sha2 | 0.11.1 | MIT OR Apache-2.0 |
-| signal-hook | 0.3.18 | Apache-2.0/MIT |
+| signal-hook | 0.4.5 | Apache-2.0/MIT |
 | signal-hook-registry | 1.4.8 | MIT OR Apache-2.0 |
 | signature | 3.0.0 | Apache-2.0 OR MIT |
 | spki | 0.8.1 | Apache-2.0 OR MIT |

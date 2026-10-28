@@ -10,6 +10,15 @@ The project follows [Semantic Versioning](https://semver.org/).
   valid SHA-2 signing flag. Previously the RSA/SHA-1 policy could reject the
   probe before it exercised binding enforcement, giving false assurance.
 
+### Validation
+
+- Recorded a coverage-guided fuzz campaign: 3,600 s for each of the four
+  targets on commit `103e9f9` (255,532,162 executions in total), with no
+  crash reported.
+- A tag-free release rehearsal passed on macOS arm64 and Linux x86_64 for
+  commit `103e9f9`. A real tag build and its provenance attestation are still
+  to be verified.
+
 ### Changed
 
 - Made README a shorter product entry point with fair OpenSSH alternatives,
@@ -61,8 +70,9 @@ First public experimental preview. Not independently audited; see
   private sockets, bounded clients and inode-checked cleanup and recovery.
 - Real OpenSSH end-to-end tests, hostile protocol clients, property tests,
   failure injection, resource checks and fuzz targets with committed seeds.
-- Pinned toolchain and CI; checksummed release archives with license notices
-  and build provenance, gated by full CI and matching tag/package versions.
+- Pinned toolchain and CI; a release workflow for checksummed archives with
+  license notices and build provenance, gated by full CI and matching
+  tag/package versions (never completed: the alpha.1 build was cancelled).
 - Security/threat models, protocol references, compatibility documentation,
   contribution guidelines and private vulnerability reporting.
 
