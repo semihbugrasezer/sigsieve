@@ -75,7 +75,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - Keep PRs focused, and describe the security impact.
 - `main` is protected: changes land only through pull requests, and the four
   CI checks (`supply-chain` and the macOS, Linux x86_64 and Linux arm64
-  `test` jobs) must pass on a branch that is up to date with `main`.
+  `test` jobs) must pass for the PR's current head. Updating the branch from
+  `main` is optional; resolve any merge conflicts before merging.
 - Update `CHANGELOG.md` in the topmost section that is not yet released.
 - By contributing you agree that your work is licensed under the MIT license.
 
