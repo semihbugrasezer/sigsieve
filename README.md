@@ -14,9 +14,10 @@ agent socket it forwards.
 
 > [!WARNING]
 > **Experimental security software. Not independently audited.**
-> `0.1.0-alpha.2` is an unreleased source candidate; there are no verified
-> binary releases or published Homebrew installation yet. Real Secretive
-> signing and destination binding remain unverified. Read the
+> `0.1.0-alpha.2` is experimental. Only treat archives attached to a verified
+> [GitHub pre-release](https://github.com/semihbugrasezer/sigsieve/releases) as
+> published binaries; a source tag or CI artifact alone is not a release.
+> Real Secretive signing and destination binding remain unverified. Read the
 > [security model](docs/SECURITY_MODEL.md) and [limitations](docs/LIMITATIONS.md)
 > before relying on it, and keep ordinary SSH access available.
 
@@ -65,7 +66,7 @@ before using it with a Git hosting service.
 
 ## Install from source
 
-Current installation requires Rust (the checkout pins 1.99.1) and OpenSSH
+Source installation requires Rust (the checkout pins 1.99.1) and OpenSSH
 8.4+; ProxyJump/relay sessions require 8.7+. Tested platforms are macOS arm64
 and Linux x86_64/aarch64. Planned binary targets are macOS arm64 and Linux
 x86_64; Linux aarch64 is source-only. No Windows or Intel macOS validation
@@ -82,9 +83,10 @@ cargo install --locked --path .
 sigsieve --version
 ```
 
-Ensure `~/.cargo/bin` is on your PATH. There is no published `brew install`
-command yet. The alpha.1 source tag is superseded; its release build was
-cancelled. Future archives must pass the
+Ensure `~/.cargo/bin` is on your PATH. For prebuilt packages, use only the
+verified assets and checksums attached to a published [GitHub pre-release](https://github.com/semihbugrasezer/sigsieve/releases),
+if available. The alpha.1 source tag is superseded; its release build was
+cancelled. No Homebrew installation is published yet. Released archives must pass the
 [release checklist](docs/RELEASE_CHECKLIST.md), including checksums, license
 notices, native smoke tests and provenance verification, before appearing on
 [Releases](https://github.com/semihbugrasezer/sigsieve/releases).
@@ -134,9 +136,9 @@ a new candidate.
 | Real OpenSSH | Real `ssh-agent`, `ssh` and throwaway `sshd` tests in CI on macOS arm64 and Linux x86_64/aarch64; inspect [CI for your exact commit](https://github.com/semihbugrasezer/sigsieve/actions/workflows/ci.yml). |
 | Real Secretive (ECDSA P-256) | One recorded user-assisted session: listing, hidden-key refusal and filtered forwarding. Allowed-key signing, destination binding and device-owner confirmation of Touch ID observations remain pending. [Recorded results](docs/SECRETIVE_INTEGRATION.md#recorded-real-device-results). |
 | Git hosts | 2026-10-27 advertisement measurements: GitHub advertises hostbound authentication (end-to-end unverified); GitLab.com and Bitbucket Cloud do not. [Measurements and caveats](docs/SSH_COMPATIBILITY.md#git-hosting-services). |
-| Fuzzing | Stable corpus mutation, historical uninstrumented runs and a recorded 60 s/target instrumented libFuzzer smoke run. Sustained campaigns remain outstanding. [Run and limits](docs/TESTING.md#recorded-coverage-guided-smoke-run). |
+| Fuzzing | Stable corpus mutation plus instrumented libFuzzer: 60 s/target smoke and a successful 3,600 s/target campaign (2026-10-27, commit `103e9f9`; 255,532,162 executions in aggregate, no crash reported). These runs do not constitute an audit or coverage percentage. [Evidence](docs/TESTING.md#recorded-sustained-coverage-guided-run). |
 | Other integrations | 1Password and physical FIDO keys untested; SSH identity certificates unsupported. [Key types and protocol matrix](docs/SSH_COMPATIBILITY.md). |
-| Distribution | Packaging and provenance workflow prepared; no verified published archives. [Release gates](docs/RELEASE_CHECKLIST.md). |
+| Distribution | Tag-free macOS arm64 and Linux x86_64 packaging, checksums and binary smoke tests passed on commit `103e9f9`; this does not prove a subsequent tag build or provenance. For published assets consult [Releases](https://github.com/semihbugrasezer/sigsieve/releases) and the [release gates](docs/RELEASE_CHECKLIST.md). |
 
 ## Learn more and contribute
 
