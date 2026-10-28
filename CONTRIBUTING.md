@@ -8,8 +8,9 @@ changes is correctness and evidence, not feature count.
 Documentation corrections, reproducible bug reports and synthetic regression
 tests are useful first contributions. Pick a small problem from the
 [issues](https://github.com/semihbugrasezer/sigsieve/issues), or describe the
-problem before starting a larger change. Security reports belong in the
-[private reporting channel](SECURITY.md).
+problem before starting a larger change. For installation or usage help, see
+[SUPPORT.md](SUPPORT.md) and use the **Usage question** issue template.
+Security reports belong in the [private reporting channel](SECURITY.md).
 
 Work on a branch in your fork and open a focused PR against `main`. Include
 what changed, why, and the commands you actually ran. For documentation,
