@@ -36,8 +36,10 @@ These remain explicit limitations of the alpha, not passing tests:
 - Real Secretive signing, destination binding and user-presence observations
   require an owner-assisted device test; protocol tests do not prove them.
 - 1Password and physical FIDO keys need separate interoperability testing.
-- Coverage-guided fuzzing requires nightly and cargo-fuzz; the stable corpus
-  pass is bounded mutation, not a coverage measurement.
+- Instrumented coverage-guided fuzzing has been run for 3,600 s per target on
+  commit `103e9f9`; this is evidence for that revision, not an audit of the
+  published release. See [TESTING.md](TESTING.md#recorded-sustained-coverage-guided-run).
+  Further fuzzing remains valuable; stable mutation alone is not coverage-guided.
 - See [LIMITATIONS.md](LIMITATIONS.md) for availability limits, supported
   host-key types, trust in the local client/configuration, and allowed-key misuse.
 
