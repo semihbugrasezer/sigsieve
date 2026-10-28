@@ -21,7 +21,7 @@ use crate::ssh::{
     verify_ssh_plan, LOGIN_AGENT_VAR,
 };
 
-use sigsieve::keys::{parse_public_key, Fingerprint};
+use sigsieve::keys::{parse_public_key, Fingerprint, KeyType};
 use sigsieve::policy::Policy;
 use sigsieve::protocol::{self, SSH_AGENTC_SIGN_REQUEST};
 use sigsieve::proxy::{self, Limits, Proxy};
@@ -420,7 +420,12 @@ fn self_test(socket_path: &Path, policy: &Policy) -> Result<Vec<Identity>, Strin
             let mut req = vec![SSH_AGENTC_SIGN_REQUEST];
             protocol::put_string(&mut req, &id.blob);
             protocol::put_string(&mut req, b"sigsieve self-test: unbound");
-            protocol::put_u32(&mut req, 0);
+            let flags = if matches!(parse_public_key(&id.blob), Ok(KeyType::Rsa)) {
+                protocol::SSH_AGENT_RSA_SHA2_256
+            } else {
+                0
+            };
+            protocol::put_u32(&mut req, flags);
             match client.request(&req) {
                 Ok(r) if r == [protocol::SSH_AGENT_FAILURE] => {}
                 Ok(_) => {
@@ -973,5 +978,56 @@ fn connect(args: ConnectArgs) -> i32 {
     match status.and_then(|s| s.code()) {
         Some(code) => code,
         None => EXIT_FAIL,
+    }
+}
+
+#[cfg(test)]
+#[path = "../tests/common/mod.rs"]
+mod test_helpers;
+
+#[cfg(test)]
+mod tests {
+    use super::test_helpers::*;
+    use super::*;
+
+    #[test]
+    fn binding_self_test_rejects_missing_enforcement_for_rsa_and_other_keys() {
+        for (key, fingerprint) in [
+            (RSA_LEGACY, RSA_LEGACY_FP),
+            (ECDSA_CI, ECDSA_CI_FP),
+            (ED_ADMIN, ED_ADMIN_FP),
+        ] {
+            let up = MockAgent::start(
+                vec![(blob(key), "synthetic self-test".into())],
+                Mode::Normal,
+            );
+            let upstream = Upstream::new(&up.path, Duration::from_secs(5));
+            let (filtering, _) = Policy::from_fingerprints(&[fingerprint]).unwrap();
+            let binding = filtering
+                .clone()
+                .with_destinations(&[ED_PERSONAL_FP])
+                .unwrap();
+
+            // The exact diagnostic probe must catch a proxy missing binding enforcement.
+            let plain = Running::start(
+                Proxy::new(filtering, upstream.clone(), Limits::default()),
+                None,
+            )
+            .unwrap();
+            assert_eq!(
+                self_test(plain.rt.path(), &binding).err().as_deref(),
+                Some("destination binding is not enforced: an unbound sign request was signed"),
+                "{fingerprint}"
+            );
+            assert_eq!(up.sign_requests().len(), 1);
+
+            let bound = Running::start(
+                Proxy::new(binding.clone(), upstream, Limits::default()),
+                None,
+            )
+            .unwrap();
+            assert_eq!(self_test(bound.rt.path(), &binding).unwrap().len(), 1);
+            assert_eq!(up.sign_requests().len(), 1, "bound probe reached upstream");
+        }
     }
 }

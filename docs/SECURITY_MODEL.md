@@ -112,6 +112,7 @@ with stated gaps; **N/A** = not a SigSieve property.
 | Only bound userauth to an allowed destination is signed | Tested (E2E) | `authorization_accepts_only_bound_userauth_to_allowed_destination`, `destination_binding_end_to_end` (allowed host succeeds, other host refused) |
 | Attacker holding a permitted host key cannot redirect forwarded auth | Tested | `attacker_holding_a_permitted_host_key_cannot_redirect_forwarded_auth` |
 | Arbitrary data never signed by restricted keys | Tested (E2E) | `random_sign_data_is_never_authorized`, `ssh-keygen -Y sign` and raw signing in E2E |
+| `doctor`/`connect` binding probe detects missing enforcement for RSA, ECDSA P-256 and Ed25519 | Tested (mock agent) | `binding_self_test_rejects_missing_enforcement_for_rsa_and_other_keys`; the same probe must sign in filtering-only mode and be refused before upstream contact in binding mode |
 | Mutation check | Done | removing the destination check or bind-signature verification makes `destination_binding_end_to_end` fail; removing the session-id check makes unit tests fail |
 
 ## Trust boundaries

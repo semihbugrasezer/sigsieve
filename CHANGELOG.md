@@ -4,6 +4,12 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- RSA destination-binding self-checks in `doctor` and `connect` now use a
+  valid SHA-2 signing flag. Previously the RSA/SHA-1 policy could reject the
+  probe before it exercised binding enforcement, giving false assurance.
+
 ### Changed
 
 - Made README a shorter product entry point with fair OpenSSH alternatives,
