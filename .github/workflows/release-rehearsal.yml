@@ -16,6 +16,7 @@ on:
       - .github/workflows/release.yml
       - .github/workflows/release-rehearsal.yml
       - scripts/package-release.py
+      - scripts/test-package-release.py
       - scripts/third-party-notices.py
 
 permissions:
@@ -43,6 +44,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+      - name: Packaging regression (synthetic inputs)
+        run: python3 scripts/test-package-release.py
       - run: rustup show active-toolchain || rustup toolchain install
       - name: Build (as release.yml)
         run: |
@@ -80,6 +83,9 @@ jobs:
           for f in CHANGELOG.md LICENSE README.md THIRD_PARTY_LICENSES.txt sigsieve; do
             grep -qx "$f" contents.txt || { echo "::error::archive lacks $f"; exit 1; }
           done
+          # Documentation must match this build, even when opened outside a checkout.
+          grep -qF "https://github.com/semihbugrasezer/sigsieve/blob/${GITHUB_SHA}/docs/USAGE.md" "smoke/${name}/README.md"
+          grep -qF "https://github.com/semihbugrasezer/sigsieve/blob/${GITHUB_SHA}/docs/LIMITATIONS.md" "smoke/${name}/CHANGELOG.md"
           bin="smoke/${name}/sigsieve"
           test -x "$bin"
           version=$(cargo metadata --no-deps --locked --format-version 1 \

@@ -8,6 +8,8 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Packaged README/CHANGELOG links now point to documentation at the build's
+  immutable source commit instead of missing paths outside a checkout.
 - RSA destination-binding self-checks in `doctor` and `connect` now use a
   valid SHA-2 signing flag. Previously the RSA/SHA-1 policy could reject the
   probe before it exercised binding enforcement, giving false assurance.
