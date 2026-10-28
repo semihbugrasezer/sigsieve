@@ -1,6 +1,6 @@
 # Usage and troubleshooting
 
-[Install from source](../README.md#install-from-source) first. Start with
+[Install the verified release or build from source](INSTALL.md) first. Start with
 identity filtering; add destination binding only after checking the
 [destination's compatibility](SSH_COMPATIBILITY.md).
 

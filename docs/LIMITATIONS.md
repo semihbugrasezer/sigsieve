@@ -133,9 +133,13 @@ behind wording that suggests otherwise.
 - Public CI covers macOS arm64 and Linux x86_64/arm64. Only a green CI run for
   the exact release commit establishes current platform coverage; see the
   release notes.
-- Coverage-guided fuzzing has one recorded one-hour-per-target campaign (no
-  crash) for one revision; longer and continuous campaigns remain outstanding.
-  See the [runs and their limits](TESTING.md#recorded-one-hour-campaign).
+- The released `v0.1.0-alpha.2` candidate at `fc7484b` passed a four-target,
+  one-hour-per-target fuzz campaign (no reported crash or sanitizer failure).
+  This does not prove the absence of vulnerabilities; longer campaigns and
+  deeper coverage remain outstanding. See [exact-SHA results](TESTING.md#release-candidate-evidence-2026-10-28).
 - No independent external security review.
-- Real Secretive testing is limited to one user-assisted session (listing,
-  hidden-key refusal, connect to one host).
+- Real Secretive testing is limited to owner-assisted observations, including
+  signing and destination binding against two localhost test servers on
+  `fc7484b`. No interoperability assurance for other devices, services,
+  or Secretive versions; full Touch ID prompt counts were not recorded.
+  See [device evidence](SECRETIVE_INTEGRATION.md#recorded-real-device-results).

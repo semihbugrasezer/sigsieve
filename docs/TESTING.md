@@ -1,6 +1,6 @@
 # Testing
 
-All tests use synthetic, throwaway keys. They never use your own agent:
+All automated tests use synthetic, throwaway keys. They never use your own agent:
 `SSH_AUTH_SOCK` is always set explicitly, ssh runs with `-F /dev/null` and
 `IdentitiesOnly`, and every sshd is unprivileged, bound to 127.0.0.1 on free
 ports, configured from a temporary directory.

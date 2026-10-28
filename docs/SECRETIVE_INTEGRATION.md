@@ -5,7 +5,8 @@ Secure Enclave (ECDSA P-256) and serves them through an SSH agent socket.
 SigSieve sits in front of that socket and never sees private keys. Allowed
 signing requests are delegated to Secretive; its key storage and user-presence
 policy remain in control. One owner-assisted allowed-key signing and destination-binding test passed
-on release commit `fc7484b`; this does not guarantee every Secretive configuration.
+on release commit `fc7484b`; this does not guarantee every Secretive
+configuration.
 See the [recorded results](#recorded-real-device-results).
 
 For installation and a first session, start with the
@@ -38,8 +39,9 @@ authentication caching. SigSieve does not change this:
   destination or generic-signing steps; a full per-operation prompt count was
   not recorded.
 
-For forwarding, use a key that requires authentication, so each remote
-signature needs your presence.
+For forwarding, consider a key configured to require authentication.
+Secretive decides when to prompt and may cache authorization: SigSieve
+cannot guarantee user presence on every remote signature.
 
 ## Automated controlled check
 
@@ -87,10 +89,11 @@ host cannot use the Secretive key for servers other than the allowed
 destinations (it can still authenticate to those while you are connected).
 It passed an owner-assisted test with one real Secretive key and two
 localhost test SSH servers on 2026-10-28; coverage of other versions,
-configurations, host keys and remote services is not established. Get the destination's
-host key fingerprint from a source you trust (for example
+configurations, host keys and remote services is not established. Get the
+destination's host key fingerprint from a source you trust (for example
 `ssh-keygen -lf ~/.ssh/known_hosts` after verifying it, or the service's
-published fingerprints). This has not been tested with an external production destination.
+published fingerprints). This has not been tested with an external production
+destination.
 
 ## Recorded real-device results
 
