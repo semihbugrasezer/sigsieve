@@ -700,9 +700,14 @@ fn ssh_crash_still_cleans_up_and_reports_failure() {
 fn terminating_connect_stops_ssh_and_cleans_up() {
     let up = MockAgent::start(three_identities(), Mode::Normal);
     let dir = private_tempdir();
+    // Signal only once the trap is installed: SIGTERM before it would kill
+    // the shell outright and connect would report 1, not ssh's 143.
     let ssh = crashing_ssh(
         dir.path(),
-        "trap 'exit 143' TERM; while :; do sleep 0.1; done",
+        &format!(
+            "trap 'exit 143' TERM; : > \"{}/ready\"; while :; do sleep 0.1; done",
+            dir.path().display()
+        ),
     );
     let child = bin()
         .args(["connect", "ci-host", "--upstream"])
@@ -714,7 +719,7 @@ fn terminating_connect_stops_ssh_and_cleans_up() {
         .spawn()
         .unwrap();
     let guard = RunGuard(Some(child));
-    wait_for(&dir.path().join("ssh.pid"));
+    wait_for(&dir.path().join("ready"));
     let ssh_pid: i32 = fs::read_to_string(dir.path().join("ssh.pid"))
         .unwrap()
         .trim()
