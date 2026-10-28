@@ -130,8 +130,9 @@ behind wording that suggests otherwise.
 
 ## Verification gaps (see RELEASE_CHECKLIST.md)
 
-- Linux x86_64 passed a previous CI run. Only a green CI run for the exact
-  release commit establishes current platform coverage; see the release notes.
+- Public CI covers macOS arm64 and Linux x86_64/arm64. Only a green CI run for
+  the exact release commit establishes current platform coverage; see the
+  release notes.
 - Coverage-guided fuzzing has one recorded one-hour-per-target campaign (no
   crash) for one revision; longer and continuous campaigns remain outstanding.
   See the [runs and their limits](TESTING.md#recorded-one-hour-campaign).

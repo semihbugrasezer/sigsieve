@@ -61,7 +61,9 @@ trailing messages, unknown types, random bytes, slow trickles.
   rate; idle limit (300 s); malformed → `FAILURE`; unframeable → close.
 - *Evidence:* unit/property tests, stable mutation fuzzing (~800k inputs per
   run at 50k iterations), libFuzzer smoke runs (~146M executions,
-  uninstrumented), raw attackers in real SSH sessions.
+  uninstrumented), a coverage-guided 3600 s/target campaign on `103e9f9` with
+  no crash ([TESTING.md](TESTING.md#recorded-one-hour-campaign)), raw
+  attackers in real SSH sessions.
 
 ### Unauthorized signing with a known public key
 

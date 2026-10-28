@@ -64,8 +64,9 @@ First public experimental preview. Not independently audited; see
   private sockets, bounded clients and inode-checked cleanup and recovery.
 - Real OpenSSH end-to-end tests, hostile protocol clients, property tests,
   failure injection, resource checks and fuzz targets with committed seeds.
-- Pinned toolchain and CI; checksummed release archives with license notices
-  and build provenance, gated by full CI and matching tag/package versions.
+- Pinned toolchain and CI; a release workflow for checksummed archives with
+  license notices and build provenance, gated by full CI and matching
+  tag/package versions (never completed: the alpha.1 build was cancelled).
 - Security/threat models, protocol references, compatibility documentation,
   contribution guidelines and private vulnerability reporting.
 

@@ -134,9 +134,9 @@ a new candidate.
 | Real OpenSSH | Real `ssh-agent`, `ssh` and throwaway `sshd` tests in CI on macOS arm64 and Linux x86_64/aarch64; inspect [CI for your exact commit](https://github.com/semihbugrasezer/sigsieve/actions/workflows/ci.yml). |
 | Real Secretive (ECDSA P-256) | One recorded user-assisted session: listing, hidden-key refusal and filtered forwarding. Allowed-key signing, destination binding and device-owner confirmation of Touch ID observations remain pending. [Recorded results](docs/SECRETIVE_INTEGRATION.md#recorded-real-device-results). |
 | Git hosts | 2026-10-27 advertisement measurements: GitHub advertises hostbound authentication (end-to-end unverified); GitLab.com and Bitbucket Cloud do not. [Measurements and caveats](docs/SSH_COMPATIBILITY.md#git-hosting-services). |
-| Fuzzing | Stable corpus mutation in CI and a recorded one-hour-per-target coverage-guided libFuzzer campaign (about 255 million executions, no crash). Longer and continuous campaigns remain outstanding. [Runs and limits](docs/TESTING.md#recorded-one-hour-campaign). |
+| Fuzzing | Stable corpus mutation in CI and a recorded one-hour-per-target coverage-guided libFuzzer campaign on commit `103e9f9` (about 255 million executions, no crash); later commits are not covered by it. Longer and continuous campaigns remain outstanding. [Runs and limits](docs/TESTING.md#recorded-one-hour-campaign). |
 | Other integrations | 1Password and physical FIDO keys untested; SSH identity certificates unsupported. [Key types and protocol matrix](docs/SSH_COMPATIBILITY.md). |
-| Distribution | Tag-free release rehearsal (build, deterministic packaging, checksums, binary smoke test) passed on macOS arm64 and Linux x86_64; no tag build, provenance attestation or published archive yet. [Release gates](docs/RELEASE_CHECKLIST.md). |
+| Distribution | Tag-free release rehearsal (build, deterministic packaging, checksums, binary smoke test) passed on macOS arm64 and Linux x86_64 for commit `103e9f9`; no tag build, provenance attestation or published archive yet. [Release gates](docs/RELEASE_CHECKLIST.md). |
 
 ## Learn more and contribute
 
