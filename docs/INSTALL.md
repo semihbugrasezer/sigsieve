@@ -31,8 +31,9 @@ Use a recent GitHub CLI with `gh attestation verify` support for
 rather than skipping provenance verification.
 
 Run this in your terminal. It downloads only the matching release archive and
-checksum to a temporary directory, **verifies checksum and provenance before
-running the binary**, and installs to `~/.local/bin` (not a system directory).
+checksum to a temporary directory, **verifies the downloaded checksum and a
+separately pinned SHA-256 digest as well as provenance before running the
+binary**, and installs to `~/.local/bin` (not a system directory).
 
 ```sh
 (
@@ -41,8 +42,12 @@ running the binary**, and installs to `~/.local/bin` (not a system directory).
   tag=v0.1.0-alpha.2
   commit=fc7484be0371242f517b6628b0f7dcc3a9a12a29
   case "$(uname -s)/$(uname -m)" in
-    Darwin/arm64) target=aarch64-apple-darwin ;;
-    Linux/x86_64) target=x86_64-unknown-linux-gnu ;;
+    Darwin/arm64)
+      target=aarch64-apple-darwin
+      expected_sha=18ad494d029d9b207074f79778ed49099f8d0114575ad8554d44a9d0ca3c28ec ;;
+    Linux/x86_64)
+      target=x86_64-unknown-linux-gnu
+      expected_sha=b9dbe8f4d771cd2a054a238af5a7e400f99e8ed5a7977457ee77a06ec79b42c9 ;;
     *) echo "No verified binary for this OS/architecture; build from source." >&2; exit 1 ;;
   esac
   name="sigsieve-$tag-$target"
@@ -53,8 +58,10 @@ running the binary**, and installs to `~/.local/bin` (not a system directory).
     -p "$name.tar.gz" -p "$name.tar.gz.sha256"
   if command -v shasum >/dev/null 2>&1; then
     shasum -a 256 -c "$name.tar.gz.sha256"
+    printf '%s  %s\n' "$expected_sha" "$name.tar.gz" | shasum -a 256 -c -
   else
     sha256sum -c "$name.tar.gz.sha256"
+    printf '%s  %s\n' "$expected_sha" "$name.tar.gz" | sha256sum -c -
   fi
   gh attestation verify "$name.tar.gz" --repo "$repo" \
     --signer-workflow "$repo/.github/workflows/release.yml" \
@@ -86,7 +93,9 @@ The published artifacts' SHA-256 values are:
 b9dbe8f4d771cd2a054a238af5a7e400f99e8ed5a7977457ee77a06ec79b42c9  sigsieve-v0.1.0-alpha.2-x86_64-unknown-linux-gnu.tar.gz
 ```
 
-Checksum matching alone does not prove build origin. The provenance check
+The hardcoded digest prevents accepting an archive and checksum that have both
+changed since this guide was reviewed. Checksums alone do not prove build
+origin. The provenance check
 binds the archive to this repository's `release.yml`, immutable tag ref and
 source digest, while denying self-hosted runners. See the
 [release verification procedure](RELEASE_CHECKLIST.md).
