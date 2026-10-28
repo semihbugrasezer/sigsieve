@@ -1,0 +1,36 @@
+name: Usage question
+description: Installation, configuration or usage help (not security vulnerabilities).
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please check [SUPPORT.md](https://github.com/semihbugrasezer/sigsieve/blob/main/SUPPORT.md) and [usage/troubleshooting](https://github.com/semihbugrasezer/sigsieve/blob/main/docs/USAGE.md) first.
+        **Do not post suspected vulnerabilities here:** report them privately via SECURITY.md.
+        Redact hostnames, account names, fingerprints, agent paths, tokens and keys.
+  - type: input
+    id: version
+    attributes:
+      label: SigSieve version or commit
+      placeholder: "v0.1.0-alpha.2 or commit SHA"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: OS, OpenSSH and upstream agent
+      placeholder: "Ubuntu 24.04, OpenSSH 9.x, ssh-agent"
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to do?
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: What did you try, and what happened?
+      description: Redacted commands/output only; no real keys or private host data.
+    validations:
+      required: true

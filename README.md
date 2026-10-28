@@ -1,5 +1,7 @@
 # SigSieve
 
+[![CI](https://github.com/semihbugrasezer/sigsieve/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/semihbugrasezer/sigsieve/actions/workflows/ci.yml)
+
 **Forward the SSH identities a remote host needs, while keeping your existing agent.**
 
 SigSieve is a local SSH agent proxy for macOS and Linux. It filters forwarded
@@ -91,6 +93,28 @@ cancelled. An archive is attached to a release only after passing the
 notices, provenance and native smoke tests on macOS arm64 and Linux x86_64;
 see [Releases](https://github.com/semihbugrasezer/sigsieve/releases).
 
+## First safe check with OpenSSH (Linux or macOS)
+
+If you already have an OpenSSH `ssh-agent` with at least one key loaded,
+you can try SigSieve without Secretive. If not, follow
+[Choose your upstream agent](docs/USAGE.md#choose-your-upstream-agent) first.
+The steps below **check filtering and preview SSH configuration only**;
+they do not open a remote session or request a real-key signature.
+
+```bash
+upstream="$SSH_AUTH_SOCK"             # your existing OpenSSH agent
+SSH_AUTH_SOCK="$upstream" ssh-add -l  # select one fingerprint from the list
+fp='SHA256:REPLACE_WITH_YOUR_KEY_FINGERPRINT'
+sigsieve doctor --upstream "$upstream" --allow-fingerprint "$fp"
+sigsieve connect build-host --upstream "$upstream" --allow-fingerprint "$fp" \
+  --dry-run -- -o StrictHostKeyChecking=yes
+```
+
+Replace `build-host` with an SSH alias whose host key you have already
+verified. Inspect the dry-run plan before attempting a real connection;
+follow [Check, preview, connect](docs/USAGE.md#check-preview-connect) for the
+next step and for cleanup. Never share unredacted agent listings or
+connection plans in public issues.
 ## First session with Secretive (macOS)
 
 Start Secretive and list its public fingerprints locally:
@@ -152,6 +176,7 @@ a new candidate.
 - **Contribute:** [setup and first contributions](CONTRIBUTING.md),
   [testing](docs/TESTING.md), [changelog](CHANGELOG.md),
   [Code of Conduct](CODE_OF_CONDUCT.md).
+- **Get help:** see [support and questions](SUPPORT.md) for installation and usage questions.
 - **Report a problem:** use a [bug report](https://github.com/semihbugrasezer/sigsieve/issues/new/choose)
   with redacted output. Report vulnerabilities privately via [SECURITY.md](SECURITY.md).
 
