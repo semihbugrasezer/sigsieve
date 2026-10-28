@@ -1,0 +1,36 @@
+docs/SECURITY_MODEL.md
+  s_25ec96accd1e90::t_4652ce23ebd96a 115
+src/cli.rs
+  s_25ec96accd1e90::t_320315e66e11f1 983-1011,1014-1027
+  s_25ec96accd1e90::t_47a9fdd8307f92 24,423-428,1012-1013
+  s_25ec96accd1e90::t_f6e3da504b92e1 1028-1033
+CHANGELOG.md
+  s_25ec96accd1e90::t_4652ce23ebd96a 7-12
+docs/FINDINGS.md
+  s_25ec96accd1e90::t_4652ce23ebd96a 59,72-86
+  s_072f15968f3fe4::t_638fb9ec9109dc 87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f58c9db612cc2110aaf686828e1456f03a9192f7",
+  "prompts": {},
+  "sessions": {
+    "s_072f15968f3fe4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2750bcba-4463-4218-b788-8c695cf0863a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Bugra Sezer <17555579+semihbugrasezer@users.noreply.github.com>"
+    },
+    "s_25ec96accd1e90": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a17d32-af45-78c3-a793-511e36f04f42",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Semih Bugra Sezer <17555579+semihbugrasezer@users.noreply.github.com>"
+    }
+  }
+}
