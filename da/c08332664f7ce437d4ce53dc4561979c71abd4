@@ -1,0 +1,23 @@
+README.md
+  s_25ec96accd1e90::t_a3d4db59ee6172 137
+docs/TESTING.md
+  s_25ec96accd1e90::t_a3d4db59ee6172 97-117
+docs/LIMITATIONS.md
+  s_25ec96accd1e90::t_a3d4db59ee6172 135-137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dac08332664f7ce437d4ce53dc4561979c71abd4",
+  "prompts": {},
+  "sessions": {
+    "s_25ec96accd1e90": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a17d32-af45-78c3-a793-511e36f04f42",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Semih Bugra Sezer <17555579+semihbugrasezer@users.noreply.github.com>"
+    }
+  }
+}
