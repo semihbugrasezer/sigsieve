@@ -20,7 +20,8 @@ agent socket it forwards.
 > those attached to its verified pre-release on the
 > [Releases page](https://github.com/semihbugrasezer/sigsieve/releases); a tag
 > or CI artifact alone is not a release. There is no Homebrew installation.
-> Real Secretive signing and destination binding remain unverified. Read the
+> One owner-assisted Secretive signing and destination-binding test passed on
+> the release candidate; other devices and integrations remain unverified. Read the
 > [security model](docs/SECURITY_MODEL.md) and [limitations](docs/LIMITATIONS.md)
 > before relying on it, and keep ordinary SSH access available.
 
@@ -67,31 +68,30 @@ hops, and refuses non-authentication signing such as `git commit -S` through
 the forwarded agent. Consult [compatibility](docs/SSH_COMPATIBILITY.md)
 before using it with a Git hosting service.
 
-## Install from source
+## Install
 
-Current installation requires Rust (the checkout pins 1.99.1) and OpenSSH
-8.4+; ProxyJump/relay sessions require 8.7+. Tested platforms are macOS arm64
-and Linux x86_64/aarch64. Planned binary targets are macOS arm64 and Linux
-x86_64; Linux aarch64 is source-only. No Windows or Intel macOS validation
-is claimed.
+**[Download the verified experimental v0.1.0-alpha.2 release](https://github.com/semihbugrasezer/sigsieve/releases/tag/v0.1.0-alpha.2)**
+for macOS Apple Silicon or Linux x86_64. See the
+**[installation guide](docs/INSTALL.md)** for platform detection, SHA-256 and
+build provenance verification, and user-local installation. Linux builds use
+an Ubuntu 24.04 / glibc 2.39 baseline; older distributions may require a
+source build. Linux arm64 is CI-tested but source-only; Intel macOS and
+Windows are not validated. No Homebrew package or macOS notarization is claimed.
 
-Planned Linux archives use the Ubuntu 24.04 / glibc 2.39 baseline; build from
-source on older distributions.
+**Prefer source?** Install the same immutable release commit, not an
+unreviewed tip of `main`:
 
 ```bash
-git clone https://github.com/semihbugrasezer/sigsieve
+git clone https://github.com/semihbugrasezer/sigsieve.git
 cd sigsieve
-git rev-parse HEAD                   # inspect CI for this exact revision
+git checkout v0.1.0-alpha.2
+test "$(git rev-parse HEAD)" = fc7484be0371242f517b6628b0f7dcc3a9a12a29
 cargo install --locked --path .
 sigsieve --version
 ```
 
-Ensure `~/.cargo/bin` is on your PATH. There is no published `brew install`
-command yet. The alpha.1 source tag is superseded; its release build was
-cancelled. An archive is attached to a release only after passing the
-[release checklist](docs/RELEASE_CHECKLIST.md), including checksums, license
-notices, provenance and native smoke tests on macOS arm64 and Linux x86_64;
-see [Releases](https://github.com/semihbugrasezer/sigsieve/releases).
+This needs Rust 1.99.1 (pinned by the checkout) and OpenSSH 8.4+; proxy-jump
+sessions need 8.7+. Keep ordinary SSH access available while evaluating it.
 
 ## First safe check with OpenSSH (Linux or macOS)
 
@@ -115,6 +115,7 @@ verified. Inspect the dry-run plan before attempting a real connection;
 follow [Check, preview, connect](docs/USAGE.md#check-preview-connect) for the
 next step and for cleanup. Never share unredacted agent listings or
 connection plans in public issues.
+
 ## First session with Secretive (macOS)
 
 Start Secretive and list its public fingerprints locally:
@@ -158,14 +159,15 @@ a new candidate.
 | Code review | Internal AI-assisted reviews in separate contexts; [findings and residual risks](docs/FINDINGS.md). No independent external audit. |
 | Automated tests | Parsers, policy, adversarial agents, lifecycle and resource limits; [test layers and historical results](docs/TESTING.md). |
 | Real OpenSSH | Real `ssh-agent`, `ssh` and throwaway `sshd` tests in CI on macOS arm64 and Linux x86_64/aarch64; inspect [CI for your exact commit](https://github.com/semihbugrasezer/sigsieve/actions/workflows/ci.yml). |
-| Real Secretive (ECDSA P-256) | One recorded user-assisted session: listing, hidden-key refusal and filtered forwarding. Allowed-key signing, destination binding and device-owner confirmation of Touch ID observations remain pending. [Recorded results](docs/SECRETIVE_INTEGRATION.md#recorded-real-device-results). |
+| Real Secretive (ECDSA P-256) | Owner-assisted release-candidate test: allowed signing, verified hostbound login, forbidden-destination and generic signing refusal (9/9 checks); no unexpected Touch ID prompt during forbidden steps. Limited to one configuration. [Recorded results](docs/SECRETIVE_INTEGRATION.md#recorded-real-device-results). |
 | Git hosts | 2026-10-27 advertisement measurements: GitHub advertises hostbound authentication (end-to-end unverified); GitLab.com and Bitbucket Cloud do not. [Measurements and caveats](docs/SSH_COMPATIBILITY.md#git-hosting-services). |
-| Fuzzing | Stable corpus mutation in CI and a recorded one-hour-per-target coverage-guided libFuzzer campaign on commit `103e9f9` (about 255 million executions, no crash); later commits are not covered by it. Longer and continuous campaigns remain outstanding. [Runs and limits](docs/TESTING.md#recorded-one-hour-campaign). |
+| Fuzzing | [Four-target, one-hour-per-target campaign](https://github.com/semihbugrasezer/sigsieve/actions/runs/40730071966) completed for release commit `fc7484b` (312,653,669 reported executions, no crash/sanitizer failure); not evidence of the absence of vulnerabilities. [Testing details](docs/TESTING.md). |
 | Other integrations | 1Password and physical FIDO keys untested; SSH identity certificates unsupported. [Key types and protocol matrix](docs/SSH_COMPATIBILITY.md). |
-| Distribution | Tag-free release rehearsal (build, deterministic packaging, checksums, binary smoke test) passed on macOS arm64 and Linux x86_64 for commit `103e9f9`; no tag build, provenance attestation or published archive yet. [Release gates](docs/RELEASE_CHECKLIST.md). |
+| Distribution | [v0.1.0-alpha.2 is published](https://github.com/semihbugrasezer/sigsieve/releases/tag/v0.1.0-alpha.2); [release build](https://github.com/semihbugrasezer/sigsieve/actions/runs/40743739260), native macOS verification and [Linux verification](https://github.com/semihbugrasezer/sigsieve/actions/runs/40746332311) passed with provenance. [Install safely](docs/INSTALL.md). |
 
 ## Learn more and contribute
 
+- **Install:** [verified downloads and source builds](docs/INSTALL.md).
 - **Use it:** [usage, troubleshooting and uninstall](docs/USAGE.md),
   [Secretive](docs/SECRETIVE_INTEGRATION.md), [example ssh_config](examples/ssh_config).
 - **Evaluate it:** [threat model](docs/THREAT_MODEL.md),
