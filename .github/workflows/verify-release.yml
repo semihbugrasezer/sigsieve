@@ -1,0 +1,57 @@
+# Verify a tag's release build on Linux x86_64, from the real release
+# archives: run scripts/verify-release.sh (the same script used on macOS)
+# against the given release run. It checks the run, checksums, provenance,
+# archive contents and binary type, and smoke-tests the extracted Linux
+# binary with `doctor` against a throwaway ssh-agent. Read-only: it creates
+# no tag, release or artifact and uses no SSH keys of its own.
+name: Verify release
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Run ID of the "Release build" run for the tag
+        required: true
+        type: string
+      tag:
+        description: Release tag, for example v0.1.0-alpha.2
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  attestations: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  verify-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify release run (native Linux x86_64 smoke test required)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          unset ALLOW_NO_NATIVE
+          gh --version | head -1
+          set +e
+          scripts/verify-release.sh "$RUN_ID" "$TAG" 2>&1 | tee verify.txt
+          rc=${PIPESTATUS[0]}
+          set -e
+          {
+            echo '```'
+            cat verify.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          # Only a full PASS (exit 0) passes; INCOMPLETE (3) and FAIL do not.
+          exit "$rc"

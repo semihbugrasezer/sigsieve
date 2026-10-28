@@ -14,9 +14,11 @@ agent socket it forwards.
 
 > [!WARNING]
 > **Experimental security software. Not independently audited.**
-> `0.1.0-alpha.2` is an unreleased source candidate; there are no verified
-> binary releases or published Homebrew installation yet. Real Secretive
-> signing and destination binding remain unverified. Read the
+> `0.1.0-alpha.2` is an experimental pre-release. Prebuilt archives are only
+> those attached to its verified pre-release on the
+> [Releases page](https://github.com/semihbugrasezer/sigsieve/releases); a tag
+> or CI artifact alone is not a release. There is no Homebrew installation.
+> Real Secretive signing and destination binding remain unverified. Read the
 > [security model](docs/SECURITY_MODEL.md) and [limitations](docs/LIMITATIONS.md)
 > before relying on it, and keep ordinary SSH access available.
 
@@ -84,10 +86,10 @@ sigsieve --version
 
 Ensure `~/.cargo/bin` is on your PATH. There is no published `brew install`
 command yet. The alpha.1 source tag is superseded; its release build was
-cancelled. Future archives must pass the
+cancelled. An archive is attached to a release only after passing the
 [release checklist](docs/RELEASE_CHECKLIST.md), including checksums, license
-notices, native smoke tests and provenance verification, before appearing on
-[Releases](https://github.com/semihbugrasezer/sigsieve/releases).
+notices, provenance and native smoke tests on macOS arm64 and Linux x86_64;
+see [Releases](https://github.com/semihbugrasezer/sigsieve/releases).
 
 ## First session with Secretive (macOS)
 

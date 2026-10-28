@@ -55,8 +55,14 @@ These remain explicit limitations of the alpha, not passing tests:
    `ssh-agent`. It creates no tag, release or attestation.
 3. Tag the accepted candidate. `release.yml` gates, builds deterministic
    macOS arm64 and Linux x86_64 archives, creates checksums and records provenance.
-4. Download artifacts and verify checksums and `gh attestation verify` results.
-   Inspect `LICENSE` and `THIRD_PARTY_LICENSES.txt`; smoke-test the native binary.
+4. Verify the tag's release run with `scripts/verify-release.sh RUN_ID TAG`
+   on macOS arm64, and with the **Verify release** workflow (same script,
+   GitHub-hosted Ubuntu 24.04) for Linux x86_64. Each checks that the run is
+   that tag's successful release build on GitHub-hosted runners, the
+   checksums, `gh attestation verify` bound to this repository, `release.yml`,
+   the tag and its commit (self-hosted runners denied), the exact archive
+   contents and binary type, and smoke-tests the extracted release binary
+   with `doctor`. Both must report `RESULT: PASS`; `INCOMPLETE` is not a pass.
 5. Create a GitHub pre-release and attach only those verified artifacts.
    Source installation must name the same immutable release tag.
 

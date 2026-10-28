@@ -4,6 +4,8 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0-alpha.2] - 2026-10-28 (experimental pre-release)
+
 ### Fixed
 
 - RSA destination-binding self-checks in `doctor` and `connect` now use a
@@ -21,6 +23,11 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Updated `base64` to 0.23 and `signal-hook` to 0.4, and the pinned
+  `actions/download-artifact` to v8.0.2.
+- Added `scripts/verify-release.sh` and a manual **Verify release** workflow
+  that check a tag's release run, provenance and native binaries before an
+  archive is attached to a release.
 - Made README a shorter product entry point with fair OpenSSH alternatives,
   explicit alpha/distribution status and separate review, test and device evidence.
 - Moved operational examples, CLI reference, troubleshooting and recovery to
@@ -29,7 +36,7 @@ The project follows [Semantic Versioning](https://semver.org/).
 - Clarified first contributions, alpha support and dependency review; corrected
   stale logging/recovery evidence and unverified Secretive compatibility claims.
 
-## [0.1.0-alpha.2] - unreleased candidate
+### Hardening since alpha.1
 
 - Tightened SSH configuration scanning: LF-only text, ASCII keywords,
   unambiguous Include arguments and conservative locale-independent globs.
