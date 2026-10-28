@@ -36,13 +36,15 @@ These remain explicit limitations of the alpha, not passing tests:
 
 - A professional independent security audit is required before claiming
   production-grade security assurance.
-- Real Secretive signing, destination binding and user-presence observations
-  require an owner-assisted device test; protocol tests do not prove them.
+- One owner-assisted Secretive signing and destination-binding check passed
+  with a real key and two localhost SSH servers for `v0.1.0-alpha.2`; full
+  Touch ID prompt counts, other versions and external services remain
+  unverified. Protocol tests alone do not prove those integrations.
 - 1Password and physical FIDO keys need separate interoperability testing.
-- Coverage-guided fuzzing has one recorded 3,600 s-per-target campaign on
-  commit `103e9f9` ([TESTING.md](TESTING.md#recorded-one-hour-campaign)); it
-  is evidence for that revision, not for later commits or an audit. Rerun the
-  Fuzz workflow on the release candidate.
+- `v0.1.0-alpha.2` has a recorded four-target 3,600 s-per-target campaign
+  on exact release commit `fc7484b` ([TESTING.md](TESTING.md#release-candidate-evidence-2026-10-28)).
+  For every future release candidate, rerun coverage-guided fuzzing on its
+  exact SHA; a successful campaign is not an audit.
 - See [LIMITATIONS.md](LIMITATIONS.md) for availability limits, supported
   host-key types, trust in the local client/configuration, and allowed-key misuse.
 
