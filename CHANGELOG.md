@@ -4,7 +4,9 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Changed
+## [0.1.0-alpha.2] - experimental release candidate
+
+### Documentation and validation
 
 - Made README a shorter product entry point with fair OpenSSH alternatives,
   explicit alpha/distribution status and separate review, test and device evidence.
@@ -13,8 +15,11 @@ The project follows [Semantic Versioning](https://semver.org/).
   manual SSH configuration edits.
 - Clarified first contributions, alpha support and dependency review; corrected
   stale logging/recovery evidence and unverified Secretive compatibility claims.
+- Recorded a successful four-target instrumented fuzz campaign (3,600 s per
+  target; 255,532,162 executions) on commit `103e9f9`, without reported crashes.
+- Verified tag-free release rehearsal on macOS arm64 and Linux x86_64 for
+  commit `103e9f9`. A real tag build and attestation still require validation.
 
-## [0.1.0-alpha.2] - unreleased candidate
 
 - Tightened SSH configuration scanning: LF-only text, ASCII keywords,
   unambiguous Include arguments and conservative locale-independent globs.
