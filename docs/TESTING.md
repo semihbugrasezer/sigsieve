@@ -116,6 +116,28 @@ These counters are libFuzzer's reported coverage units, not a percentage of
 program coverage. This is short smoke evidence for that revision, not a
 sustained campaign, a result for later commits or proof of no vulnerabilities.
 
+### Recorded sustained coverage-guided run
+
+On 2026-10-27, [run 40503563496](https://github.com/semihbugrasezer/sigsieve/actions/runs/40503563496)
+completed four instrumented libFuzzer/AddressSanitizer targets with a
+3,600-second budget per target. The exercised commit was
+`103e9f9aae0da1148d67b6e13882cb829add2fca` (not automatically equivalent
+to the latest main or a later release tag). All four jobs succeeded; none
+reported a crash or sanitizer failure.
+
+| Target | Executions | Final libFuzzer `cov` | Result |
+|---|---:|---:|---|
+| `requests` | 5,072,940 | 1,699 | completed; no crash reported |
+| `session_bind` | 13,891,709 | 2,220 | completed; no crash reported |
+| `key_blob` | 78,451,123 | 646 | completed; no crash reported |
+| `upstream_reply` | 158,116,390 | 103 | completed; no crash reported |
+| **Total** | **255,532,162** | — | 4/4 completed |
+
+LibFuzzer `cov` values are instrumentation coverage units, not percentages.
+A successful campaign is not proof that vulnerabilities are absent. Corpus
+artifacts and job logs are linked from the run; do not promote this result
+to a claim of independent auditing or real Secretive compatibility.
+
 ## Historical results (pre-publication, 2026-10-24)
 
 These measurements describe earlier local candidates, not release acceptance.
