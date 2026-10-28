@@ -132,9 +132,10 @@ behind wording that suggests otherwise.
 
 - Linux x86_64 passed a previous CI run. Only a green CI run for the exact
   release commit establishes current platform coverage; see the release notes.
-- Coverage-guided fuzzing has a recorded 60 s/target instrumented smoke run;
-  sustained campaigns remain outstanding. See the
-  [run and its limits](TESTING.md#recorded-coverage-guided-smoke-run).
+- Coverage-guided fuzzing has a recorded 60 s/target smoke run and a
+  3,600 s/target campaign, both on earlier revisions; neither validates a
+  later release commit or amounts to an independent audit. See the
+  [recorded campaign and limits](TESTING.md#recorded-sustained-coverage-guided-run).
 - No independent external security review.
 - Real Secretive testing is limited to one user-assisted session (listing,
   hidden-key refusal, connect to one host).
