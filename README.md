@@ -136,7 +136,7 @@ a new candidate.
 | Git hosts | 2026-10-27 advertisement measurements: GitHub advertises hostbound authentication (end-to-end unverified); GitLab.com and Bitbucket Cloud do not. [Measurements and caveats](docs/SSH_COMPATIBILITY.md#git-hosting-services). |
 | Fuzzing | Stable corpus mutation in CI and a recorded one-hour-per-target coverage-guided libFuzzer campaign (about 255 million executions, no crash). Longer and continuous campaigns remain outstanding. [Runs and limits](docs/TESTING.md#recorded-one-hour-campaign). |
 | Other integrations | 1Password and physical FIDO keys untested; SSH identity certificates unsupported. [Key types and protocol matrix](docs/SSH_COMPATIBILITY.md). |
-| Distribution | Packaging and provenance workflow prepared; no verified published archives. [Release gates](docs/RELEASE_CHECKLIST.md). |
+| Distribution | Tag-free release rehearsal (build, deterministic packaging, checksums, binary smoke test) passed on macOS arm64 and Linux x86_64; no tag build, provenance attestation or published archive yet. [Release gates](docs/RELEASE_CHECKLIST.md). |
 
 ## Learn more and contribute
 

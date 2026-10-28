@@ -4,6 +4,15 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Validation
+
+- Recorded a coverage-guided fuzz campaign: 3,600 s for each of the four
+  targets on commit `103e9f9` (255,532,162 executions in total), with no
+  crash reported.
+- A tag-free release rehearsal passed on macOS arm64 and Linux x86_64 for
+  commit `103e9f9`. A real tag build and its provenance attestation are still
+  to be verified.
+
 ### Changed
 
 - Made README a shorter product entry point with fair OpenSSH alternatives,
