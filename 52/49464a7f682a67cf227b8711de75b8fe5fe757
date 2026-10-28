@@ -1,0 +1,19 @@
+CONTRIBUTING.md
+  s_25ec96accd1e90::t_22b8bbc391e919 78-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5249464a7f682a67cf227b8711de75b8fe5fe757",
+  "prompts": {},
+  "sessions": {
+    "s_25ec96accd1e90": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a17d32-af45-78c3-a793-511e36f04f42",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Semih Bugra Sezer <17555579+semihbugrasezer@users.noreply.github.com>"
+    }
+  }
+}
