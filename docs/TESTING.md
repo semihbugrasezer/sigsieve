@@ -116,6 +116,27 @@ These counters are libFuzzer's reported coverage units, not a percentage of
 program coverage. This is short smoke evidence for that revision, not a
 sustained campaign, a result for later commits or proof of no vulnerabilities.
 
+### Recorded one-hour campaign
+
+On 2026-10-27, [run 40503563496](https://github.com/semihbugrasezer/sigsieve/actions/runs/40503563496)
+ran each of the four targets for 3600 s on `main` at
+`103e9f9aae0da1148d67b6e13882cb829add2fca`, with the same toolchain, sanitizer
+and seeds as above. All four jobs finished successfully.
+
+| Target | Executions | exec/s | Final `cov` / `ft` | Corpus | New units | Peak RSS | Result |
+|---|---|---|---|---|---|---|---|
+| `requests` | 5,072,940 | 1,408 | 1,699 / 7,001 | 604 entries | 2,792 | 505 MB | no crash reported |
+| `session_bind` | 13,891,709 | 3,857 | 2,220 / 3,614 | 324 entries | 490 | 500 MB | no crash reported |
+| `key_blob` | 78,451,123 | 21,785 | 646 / 719 | 171 entries | 738 | 503 MB | no crash reported |
+| `upstream_reply` | 158,116,390 | 43,909 | 103 / 274 | 48 entries | 440 | 514 MB | no crash reported |
+
+Coverage (`cov`) grew only slightly over the 60 s smoke run for each target
+(for example 1,676 → 1,699 for `requests`), which suggests these targets are
+close to saturating what their current entry points can reach; deeper
+coverage needs new targets or richer seeds rather than longer runs. One hour
+per target is a modest campaign for one revision, not proof of the absence
+of vulnerabilities.
+
 ## Historical results (pre-publication, 2026-10-24)
 
 These measurements describe earlier local candidates, not release acceptance.
