@@ -56,6 +56,7 @@ fix (where one exists).
 | F-32 | HIGH | SSH pre-scan disagreed with OpenSSH on quoted keywords and Include argument delimiters, permitting Match exec during verification | Fixed: conservative keywords, exact space/tab path parsing, UTF-8 validation; regression tests |
 | F-31 | HIGH | Review of F-29/F-30: a relay's own `-F` was ignored for its nested hops; hop forwardings were not checked; quoting (`e'x'ec`) hid `Match exec`; X11 forwarding ran xauth with the login agent; unsafe `-F` paths reached ssh's ProxyJump shell command; concurrent stale-socket recovery could have two winners | Fixed (details below) |
 | F-40 | LOW (availability) | A slow downstream reader could keep a reply write going indefinitely: SO_SNDTIMEO restarts on every partial transfer | Fixed: nonblocking reply writes under one whole-reply deadline; red/green regression |
+| F-41 | LOW (diagnostic) | RSA binding self-test refused by algorithm policy instead of exercising destination enforcement | Fixed: valid RSA/SHA-2 probe; regression catches missing enforcement for RSA, ECDSA and Ed25519 |
 
 
 ### Review scope
@@ -67,6 +68,22 @@ register and executable regression tests supersede earlier review summaries.
 None of these reviews is a professional independent audit.
 
 ## Details
+
+### F-41 — LOW — RSA binding self-test gave false assurance
+
+After legacy RSA/SHA-1 signing was refused (F-38), the `doctor`/`connect`
+unbound allowed-key probe still used flags `0`. With RSA as the first exposed
+identity, algorithm validation rejected that probe even when destination
+binding was disabled. The self-test could therefore report binding verified
+without detecting missing enforcement. This was a diagnostic gap, not an
+observed authentication bypass.
+
+The probe now selects `SSH_AGENT_RSA_SHA2_256` for RSA, retaining zero flags
+for other key types. `binding_self_test_rejects_missing_enforcement_for_rsa_and_other_keys`
+exercises the actual shared self-test against both proxy modes: it must catch
+a filtering-only proxy when binding is expected, and pass against a binding
+proxy without sending a sign request upstream. It failed before the fix and
+passes for RSA, ECDSA P-256 and Ed25519. Agents and keys are synthetic.
 
 ### F-40 — LOW — slow reader extends the downstream write timeout
 
