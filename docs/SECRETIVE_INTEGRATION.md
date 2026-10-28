@@ -4,8 +4,9 @@
 Secure Enclave (ECDSA P-256) and serves them through an SSH agent socket.
 SigSieve sits in front of that socket and never sees private keys. Allowed
 signing requests are delegated to Secretive; its key storage and user-presence
-policy remain in control. Real allowed-key signing through SigSieve has not
-yet been verified; see the [recorded results](#recorded-real-device-results).
+policy remain in control. One owner-assisted allowed-key signing and destination-binding test passed
+on release commit `fc7484b`; this does not guarantee every Secretive configuration.
+See the [recorded results](#recorded-real-device-results).
 
 For installation and a first session, start with the
 [usage guide](USAGE.md). The procedure below is a device verification check,
@@ -32,8 +33,10 @@ authentication caching. SigSieve does not change this:
 - `doctor` and `connect` self-tests list keys and send a sign request for a
   *synthetic* key that SigSieve rejects. With destination binding they also
   probe an unbound allowed-key request, which SigSieve must reject locally.
-  These probes do not ask Secretive to sign; device-owner confirmation of
-  the observed prompt behaviour remains pending.
+  These probes do not ask Secretive to sign. During the 2026-10-28 tested
+  configuration, the owner reported no unexpected prompts in the forbidden
+  destination or generic-signing steps; a full per-operation prompt count was
+  not recorded.
 
 For forwarding, use a key that requires authentication, so each remote
 signature needs your presence.
@@ -82,11 +85,12 @@ Secretive has no destination-constraint support of its own. With
 binding before any request reaches Secretive, so a compromised forwarding
 host cannot use the Secretive key for servers other than the allowed
 destinations (it can still authenticate to those while you are connected).
-This is a design claim, tested with OpenSSH's agent but not yet with a real
-Secretive key. Get the destination's
+It passed an owner-assisted test with one real Secretive key and two
+localhost test SSH servers on 2026-10-28; coverage of other versions,
+configurations, host keys and remote services is not established. Get the destination's
 host key fingerprint from a source you trust (for example
 `ssh-keygen -lf ~/.ssh/known_hosts` after verifying it, or the service's
-published fingerprints). Not yet verified with a real Secretive key.
+published fingerprints). This has not been tested with an external production destination.
 
 ## Recorded real-device results
 
@@ -95,5 +99,6 @@ published fingerprints). Not yet verified with a real Secretive key.
 | 2026-10-24 | `scripts/agent-integration-check.sh` (no signing) against Secretive with 3 keys, 1 allowed | PASS: filtered listing exactly 1 key; raw sign requests for the 2 hidden keys refused; socket cleaned up; upstream unchanged |
 | 2026-10-24 | `sigsieve connect <ci host>` (one allowed key, `StrictHostKeyChecking=yes`) | PASS: remote `ssh-add -l` showed only the allowed key; cleanup verified; plain ssh unaffected afterwards |
 | 2026-10-24 | `connect --dry-run` against the real ssh_config | PASS: login agent kept (Secretive via IdentityAgent), only filtered socket forwarded |
-| pending | whether any Touch ID prompt appeared during hidden-key refusal | awaiting owner confirmation |
-| pending | `--sign-allowed`, destination binding with Secretive | not run |
+| 2026-10-28 | Candidate `fc7484b`: real Secretive signing, P-256 key, signature verified locally, 1 identity forwarded to localhost sshd | PASS: 9/9 scripted checks, including hostbound allowed destination, forbidden destination refusal after key offer, generic-signing refusal, socket cleanup and unchanged upstream key count |
+| 2026-10-28 | Device-owner Touch ID observations during forbidden destination and generic signing steps | No unexpected prompts observed for those two steps; full per-step counts and Secretive version were not recorded |
+| pending | Integration with other Secretive versions, production SSH services, and full user-presence prompt matrix | not verified |
