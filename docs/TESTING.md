@@ -137,6 +137,40 @@ coverage needs new targets or richer seeds rather than longer runs. One hour
 per target is a modest campaign for one revision, not proof of the absence
 of vulnerabilities.
 
+## Release-candidate evidence (2026-10-28)
+
+The experimental [v0.1.0-alpha.2 pre-release](https://github.com/semihbugrasezer/sigsieve/releases/tag/v0.1.0-alpha.2)
+is pinned to commit `fc7484be0371242f517b6628b0f7dcc3a9a12a29`
+(not the later documentation-only `main` head).
+
+- [CI](https://github.com/semihbugrasezer/sigsieve/actions/runs/40729859157):
+  all four required jobs passed (supply-chain, macOS, Linux x86_64 and arm64).
+- [Release rehearsal](https://github.com/semihbugrasezer/sigsieve/actions/runs/40730067585):
+  macOS arm64 and Linux x86_64 passed.
+- [Four-target fuzz run](https://github.com/semihbugrasezer/sigsieve/actions/runs/40730071966):
+  3600 s per target; all jobs passed with no reported crash or sanitizer failure.
+- [Real tag release build](https://github.com/semihbugrasezer/sigsieve/actions/runs/40743739260):
+  packaging, SHA-256 checksums and provenance attestation passed.
+- Release verifier: macOS arm64 native `RESULT: PASS` was recorded locally;
+  [Linux x86_64 native `RESULT: PASS`](https://github.com/semihbugrasezer/sigsieve/actions/runs/40746332311)
+  is recorded in the public workflow log.
+- Owner-assisted Secretive P-256 localhost test returned 9/9 PASS, including
+  an allowed signature, allowed hostbound authentication, forbidden host
+  refusal and rejection of non-authentication signing. The owner reported
+  no unexpected Touch ID requests during forbidden steps. This is one
+  device/configuration and not an independent external audit.
+
+| Target | Executions | Final `cov / ft` | Final corpus | New units | Result |
+|---|---:|---|---:|---:|---|
+| `requests` | 13,375,674 | 1,712 / 7,600 | 698 | 3,419 | no crash reported |
+| `session_bind` | 10,255,713 | 2,214 / 3,618 | 320 | 522 | no crash reported |
+| `key_blob` | 96,142,034 | 600 / 673 | 147 | 731 | no crash reported |
+| `upstream_reply` | 192,880,248 | 103 / 274 | 47 | 416 | no crash reported |
+| **Total** | **312,653,669** | — | — | — | **4 jobs successful** |
+
+The libFuzzer counters are not a percentage of code coverage. A successful
+campaign is not proof of the absence of vulnerabilities.
+
 ## Historical results (pre-publication, 2026-10-24)
 
 These measurements describe earlier local candidates, not release acceptance.
