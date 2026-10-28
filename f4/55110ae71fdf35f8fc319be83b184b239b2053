@@ -1,0 +1,32 @@
+scripts/test-package-release.py
+  s_25ec96accd1e90::t_aa038374df2741 7,14-18
+  s_25ec96accd1e90::t_a64b9a3371034b 1-6,8-13,19-80
+scripts/package-release.py
+  s_25ec96accd1e90::t_48c8018b1a7c1a 10-11,14-16,18-26,38,40
+  s_25ec96accd1e90::t_aa038374df2741 39
+.github/workflows/ci.yml
+  s_25ec96accd1e90::t_48c8018b1a7c1a 111-112
+CHANGELOG.md
+  s_25ec96accd1e90::t_48c8018b1a7c1a 9-10
+.github/workflows/release-rehearsal.yml
+  s_25ec96accd1e90::t_48c8018b1a7c1a 19,86-88
+  s_25ec96accd1e90::t_5e93526cf10b67 47-48
+docs/RELEASE_CHECKLIST.md
+  s_25ec96accd1e90::t_48c8018b1a7c1a 27-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f455110ae71fdf35f8fc319be83b184b239b2053",
+  "prompts": {},
+  "sessions": {
+    "s_25ec96accd1e90": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a17d32-af45-78c3-a793-511e36f04f42",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Semih Bugra Sezer <17555579+semihbugrasezer@users.noreply.github.com>"
+    }
+  }
+}
