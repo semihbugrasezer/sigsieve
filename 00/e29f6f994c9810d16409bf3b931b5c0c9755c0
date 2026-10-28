@@ -1,0 +1,23 @@
+CHANGELOG.md
+  s_211cc592f3418f::t_ae341e486773fe 7-15
+README.md
+  s_211cc592f3418f::t_7d724aac4e43cc 139
+docs/RELEASE_CHECKLIST.md
+  s_211cc592f3418f::t_ce64bb6e3d7e45 39-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "00e29f6f994c9810d16409bf3b931b5c0c9755c0",
+  "prompts": {},
+  "sessions": {
+    "s_211cc592f3418f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "828f2ed6-2d53-45e4-b19e-2d6b5d5f6c84",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <17555579+semihbugrasezer@users.noreply.github.com>"
+    }
+  }
+}
