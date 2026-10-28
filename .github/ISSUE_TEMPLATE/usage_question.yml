@@ -4,7 +4,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Please check [SUPPORT.md](../../SUPPORT.md) and [usage/troubleshooting](../../docs/USAGE.md) first.
+        Please check [SUPPORT.md](https://github.com/semihbugrasezer/sigsieve/blob/main/SUPPORT.md) and [usage/troubleshooting](https://github.com/semihbugrasezer/sigsieve/blob/main/docs/USAGE.md) first.
         **Do not post suspected vulnerabilities here:** report them privately via SECURITY.md.
         Redact hostnames, account names, fingerprints, agent paths, tokens and keys.
   - type: input
