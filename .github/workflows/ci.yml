@@ -111,6 +111,41 @@ jobs:
       - name: Build cargo-fuzz targets
         run: cargo build --release --manifest-path fuzz/Cargo.toml --locked
 
+  msrv:
+    # The declared rust-version (Cargo.toml) must build and pass the full
+    # test suite, both from the repository and from the packaged .crate.
+    # RUSTUP_TOOLCHAIN overrides rust-toolchain.toml for this job only.
+    name: msrv (Rust 1.88)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      RUSTUP_TOOLCHAIN: "1.88.0"
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Toolchain matches the declared rust-version
+        run: |
+          rustup toolchain install 1.88.0 --profile minimal
+          declared=$(sed -n 's/^rust-version = "\(.*\)"$/\1/p' Cargo.toml)
+          test "$declared" = "1.88" || { echo "::error::rust-version is '$declared', job tests 1.88"; exit 1; }
+          rustc -V; cargo -V
+          rustc -V | grep -q '^rustc 1\.88\.0 ' || { echo "::error::not running Rust 1.88.0"; exit 1; }
+      - name: Install OpenSSH, GnuPG, git and python3
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends openssh-client openssh-server python3 gnupg git
+          sudo mkdir -p -m 0755 /run/sshd
+      - name: cargo test on Rust 1.88
+        run: |
+          cargo test --all-targets --locked -- --nocapture 2>&1 | tee msrv-test.log
+          if grep -nE 'skipp(ing|ed)' msrv-test.log; then echo "::error::a test was skipped"; exit 1; fi
+      - name: Packaged crate on Rust 1.88
+        run: |
+          bash scripts/check-crate-package.sh 2>&1 | tee msrv-crate.log
+          if grep -nE 'skipp(ing|ed)' msrv-crate.log; then echo "::error::a test was skipped"; exit 1; fi
+
   supply-chain:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
