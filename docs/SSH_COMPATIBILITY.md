@@ -72,11 +72,11 @@ applied temporarily to show the test fails without the guard (recorded
 | Final hop not in the allowlist (Ed25519 forwarding host, P-256 destination) | `destination_binding_end_to_end` (pre-existing) | destination check removed |
 | Forged bind / sign after forged bind / userauth-shaped data without a bind (raw client) | `destination_binding_end_to_end` (pre-existing) | bind signature check removed |
 | Allowed host key earlier in the chain (forwarding hop) does not authorize another final destination; the same host as final Ed25519 destination works | `allowed_forwarding_hop_does_not_authorize_another_final_destination` | authorize if *any* binding's host key is allowed |
-| Agent forwarded again through an allowed intermediate host: allowed final destination works, disallowed one refused | `destination_binding_across_two_forwarding_hops` | forwarding flag of binds ignored |
+| Agent forwarded again through an allowed intermediate host: allowed final destination works, disallowed one refused | `destination_binding_across_two_forwarding_hops` | binding limit lowered to 2 per connection (single-hop tests still pass) |
 | Plain `publickey` (no hostbound) to the allowed destination refused; hostbound to the same destination works | `destination_binding_refuses_plain_publickey_to_allowed_destination` | `HostboundRequired` check removed |
 | RSA-only destination host key refused although allowed (no fallback to identity-only filtering) | `destination_binding_rsa_host_key_fails_closed_even_when_allowed` | RSA host keys accepted without verification |
-| `git commit -S` (`gpg.format=ssh`) refused, no commit created; positive control in filtering mode verifies | `git_ssh_commit_signing_through_forwarded_agent` | forwarding-hop guard fails open |
-| gpg-agent as upstream: allowed destination works, other destination and `ssh-keygen -Y sign` refused | `destination_binding_with_gpg_agent_upstream` | destination check removed |
+| `git commit -S` (`gpg.format=ssh`) refused, no commit created; positive control in filtering mode verifies | `git_ssh_commit_signing_through_forwarded_agent` | forwarding-hop guard fails open (also caught by the `ssh-keygen -Y sign` step of `destination_binding_end_to_end`; new evidence is the git tool path and its filtering-mode positive) |
+| gpg-agent as upstream: allowed destination works, other destination and `ssh-keygen -Y sign` refused | `destination_binding_with_gpg_agent_upstream` | destination check removed (same guard as `destination_binding_end_to_end`; new evidence is gpg-agent as upstream) |
 
 sshd has no option to stop advertising `publickey-hostbound`, so the client
 setting `PubkeyAuthentication=unbound` stands in for a server without it; a
@@ -86,11 +86,12 @@ real non-OpenSSH server lacking hostbound is not tested here.
 
 Status of agents SigSieve has been run against as its `--upstream`. Only
 throwaway instances with synthetic keys in temporary directories were used.
+Recorded after `v0.1.0-alpha.2`; not part of that release's evidence.
 
 | Agent | Status | Scope |
 |---|---|---|
 | OpenSSH `ssh-agent` | VERIFIED (automated) | filtering, signing, RSA SHA-2/SHA-1, constrained keys, destination binding (`tests/openssh.rs`, `tests/e2e_sshd.rs`) |
-| GnuPG `gpg-agent --enable-ssh-support` | VERIFIED locally, 2026-10-30, GnuPG 2.5.24, macOS 27 arm64 | filtering and SSHSIG signing with Ed25519/P-256/RSA keys, rsa-sha2-256/512 honoured and `ssh-rsa` refused, mutations refused (`gpg_agent_upstream_filtering_signing_and_mutations`); destination binding with a P-256 key (`destination_binding_with_gpg_agent_upstream`). Both tests **skip** when GnuPG is missing (fail only with `SIGSIEVE_REQUIRE_GPG_AGENT=1`); CI coverage is not established unless a CI log shows they ran. Other GnuPG versions, smartcard-backed keys and passphrase-protected keys (pinentry) are untested |
+| GnuPG `gpg-agent --enable-ssh-support` | VERIFIED locally, 2026-10-30, GnuPG 2.5.24, macOS 27 arm64 | filtering (Ed25519 key hidden from the listing), P-256 and RSA SSHSIG signatures sign and verify, rsa-sha2-256/512 honoured and `ssh-rsa` refused, mutations refused (`gpg_agent_upstream_filtering_signing_and_mutations`); destination binding with a P-256 key (`destination_binding_with_gpg_agent_upstream`). Both tests **skip** when GnuPG is missing (fail only with `SIGSIEVE_REQUIRE_GPG_AGENT=1`); CI coverage is not established unless a CI log shows they ran. Other GnuPG versions, smartcard-backed keys and passphrase-protected keys (pinentry) are untested |
 | Secretive | owner-assisted record only | see [SECRETIVE_INTEGRATION.md](SECRETIVE_INTEGRATION.md#recorded-real-device-results); not exercised by these tests |
 | 1Password SSH agent | NOT_TESTED / EXTERNAL_VALIDATION_REQUIRED | not installed on the test machine |
 | Other agents (KeePassXC, Bitwarden, ssh-tpm-agent, Pageant-compatible, hardware FIDO `sk-*` keys) | NOT_TESTED | — |
