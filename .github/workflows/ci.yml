@@ -147,7 +147,12 @@ jobs:
         # .gitleaks.toml, .gitleaksignore or `gitleaks:allow` comment, so the
         # default rules are used from a config written here and an empty
         # ignore directory; inline allow comments are ignored.
+        # gitleaks always also reads ./.gitleaksignore from the scanned
+        # directory, whatever the flags, so the file is refused outright.
         run: |
+          if find . -path ./.git -prune -o -name .gitleaksignore -print | grep -q .; then
+            echo "::error::.gitleaksignore is not allowed; it would suppress findings"; exit 1
+          fi
           mkdir -p "$RUNNER_TEMP/gitleaks/noignore"
           printf '[extend]\nuseDefault = true\n' > "$RUNNER_TEMP/gitleaks/config.toml"
       - name: gitleaks (git history reachable from HEAD, redacted)

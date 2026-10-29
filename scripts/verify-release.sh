@@ -11,7 +11,8 @@
 #
 # Read-only towards GitHub: downloads the run's artifacts, verifies checksums
 # and build provenance, the CycloneDX SBOM sidecars (checksum, provenance and
-# SBOM attestation linking each to its archive), inspects the archives and
+# that a CycloneDX SBOM attestation exists for each archive; its predicate is
+# not compared with the sidecar), inspects the archives and
 # smoke-tests the native binary against a throwaway ssh-agent.
 #
 # SBOMs are required for every tag except those in PRE_SBOM_TAGS, which were
