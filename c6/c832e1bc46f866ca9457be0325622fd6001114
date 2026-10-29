@@ -1,0 +1,32 @@
+scripts/check-crate-package.sh
+  s_c68b92ee5f638d::t_4aa5655aee0549 1-21,26-63
+  s_c68b92ee5f638d::t_c69ae5cd17ceea 22-25
+CHANGELOG.md
+  s_c68b92ee5f638d::t_c80c8d9e1deb7b 7-18
+Cargo.toml
+  s_c68b92ee5f638d::t_6777a732fbd660 5-7,14-28
+docs/TESTING.md
+  s_c68b92ee5f638d::t_81c60ffb947222 18,94-101
+src/fuzzing.rs
+  s_c68b92ee5f638d::t_e707322edb70de 113
+tests/data/fuzz-seeds
+  s_c68b92ee5f638d::t_df62779e383751 1
+tests/fuzz_corpus.rs
+  s_c68b92ee5f638d::t_bdbeda1368269c 1-2,71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c6c832e1bc46f866ca9457be0325622fd6001114",
+  "prompts": {},
+  "sessions": {
+    "s_c68b92ee5f638d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a8909518-2df4-4dab-82d0-d7222a653bd4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <17555579+semihbugrasezer@users.noreply.github.com>"
+    }
+  }
+}
