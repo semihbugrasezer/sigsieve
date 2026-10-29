@@ -1,6 +1,6 @@
 [package]
 name = "sigsieve"
-version = "0.1.0-alpha.2"
+version = "0.1.0-alpha.3"
 edition = "2021"
 # Floor set by dependencies (sha2 0.11, proptest 1.12 declare 1.88) and
 # clippy's incompatible_msrv lint; not built on a 1.88 toolchain in CI.

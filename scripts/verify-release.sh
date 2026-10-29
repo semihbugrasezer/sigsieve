@@ -2,7 +2,7 @@
 # Verify the artifacts of a SigSieve release.yml run before attaching them to
 # a GitHub pre-release (docs/RELEASE_CHECKLIST.md, publication step 4).
 #
-# Usage: verify-release.sh RUN_ID [TAG]     (TAG default: v0.1.0-alpha.2)
+# Usage: verify-release.sh RUN_ID [TAG]     (TAG default: v0.1.0-alpha.3)
 #
 # Exit 0 (PASS) only when every check, including the native smoke test of the
 # archive for this host, passed. Run it on macOS arm64 and on Linux x86_64:
@@ -30,7 +30,7 @@ SBOM_PREDICATE=https://cyclonedx.org/bom
 
 [ $# -ge 1 ] && [ $# -le 2 ] || { echo "usage: $0 RUN_ID [TAG]" >&2; exit 2; }
 RUN_ID=$1
-TAG=${2:-v0.1.0-alpha.2}
+TAG=${2:-v0.1.0-alpha.3}
 VERSION=${TAG#v}
 case $RUN_ID in *[!0-9]* | '') echo "RUN_ID must be numeric" >&2; exit 2 ;; esac
 case $TAG in v[0-9]*) ;; *) echo "TAG must look like v0.1.0-alpha.2" >&2; exit 2 ;; esac

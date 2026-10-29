@@ -47,6 +47,24 @@ SSH host-key verification and recovery access.
 - Publish release notes with the exact commit, CI links, supported platforms,
   checks performed and remaining limitations; mark alpha releases as pre-release.
 
+## Candidate record: v0.1.0-alpha.3
+
+Runtime code is unchanged from `v0.1.0-alpha.2` (test-only changes under
+`src/`). Supported prebuilt targets stay macOS arm64 and Linux x86_64;
+Linux arm64 is CI-tested but source-only; Intel macOS and Windows are not
+validated. A gate is only ticked from evidence on the exact candidate SHA.
+
+| Gate | Status |
+|---|---|
+| Version 0.1.0-alpha.3 in `Cargo.toml` and both lockfiles | Done on the release-preparation branch |
+| Hosted CI on the exact candidate SHA, including `msrv (Rust 1.88)` | Pending |
+| Release rehearsal (`workflow_dispatch`) on the exact candidate SHA, including the OIDC-free `verify` job | Pending |
+| Coverage-guided fuzzing, 3,600 s per target, on the exact candidate SHA | Pending |
+| Independent (internal, AI-assisted) security review of the release path | Pending; not an external audit |
+| F-42: the tag's `attest` job log shows the binding step passed and all three downloads were by ID | Only possible after tagging; blocks publication |
+| `scripts/verify-release.sh RUN_ID v0.1.0-alpha.3` on macOS arm64 and the **Verify release** workflow on Linux report `RESULT: PASS`, including SBOM sidecars and attestations | Only possible after tagging; blocks publication |
+| README / INSTALL point at the new release only after it is published | Post-publication step |
+
 ## Remaining assurance work
 
 These remain explicit limitations of the alpha, not passing tests:

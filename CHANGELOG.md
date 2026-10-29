@@ -4,6 +4,16 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0-alpha.3] - not yet tagged (experimental pre-release candidate)
+
+The proxy's runtime code is unchanged from `0.1.0-alpha.2`: the only
+changes under `src/` are in test code. This candidate changes how releases
+are built, attested and verified, and adds tests and documentation. It is
+still experimental and **not independently audited**. Release artifacts
+are covered only by the checks this workflow runs; the F-42 fix is
+proven end to end only once this tag's attest job has run (see
+[RELEASE_CHECKLIST](docs/RELEASE_CHECKLIST.md)).
+
 ### Packaging
 
 - Restrict the crates.io package to an `include` allowlist (sources, tests,
@@ -15,8 +25,9 @@ The project follows [Semantic Versioning](https://semver.org/).
   `scripts/check-crate-package.sh` to test the unpacked `.crate`.
 - CI packages the crate and runs its tests from the unpacked `.crate`
   (`scripts/check-crate-package.sh`, Ubuntu 24.04).
-- Declare `rust-version = "1.88"`, the floor set by dependencies; it is not
-  built on a 1.88 toolchain in CI.
+- Declare `rust-version = "1.88"`, the floor set by dependencies. A CI job
+  (`msrv (Rust 1.88)`) builds and tests it, from the repository and from the
+  packaged `.crate`.
 
 ### Documentation
 
@@ -56,7 +67,9 @@ The project follows [Semantic Versioning](https://semver.org/).
   exactly the artifacts (ID and digest) the build and SBOM jobs reported,
   downloads them by ID, hashes each zip before unpacking, and compares each
   archive with the SHA-256 its build job computed. Tested with
-  `scripts/test-attest-inputs.sh`; not yet run in GitHub Actions.
+  `scripts/test-attest-inputs.sh` (50 cases) locally and, through the
+  rehearsal `verify` job, on GitHub-hosted runners with real artifacts; the
+  tag-only attest job (OIDC, attestations) has not run yet.
 - Attest checks every zip entry (regular file, exactly an expected name)
   before extracting. The release rehearsal mirrors the per-target build
   jobs and adds a `verify` job (no OIDC) that runs attest's checks, read
@@ -79,6 +92,15 @@ The project follows [Semantic Versioning](https://semver.org/).
   evidence of the SHA-1 guard), mutations, and destination binding
   (required in CI).
 - Mock-upstream regression: a truncated sign response is never completed.
+- The sshd end-to-end harness picks all its ports while holding them (two
+  ports released one after the other could be the same, which applied the
+  hop port's `authorized_keys` to logins and failed a test on Linux arm64
+  with `Permission denied (publickey)`), and checks with `ssh-keyscan` that
+  each port is served by its own sshd's host key before any test runs,
+  rebuilding the environment (at most three attempts) if another process
+  took a port. Test infrastructure only.
+- CI installs and requires `git`, `gpg`, `gpg-agent` and `gpgconf` and sets
+  `SIGSIEVE_REQUIRE_GPG_AGENT=1`, so these tests cannot be skipped silently.
 
 - Pin that session binds after an authentication bind, including forged
   ones, leave binding state and signing authorization unchanged.
