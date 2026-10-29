@@ -28,8 +28,8 @@ Last updated: 2026-10-29, baseline `main` @ `2edffc8`.
 
 | ID | Task | Owner | Depends | Acceptance criteria | State | Evidence |
 |---|---|---|---|---|---|---|
-| P0-01 | Internal adversarial review with external-audit disclaimer | A | INV | Report cites file:line per finding, classifies CONFIRMED/SUSPECTED/OUT-OF-SCOPE, states it is not an independent audit | IN_PROGRESS | — |
-| P0-02 | Regression tests for confirmed findings before fixes | A→Lead | P0-01 | Each CONFIRMED finding has a failing-then-passing test and a FINDINGS.md entry | TODO | — |
+| P0-01 | Internal adversarial review with external-audit disclaimer | A | INV | Report cites file:line per finding, classifies CONFIRMED/SUSPECTED/OUT-OF-SCOPE, states it is not an independent audit | DONE (internal; not an audit) | Separate-context AI review of `src/` @ `fc7484be`: no new CRITICAL/HIGH/MEDIUM/LOW; 5 INFO recorded in [FINDINGS.md](FINDINGS.md#internal-review-of-v010-alpha2-source-2026-10-29) |
+| P0-02 | Regression tests for confirmed findings before fixes | A→Lead | P0-01 | Each CONFIRMED finding has a failing-then-passing test and a FINDINGS.md entry | DONE (no actionable finding) | No CONFIRMED vulnerability to fix. Added `binding::tests::binds_after_authentication_bind_leave_state_unchanged`: it passes, and it fails when the `AlreadyBoundForAuth` check is removed (mutation-checked locally). A-1 hardening awaits a maintainer decision |
 | P0-03 | Expand real OpenSSH E2E / destination-binding negative matrix | B | INV | New negative cases run under `SIGSIEVE_REQUIRE_SSHD=1`; no skips | TODO (deferred: disk capacity) | Existing: `tests/e2e_sshd.rs`, `tests/openssh.rs` |
 | P0-04 | Other upstream agent implementations with synthetic identities | B | INV | Each agent listed as VERIFIED only when exercised | TODO | Existing matrix: [SSH_COMPATIBILITY.md](SSH_COMPATIBILITY.md) |
 | P0-05 | CI secret scanning, safe for fork PRs | C | INV | Pinned + checksum-verified scanner, `pull_request` trigger, read-only token, redacted output, narrow allowlist | IN_PROGRESS | GitHub-native secret scanning + push protection already enabled |
@@ -44,7 +44,7 @@ Last updated: 2026-10-29, baseline `main` @ `2edffc8`.
 
 | ID | Task | Owner | Depends | Acceptance criteria | State | Evidence |
 |---|---|---|---|---|---|---|
-| P1-01 | Five-minute safe quickstart | D | P0 gates | Uses synthetic/demo agent, no real key or host needed, commands tested | PARTIAL | README "First safe check" + [INSTALL.md](INSTALL.md) exist but need a real key in an existing agent; a synthetic-agent demo is TODO |
+| P1-01 | Five-minute safe quickstart | D | P0 gates | Uses synthetic/demo agent, no real key or host needed, commands tested | DONE (branch) | [QUICKSTART.md](QUICKSTART.md); its code blocks were extracted and run verbatim with `bash -e` on macOS arm64 (exit 0, no leftover processes) |
 | P1-02 | Doctor diagnostics and actionable errors | D | P0-01 | No sensitive data in output; tests for each new message | TODO | — |
 | P1-03 | Interactive fingerprint selection | D+A | design + threat review | Written design approved before code | TODO (gated) | — |
 | P1-04 | First-run setup wizard evaluation | D | P1-03 | Evaluation separates confirmed needs from speculation | TODO | — |
