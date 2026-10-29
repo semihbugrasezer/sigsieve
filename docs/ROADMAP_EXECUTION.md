@@ -84,3 +84,12 @@ explicit maintainer approval.
 3. The lead rebases reviewed branches onto current `main`, reruns the full
    local validation, and prepares one small pull request per track.
 4. Pushes and pull requests are opened only after maintainer approval.
+
+## Community feedback plan (P2-07)
+
+No telemetry, analytics, tracking pixels or phone-home checks are added. Feedback comes only from channels where people choose to speak:
+
+- GitHub issue forms (bug, usage question, feature request) and private vulnerability reporting, as described in [SUPPORT.md](../SUPPORT.md) and [SECURITY.md](../SECURITY.md).
+- The three-user trial protocol in [EXTERNAL_VALIDATION.md](EXTERNAL_VALIDATION.md), with informed consent and redacted records.
+- Release notes ask users to report the platform, OpenSSH version and upstream agent that they actually ran. These reports are added to [SSH_COMPATIBILITY.md](SSH_COMPATIBILITY.md) as user-reported evidence, kept separate from CI-verified evidence.
+- Download counts shown by GitHub are not treated as adoption evidence.

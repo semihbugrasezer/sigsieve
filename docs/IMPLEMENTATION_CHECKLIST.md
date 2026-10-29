@@ -59,13 +59,13 @@ Last updated: 2026-10-29, baseline `main` @ `2edffc8`.
 
 | ID | Task | Owner | Depends | Acceptance criteria | State | Evidence |
 |---|---|---|---|---|---|---|
-| P2-01 | Linux aarch64 prebuilt release evaluation | C | P0-06 | Decision recorded; native test evidence on arm runner | PARTIAL | `test (ubuntu-24.04-arm)` is a required CI check; not a release target |
-| P2-02 | macOS Intel validation requirements | Lead | — | Hardware/runner requirements documented | TODO | — |
-| P2-03 | Username-constraint design proposal | Lead+A | — | Invariants and adversarial tests specified; no code | TODO | — |
-| P2-04 | Path/intermediate-hop binding research vs OpenSSH | Lead+A | — | Research note; no implementation | TODO | — |
+| P2-01 | Linux aarch64 prebuilt release evaluation | C | P0-06 | Decision recorded; native test evidence on arm runner | PARTIAL (evaluated; implementation after P0-06) | [design/PLATFORM_SUPPORT.md](design/PLATFORM_SUPPORT.md#p2-01-linux-aarch64-prebuilt-archive); `test (ubuntu-24.04-arm)` required check |
+| P2-02 | macOS Intel validation requirements | Lead | — | Hardware/runner requirements documented | DONE (doc) | [design/PLATFORM_SUPPORT.md](design/PLATFORM_SUPPORT.md#p2-02-macos-intel-x86_64-apple-darwin); native run BLOCKED_EXTERNAL |
+| P2-03 | Username-constraint design proposal | Lead+A | — | Invariants and adversarial tests specified; no code | PARTIAL (draft; awaiting adversarial design review) | [design/DESTINATION_CONSTRAINT_EXTENSIONS.md](design/DESTINATION_CONSTRAINT_EXTENSIONS.md#p2-03-username-constraints) |
+| P2-04 | Path/intermediate-hop binding research vs OpenSSH | Lead+A | — | Research note; no implementation | PARTIAL (open questions need real OpenSSH traces) | [design/DESTINATION_CONSTRAINT_EXTENSIONS.md](design/DESTINATION_CONSTRAINT_EXTENSIONS.md#p2-04-path-and-intermediate-hop-constraints-research-only) |
 | P2-05 | Performance and resource-exhaustion baselines | B | — | Measurable, repeatable baseline | PARTIAL | `tests/bench.rs` (ignored by default), [RESOURCE_LIMITS.md](RESOURCE_LIMITS.md) |
-| P2-06 | Windows feasibility note | Lead | — | Document only | TODO | — |
-| P2-07 | Community adoption/feedback plan without telemetry | Lead | — | Plan uses issues/discussions only | TODO | — |
+| P2-06 | Windows feasibility note | Lead | — | Document only | DONE (doc) | [design/PLATFORM_SUPPORT.md](design/PLATFORM_SUPPORT.md#p2-06-windows) |
+| P2-07 | Community adoption/feedback plan without telemetry | Lead | — | Plan uses issues/discussions only | DONE (doc) | [ROADMAP_EXECUTION.md](ROADMAP_EXECUTION.md#community-feedback-plan-p2-07) |
 
 ## Blocked external
 
