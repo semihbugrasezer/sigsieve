@@ -90,9 +90,11 @@ release page without checking it.
 
 ## Before publishing: known obstacles
 
-- homebrew-core does not accept alpha/pre-release versions, and its
-  notability rules apply. A maintainer-owned tap is the realistic first
-  channel, and it needs approval. No tap exists.
+- homebrew-core has acceptance and notability rules, and it may not accept
+  an alpha version. Check its current
+  [Acceptable Formulae](https://docs.brew.sh/Acceptable-Formulae) policy (not
+  verified here). A maintainer-owned tap is the realistic first channel, and
+  it needs approval. No tap exists.
 - `brew style`, `brew audit --new` and `brew install --build-from-source` plus
   `brew test` have not been run against this draft. Homebrew requires a tap
   for all of them.

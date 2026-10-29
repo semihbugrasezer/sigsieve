@@ -15,11 +15,13 @@ using the Homebrew-provided cargo 1.99.1.
 | `cargo package --locked --list` | 0 | 71 files (list reviewed below) |
 | `cargo package --locked --no-verify` | 0 | `Packaged 71 files, 618.0KiB (181.5KiB compressed)` |
 | `cargo publish --dry-run --locked` (no token in the environment) | 0 | Packaged, verified with a `dev` build of the packaged sources, then `warning: aborting upload due to dry run` |
+| `cargo check --tests --locked --offline` in the unpacked `.crate` | 101 | `couldn't read src/../fuzz/seeds/session_bind/sequence` (lib test) and `tests/../fuzz/seeds/session_bind/sequence` (`tests/proxy.rs`) |
 | `GET https://crates.io/api/v1/crates/sigsieve` (read-only) | HTTP 404 | Name not registered. `cargo search sigsieve` returned no results |
 
 The dry run's verify step only **builds** the packaged crate. It does not run
 `cargo test`. A passing dry run does not mean the published source can run
-its own tests (see blocker 1).
+its own tests. The `cargo check --tests` row shows that it cannot
+(blocker 1).
 
 ## Findings
 
@@ -31,7 +33,7 @@ its own tests (see blocker 1).
   `src/fuzzing.rs` (a `#[cfg(test)]` `include_bytes!("../fuzz/seeds/...")`),
   `tests/proxy.rs` (the same `include_bytes!`), and `tests/fuzz_corpus.rs`,
   which reads `fuzz/seeds` at runtime. As a result, `cargo test` on the
-  published source **fails to compile**, which hurts distribution packagers
+  published source **fails to compile** (shown above with `cargo check --tests`), which hurts distribution packagers
   and reviewers who work from the crate.
 - **Unneeded files are shipped.** These are `.github/` (issue templates and
   all workflows), `.gitignore`, `deny.toml`, `rust-toolchain.toml`, and
@@ -95,8 +97,8 @@ not decided whether the library is a supported interface.
 - `sigsieve` is unregistered today. The first `cargo publish` claims it
   permanently for the publishing account.
 - Published versions cannot be deleted or overwritten. `cargo yank` only stops
-  new lockfiles from selecting a version. Existing lockfiles and
-  `cargo install --version X` still fetch it. No yanking policy exists. For
+  new lockfiles from selecting a version. Existing `Cargo.lock` files still
+  resolve it. No yanking policy exists. For
   example: yank on a security fix that a release supersedes, and announce it in
   `SECURITY.md` and the release notes.
 - Pre-release versions (`0.1.0-alpha.N`) are allowed. Install instructions

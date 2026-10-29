@@ -9,7 +9,7 @@ class Sigsieve < Formula
   sha256 "a05994e71a165d5b1759c4cad2528aab2a02269bc7db85164359dec4829977a7"
   license "MIT"
 
-  # ponytail: no `head` block on purpose; it would build untagged `main`.
+  # No `head` block on purpose: it would build untagged `main`.
 
   depends_on "rust" => :build
 
