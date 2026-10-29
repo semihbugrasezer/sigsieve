@@ -15,7 +15,7 @@ ports, configured from a temporary directory.
 | CLI | `tests/cli.rs` | the real binary: config errors, signals and cleanup, doctor/status output privacy, `connect` with fake ssh (argument plan, refusal cases, crash and SIGTERM cleanup, dry run) |
 | Real OpenSSH tools | `tests/openssh.rs` | real `ssh-agent`, `ssh-add`, `ssh-keygen -Y sign`, constrained keys, real `ssh` config precedence; throwaway `gpg-agent` as upstream (skipped without GnuPG) |
 | Real OpenSSH E2E | `tests/e2e_sshd.rs` | `sigsieve connect` → `ssh` → throwaway `sshd`s: filtering, raw-protocol attackers in the remote session, second hop with `session-bind`, hidden-key hop refused, mutations, ControlMaster regression, destination binding (allowed host OK, other host refused, forged binds rejected) and its [negative matrix](SSH_COMPATIBILITY.md#destination-binding-negative-matrix-real-openssh): plain `publickey` refused, RSA host key refused, allowed forwarding hop vs. other final host, two forwarding hops, `git commit -S`, gpg-agent upstream |
-| Fuzzing (stable) | `tests/fuzz_corpus.rs` + `fuzz/seeds` | seed replay + bounded deterministic mutation through `src/fuzzing.rs` entry points |
+| Fuzzing (stable) | `tests/fuzz_corpus.rs` + `fuzz/seeds` (read via the `tests/data/fuzz-seeds` symlink) | seed replay + bounded deterministic mutation through `src/fuzzing.rs` entry points |
 | Fuzzing (cargo-fuzz) | `fuzz/` | coverage-guided targets: `requests`, `session_bind`, `key_blob`, `upstream_reply` |
 | Benchmark | `tests/bench.rs` (ignored) | overhead vs. direct agent access |
 
@@ -95,6 +95,14 @@ cargo +nightly fuzz run requests corpus/requests -- -max_total_time=3600
 `fuzz/corpus` (grown by fuzzing) and `fuzz/artifacts` are git-ignored; add
 minimized crashers to `fuzz/seeds/<target>/` as regression seeds. Regenerate
 the generated seeds with `cargo test --lib write_fuzz_seeds -- --ignored`.
+
+`fuzz/seeds` is the only copy of the corpus. `fuzz/` is its own package, so
+cargo never ships it in the `.crate`; tests read the seeds through the
+`tests/data/fuzz-seeds` symlink, which `cargo package` dereferences into real
+files. `scripts/check-crate-package.sh` builds the `.crate`, checks its file
+list (no `.github/`, `scripts/`, `fuzz/`, toolchain or deny config; seeds
+byte-identical to `fuzz/seeds`) and runs `cargo test --locked --offline` in
+the unpacked crate. It publishes nothing.
 
 Without nightly, the targets still build on stable
 (`cargo build --release --manifest-path fuzz/Cargo.toml`) and can be run
