@@ -46,6 +46,10 @@ Review outcome: **pending**. Reviewer, scope, findings, residual risks and
 recommendation must be filled from the actual review. No audit or certification
 claim follows from preparing this document.
 
+Use the [review options and selection notes](EXTERNAL_REVIEW_OPTIONS.md) to
+choose whom to approach. A public track record is not a confirmed fit, quote,
+availability or engagement for SigSieve.
+
 ## Three real-user installation trials
 
 Recruit three people who did not implement SigSieve and have a genuine remote
@@ -121,3 +125,55 @@ into focused work items; do not count simulated participants or existing owner
 checks as these trials. Prioritize a small key-selection/command-preparation
 helper only after the trials show where it is needed. Preserve fail-closed
 behaviour and the existing authorization model.
+
+## Recruitment drafts (not sent)
+
+These drafts are for the maintainer to adapt and send. Preparing them does
+not recruit a reviewer or participant, authorize spending or publish an invitation.
+
+### Independent reviewer enquiry
+
+> SigSieve is a small MIT-licensed Rust SSH-agent filtering proxy. We are
+> seeking an independent review of experimental `v0.1.0-alpha.2`, source
+> `fc7484be0371242f517b6628b0f7dcc3a9a12a29`. It filters identities from an
+> existing agent and optionally enforces cryptographic destination binding;
+> it does not store private keys. It has not had an independent external audit.
+>
+> Please assess whether your SSH/protocol and Rust security experience fits
+> the boundaries in our [review protocol](EXTERNAL_VALIDATION.md#independent-sshsecurity-review):
+> untrusted agent messages, binding authorization, SSH configuration and
+> proxy hops, local sockets/resources/cleanup, and release verification.
+> The [repository](https://github.com/semihbugrasezer/sigsieve) and
+> [release evidence](TESTING.md#release-candidate-evidence-2026-10-28) are public;
+> the documentation corrections are recorded in
+> [PR #27](https://github.com/semihbugrasezer/sigsieve/pull/27).
+>
+> Could you propose the scope and exclusions, reviewer independence,
+> deliverables (reproductions, findings and retest), availability and cost or
+> open-source support route? We can supply disposable test agents and servers;
+> no personal keys or production access are required. This enquiry is not a
+> booking or authorization to start paid work.
+
+### Three-volunteer invitation
+
+> We are looking for three developers who use SSH on a remote build or
+> development host to try SigSieve's installation and first connection.
+> SigSieve forwards selected identities from your existing SSH agent.
+> This is experimental, unaudited security software; the trial uses a
+> separate agent, throwaway keys and disposable, verified test servers.
+>
+> We would like macOS Apple Silicon and Linux x86_64 users who did not build
+> SigSieve. Follow the verified installation guide, choose a test key, run
+> `doctor`, inspect `connect --dry-run`, connect, and check cleanup. We will
+> record the actual time, confusing steps, help needed and whether the tool
+> solves a problem you have. A facilitator must prepare the isolated fixtures
+> before testing starts; do not substitute your own production environment.
+>
+> Please share your OS/architecture and SSH experience through the channel
+> where the maintainer posts this invitation. No private keys, credentials,
+> real hostnames or unredacted agent listings are needed. Security findings
+> go through the repository's [private reporting channel](../SECURITY.md).
+
+Record the chosen channel, date and any replies only after the maintainer
+actually sends an enquiry or invitation. Leave U1–U3 and the expert outcome
+pending until real observations exist.

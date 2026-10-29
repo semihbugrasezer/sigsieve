@@ -12,6 +12,8 @@ The project follows [Semantic Versioning](https://semver.org/).
   subshell so an older installation cannot mask failed download/verification.
 - Add an external expert review and three-user trial protocol with results
   explicitly pending; no executable behaviour changes.
+- Prepare sourced review options and unsent expert/volunteer recruitment
+  drafts; no reviewer, participant or paid engagement is confirmed.
 
 ## [0.1.0-alpha.2] - 2026-10-28 (experimental pre-release)
 
