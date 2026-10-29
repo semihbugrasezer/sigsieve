@@ -1,0 +1,25 @@
+.github/workflows/ci.yml
+  s_c68b92ee5f638d::t_da853066a00082 27-28,52,57,60
+CHANGELOG.md
+  s_c68b92ee5f638d::t_b9f3402a6a8055 74-76
+docs/IMPLEMENTATION_CHECKLIST.md
+  s_c68b92ee5f638d::t_4644cdfc3ec9fc 33,35-36
+docs/TESTING.md
+  s_c68b92ee5f638d::t_c02d22f77265e7 73-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "87cce0cd8c272bc326e031896cd941412a78f798",
+  "prompts": {},
+  "sessions": {
+    "s_c68b92ee5f638d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a8909518-2df4-4dab-82d0-d7222a653bd4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <17555579+semihbugrasezer@users.noreply.github.com>"
+    }
+  }
+}
