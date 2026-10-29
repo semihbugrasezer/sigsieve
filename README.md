@@ -95,6 +95,9 @@ sessions need 8.7+. Keep ordinary SSH access available while evaluating it.
 
 ## First safe check with OpenSSH (Linux or macOS)
 
+New to SigSieve? The [five-minute quickstart](docs/QUICKSTART.md) shows
+filtering with a throwaway agent and synthetic keys, no real key or host needed.
+
 If you already have an OpenSSH `ssh-agent` with at least one key loaded,
 you can try SigSieve without Secretive. If not, follow
 [Choose your upstream agent](docs/USAGE.md#choose-your-upstream-agent) first.
