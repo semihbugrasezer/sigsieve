@@ -8,6 +8,8 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 - Reconcile Secretive, fuzzing and published-build evidence with the exact
   `v0.1.0-alpha.2` release revision; retain device and prompt-observation limits.
+- Keep the installed-binary version check inside the install recipe's failing
+  subshell so an older installation cannot mask failed download/verification.
 - Add an external expert review and three-user trial protocol with results
   explicitly pending; no executable behaviour changes.
 
