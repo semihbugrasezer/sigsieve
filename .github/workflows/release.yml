@@ -76,16 +76,38 @@ jobs:
           python3 scripts/package-release.py "$name"
           cd dist && shasum -a 256 "${name}.tar.gz" > "${name}.tar.gz.sha256"
           cat "${name}.tar.gz.sha256"
-      - name: SBOM sidecar (CycloneDX 1.5 JSON, not inside the archive)
-        # The archive stays byte-identical to the rehearsal's; the SBOM is a
-        # separate file. bom-refs embed the checkout path, which is rewritten
-        # to /sigsieve like the binary's path remapping.
+      # actions/upload-artifact v7.0.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: sigsieve-${{ matrix.target }}
+          path: dist/
+          if-no-files-found: error
+
+  sbom:
+    # Separate job: cargo-cyclonedx and its ~120 dependencies never run where
+    # the release archives are built. `cargo cyclonedx` only reads Cargo
+    # metadata, so one Linux job produces both targets' SBOMs. They are
+    # sidecar files; the archives stay byte-identical to the rehearsal's.
+    needs: [verify-tag, ci]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - run: rustup show active-toolchain || rustup toolchain install
+      - run: cargo install --locked cargo-cyclonedx@0.5.9
+      - name: CycloneDX 1.5 JSON SBOM per release target
+        # bom-refs embed the checkout path; it is rewritten to /sigsieve like
+        # the binary's path remapping.
         run: |
-          name="sigsieve-${GITHUB_REF_NAME}-${{ matrix.target }}"
-          cargo install --locked cargo-cyclonedx@0.5.9
           export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
-          cargo cyclonedx --format json --spec-version 1.5 --target "${{ matrix.target }}" --override-filename sbom-out
-          python3 - "$GITHUB_WORKSPACE" sbom-out.json "dist/${name}.cdx.json" "${GITHUB_REF_NAME#v}" <<'EOF'
+          mkdir dist
+          for target in aarch64-apple-darwin x86_64-unknown-linux-gnu; do
+            name="sigsieve-${GITHUB_REF_NAME}-${target}"
+            cargo cyclonedx --format json --spec-version 1.5 --target "$target" --override-filename sbom-out
+            python3 - "$GITHUB_WORKSPACE" sbom-out.json "dist/${name}.cdx.json" "${GITHUB_REF_NAME#v}" <<'EOF'
           import json, sys
           workspace, src, dst, version = sys.argv[1:]
           text = open(src).read().replace(workspace, "/sigsieve")
@@ -96,19 +118,19 @@ jobs:
           assert len(bom["components"]) > 0, "SBOM lists no dependencies"
           open(dst, "w").write(text)
           EOF
-          rm sbom-out.json
-          cd dist && shasum -a 256 "${name}.cdx.json" > "${name}.cdx.json.sha256"
-          cat "${name}.cdx.json.sha256"
+            rm sbom-out.json
+            (cd dist && shasum -a 256 "${name}.cdx.json" > "${name}.cdx.json.sha256" && cat "${name}.cdx.json.sha256")
+          done
       # actions/upload-artifact v7.0.2
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: sigsieve-${{ matrix.target }}
+          name: sigsieve-sbom
           path: dist/
           if-no-files-found: error
 
   attest:
     # Kept apart from the build so no build step runs with an OIDC token.
-    needs: build
+    needs: [build, sbom]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
