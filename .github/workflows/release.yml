@@ -272,7 +272,7 @@ jobs:
             [ "$got" = "$digest" ] || fail "$dir: downloaded zip digest $got != $digest from its producing job"
             mkdir -p in
             python3 -I - "$dir" "$zip" "in/$dir" "$@" <<'EOF'
-          import os, shutil, stat, sys, zipfile
+          import os, stat, sys, zipfile
           label, path, dest, want = sys.argv[1], sys.argv[2], sys.argv[3], set(sys.argv[4:])
           def bad(msg):
               print(f"::error::{label}: {msg}")
