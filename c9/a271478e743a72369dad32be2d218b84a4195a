@@ -1,0 +1,21 @@
+CHANGELOG.md
+  s_1f1a345995e898::t_8508eaa29ead95 11-12
+docs/INSTALL.md
+  s_1f1a345995e898::t_8508eaa29ead95 76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c9a271478e743a72369dad32be2d218b84a4195a",
+  "prompts": {},
+  "sessions": {
+    "s_1f1a345995e898": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a184e0-210f-7dd1-b919-950d524ee517",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Semih Buğra Sezer <semih.b.sezer@gmail.com>"
+    }
+  }
+}

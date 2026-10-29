@@ -1,0 +1,37 @@
+docs/FINDINGS.md
+  s_1f1a345995e898::t_5b2ce2a4b4633e 45
+CHANGELOG.md
+  s_1f1a345995e898::t_5b2ce2a4b4633e 7-13,26-36
+docs/SECRETIVE_INTEGRATION.md
+  s_1f1a345995e898::t_5b2ce2a4b4633e 12-19
+docs/EXTERNAL_VALIDATION.md
+  s_1f1a345995e898::t_5b2ce2a4b4633e 1-123
+docs/SECURITY_MODEL.md
+  s_1f1a345995e898::t_5b2ce2a4b4633e 21-26,40-43,108-109
+docs/TESTING.md
+  s_1f1a345995e898::t_5b2ce2a4b4633e 163-169
+docs/SSH_COMPATIBILITY.md
+  s_1f1a345995e898::t_5b2ce2a4b4633e 7-12,45,54
+docs/RELEASE_CHECKLIST.md
+  s_1f1a345995e898::t_5b2ce2a4b4633e 50-52
+docs/THREAT_MODEL.md
+  s_1f1a345995e898::t_5b2ce2a4b4633e 3-5,63-68
+README.md
+  s_1f1a345995e898::t_5b2ce2a4b4633e 155-157,164,177-178
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "373fa299791ef04fa285afbfecba4a091b6d8217",
+  "prompts": {},
+  "sessions": {
+    "s_1f1a345995e898": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a184e0-210f-7dd1-b919-950d524ee517",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Semih Buğra Sezer <semih.b.sezer@gmail.com>"
+    }
+  }
+}
