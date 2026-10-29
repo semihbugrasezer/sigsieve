@@ -244,6 +244,13 @@ with zipfile.ZipFile(out, "w") as z:
         entry(z, files[0] + "\0../escape", reg)
     elif kind == "no-mode":
         entry(z, "nomode", 0)
+if kind == "oversize":  # expected names only, one of them 257 MiB of zeros
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+        for f in files[:-1]:
+            z.write(os.path.join(sbom, f), f)
+        zi = zipfile.ZipInfo(files[-1])
+        zi.external_attr, zi.compress_type = 0o100644 << 16, zipfile.ZIP_DEFLATED
+        z.writestr(zi, bytes(257 << 20))
 EOF
 }
 bad_sbom() { # kind expected-error
@@ -270,6 +277,7 @@ bad_sbom nul "sbom: NUL in entry name"
 # zipfile stores a zero mode as 0600 with no file type bits.
 bad_sbom no-mode "sbom: entry 'nomode' is not a regular file (mode 600)"
 bad_sbom missing "sbom: missing entries"
+bad_sbom oversize "sbom: entries declare more than the 256 MiB cap"
 
 check "rejected zips never invoked unzip" bash -c '[ ! -e "$UNZIP_LOG" ]'
 
