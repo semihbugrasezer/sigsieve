@@ -15,8 +15,9 @@ SSH host-key verification and recovery access.
   not exercise it. Run `bash scripts/test-attest-inputs.sh` (needs GNU
   find; `gfind` on macOS) on the candidate. For the first tag after the
   fix, check in the release run's attest log that the binding step ran and
-  passed, and that its three downloads were by ID; until one release run
-  shows this, a green attest job is not evidence of archive origin.
+  passed, and that its three downloads were by ID, before publishing; until
+  one release run shows this, a green attest job is not evidence of archive
+  origin.
 - On the exact candidate: format, clippy with warnings denied, debug and
   release tests with `SIGSIEVE_REQUIRE_SSHD=1`, and a release build pass.
 - Hosted CI passes on macOS and Linux, including real sshd tests, umask 0002,

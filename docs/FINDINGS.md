@@ -57,7 +57,7 @@ fix (where one exists).
 | F-31 | HIGH | Review of F-29/F-30: a relay's own `-F` was ignored for its nested hops; hop forwardings were not checked; quoting (`e'x'ec`) hid `Match exec`; X11 forwarding ran xauth with the login agent; unsafe `-F` paths reached ssh's ProxyJump shell command; concurrent stale-socket recovery could have two winners | Fixed (details below) |
 | F-40 | LOW (availability) | A slow downstream reader could keep a reply write going indefinitely: SO_SNDTIMEO restarts on every partial transfer | Fixed: nonblocking reply writes under one whole-reply deadline; red/green regression |
 | F-41 | LOW (diagnostic) | RSA binding self-test refused by algorithm policy instead of exercising destination enforcement | Fixed: valid RSA/SHA-2 probe; regression catches missing enforcement for RSA, ECDSA and Ed25519 |
-| F-42 | LOW (supply chain) | Release attest job selects artifacts by name; a compromised job holding the Actions runtime token could replace an artifact before attestation | **Fixed in the workflow, not yet run**: attest binds each artifact to its producing job's ID, zip digest and archive SHA-256 (`scripts/test-attest-inputs.sh`); blocks the next tag until a hosted run shows it working ([RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)); manual `verify-release.sh` and native smoke test remain mandatory |
+| F-42 | LOW (supply chain) | Release attest job selects artifacts by name; a compromised job holding the Actions runtime token could replace an artifact before attestation | **Fixed in the workflow, not yet run**: attest binds each artifact to its producing job's ID, zip digest and archive SHA-256 (`scripts/test-attest-inputs.sh`); blocks publishing the next tag's release until that tag's run shows it working ([RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)); manual `verify-release.sh` and native smoke test remain mandatory |
 
 
 ### Review scope
@@ -113,8 +113,9 @@ archive before uploading it (the binding proves which job uploaded an
 artifact, not that the job was honest). The service is trusted to report
 job outputs and artifact metadata faithfully. The fix has not run in GitHub
 Actions: the release rehearsal has no attest-like consumer, so only a tag
-run exercises it. F-42 therefore stays a next-tag blocker until a release
-run shows the binding working, and the maintainer's
+run exercises it. F-42 therefore stays a blocker for publishing the next
+tag's release: that tag's attest log must show the binding step passed and
+all three downloads by artifact ID. The maintainer's
 `scripts/verify-release.sh` run and native smoke test stay mandatory before
 publishing.
 

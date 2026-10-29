@@ -47,8 +47,8 @@ jobs:
   # own job's outputs, so a compromised runner of one leg could rewrite the
   # other leg's artifact ID/digest/hash. needs.<job>.outputs of a separate
   # job can only come from that job's runner. Only targets whose full CI
-  # (incl. real sshd) is part of the gate. The names keep the display names
-  # scripts/verify-release.sh checks.
+  # (incl. real sshd) is part of the gate. `name:` is meant to keep the
+  # display names scripts/verify-release.sh checks (not yet seen in a run).
   build-aarch64-apple-darwin:
     name: build (${{ matrix.os }}, ${{ matrix.target }})
     needs: [verify-tag, ci]
