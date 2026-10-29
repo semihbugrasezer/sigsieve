@@ -65,6 +65,16 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ### Tests
 
+- Real OpenSSH destination-binding negative matrix: plain `publickey` to an
+  allowed destination refused, RSA destination host key refused even when
+  allowed, an allowed forwarding hop does not authorize another final
+  destination, agent forwarded through two hops, and `git commit -S` refused
+  in binding mode (verified in filtering mode). Each was mutation-checked.
+- Throwaway `gpg-agent --enable-ssh-support` as upstream: filtering, SSHSIG
+  and RSA SHA-2 signing, SHA-1 refusal, mutations, and destination binding
+  (skipped without GnuPG).
+- Mock-upstream regression: a truncated sign response is never completed.
+
 - Pin that session binds after an authentication bind, including forged
   ones, leave binding state and signing authorization unchanged.
 
