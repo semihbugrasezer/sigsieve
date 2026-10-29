@@ -142,9 +142,21 @@ jobs:
           mkdir bin
           tar -xzf gitleaks_8.30.1_linux_x64.tar.gz -C bin gitleaks
           echo "$d/bin" >> "$GITHUB_PATH"
+      - name: Pin the scan configuration outside the checkout
+        # A pull request must not be able to silence its own finding with a
+        # .gitleaks.toml, .gitleaksignore or `gitleaks:allow` comment, so the
+        # default rules are used from a config written here and an empty
+        # ignore directory; inline allow comments are ignored.
+        run: |
+          mkdir -p "$RUNNER_TEMP/gitleaks/noignore"
+          printf '[extend]\nuseDefault = true\n' > "$RUNNER_TEMP/gitleaks/config.toml"
       - name: gitleaks (git history reachable from HEAD, redacted)
         run: |
           gitleaks version
-          gitleaks git --redact --no-banner --log-opts="HEAD" .
+          gitleaks git --redact --no-banner --config "$RUNNER_TEMP/gitleaks/config.toml" \
+            --gitleaks-ignore-path "$RUNNER_TEMP/gitleaks/noignore" --ignore-gitleaks-allow \
+            --log-opts="HEAD" .
       - name: gitleaks (checked-out tree, redacted)
-        run: gitleaks dir --redact --no-banner .
+        run: |
+          gitleaks dir --redact --no-banner --config "$RUNNER_TEMP/gitleaks/config.toml" \
+            --gitleaks-ignore-path "$RUNNER_TEMP/gitleaks/noignore" --ignore-gitleaks-allow .

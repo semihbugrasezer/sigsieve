@@ -4,7 +4,7 @@
 # notices, README, CHANGELOG) with SHA-256 checksums, writes a CycloneDX SBOM
 # sidecar (with checksum) next to each archive, and in a separate job that
 # runs no build steps attests the build provenance of archives and SBOMs and
-# links each SBOM to its archive (attestations are recorded in GitHub and the
+# records an SBOM attestation for each archive (attestations are recorded in GitHub and the
 # public Sigstore transparency log). It does NOT
 # create a GitHub release or publish any artifact: a maintainer does that manually after
 # verifying the artifacts (docs/RELEASE_CHECKLIST.md).
@@ -138,18 +138,43 @@ jobs:
       id-token: write
       attestations: write
     steps:
+      # Each artifact is downloaded by exact name into its own directory and
+      # must contain exactly its expected files, so the sbom job (which runs
+      # third-party tooling) cannot add or shadow an archive.
       # actions/download-artifact v8.0.2
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
-          pattern: sigsieve-*
-          path: dist
-          merge-multiple: true
-      - name: Exactly two archives and two SBOMs with matching checksums
+          name: sigsieve-aarch64-apple-darwin
+          path: in/aarch64-apple-darwin
+      # actions/download-artifact v8.0.2
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: sigsieve-x86_64-unknown-linux-gnu
+          path: in/x86_64-unknown-linux-gnu
+      # actions/download-artifact v8.0.2
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: sigsieve-sbom
+          path: in/sbom
+      - name: Exactly the expected files per artifact, with matching checksums
         run: |
+          expect() { # dir, expected file names
+            local dir=$1; shift
+            got=$(cd "$dir" && find . -mindepth 1 -printf '%P\n' | LC_ALL=C sort)
+            want=$(printf '%s\n' "$@" | LC_ALL=C sort)
+            test "$got" = "$want" || { echo "::error::unexpected contents of $dir"; printf 'got:\n%s\nwant:\n%s\n' "$got" "$want"; exit 1; }
+          }
+          sboms=()
+          for t in aarch64-apple-darwin x86_64-unknown-linux-gnu; do
+            n="sigsieve-${GITHUB_REF_NAME}-$t"
+            expect "in/$t" "$n.tar.gz" "$n.tar.gz.sha256"
+            sboms+=("$n.cdx.json" "$n.cdx.json.sha256")
+          done
+          expect in/sbom "${sboms[@]}"
+          mkdir dist
+          cp in/aarch64-apple-darwin/* in/x86_64-unknown-linux-gnu/* in/sbom/* dist/
           cd dist
-          test "$(ls *.tar.gz | wc -l)" -eq 2 || { ls -la; echo "::error::expected 2 archives"; exit 1; }
-          test "$(ls *.cdx.json | wc -l)" -eq 2 || { ls -la; echo "::error::expected 2 SBOMs"; exit 1; }
-          test "$(ls *.sha256 | wc -l)" -eq 4 || { ls -la; echo "::error::expected 4 checksum files"; exit 1; }
+          test "$(ls | wc -l)" -eq 8 || { ls -la; echo "::error::expected 8 files"; exit 1; }
           shasum -a 256 -c *.sha256
       # Provenance covers the SBOM files too, so a verifier can check that the
       # downloaded sidecar is the one this workflow produced.

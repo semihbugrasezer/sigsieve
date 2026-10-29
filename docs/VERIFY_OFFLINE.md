@@ -30,6 +30,11 @@ public Sigstore transparency log:
 - an SBOM attestation (`https://cyclonedx.org/bom`) whose subject is the
   archive and whose predicate is that target's SBOM.
 
+The SBOM file is tied to the release by its own build provenance. The
+checks below confirm that a CycloneDX attestation exists for the archive;
+they do not compare that attestation's predicate with the downloaded
+`.cdx.json` byte for byte.
+
 `v0.1.0-alpha.1` and `v0.1.0-alpha.2` were released before SBOMs existed.
 They have only the archive, its checksum and its build provenance. For those
 releases, skip every SBOM step below. A missing SBOM means "not present"; it
@@ -91,7 +96,7 @@ verify() {
 verify "$name.tar.gz" --bundle "sha256:$a.jsonl"
 # SBOM file: build provenance (these exact SBOM bytes came from the release run).
 verify "$name.cdx.json" --bundle "sha256:$s.jsonl"
-# Archive: SBOM attestation linking it to a CycloneDX SBOM.
+# Archive: a CycloneDX SBOM attestation exists for it (predicate not compared with the file).
 verify "$name.tar.gz" --bundle "sha256:$a.jsonl" --predicate-type https://cyclonedx.org/bom
 ```
 

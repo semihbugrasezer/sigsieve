@@ -24,7 +24,7 @@ The project follows [Semantic Versioning](https://semver.org/).
   GitHub secret scanning and push protection.
 - Release builds write a CycloneDX 1.5 SBOM sidecar per target with pinned
   cargo-cyclonedx 0.5.9. The archives are unchanged. Each SBOM gets build
-  provenance and is linked to its archive by an SBOM attestation, and
+  provenance, each archive gets a CycloneDX SBOM attestation, and
   `scripts/verify-release.sh` requires and verifies these for future tags.
   `v0.1.0-alpha.2` has no SBOM, and the script reports it as NOT_PRESENT.
   These workflow changes have not yet run in GitHub Actions.
