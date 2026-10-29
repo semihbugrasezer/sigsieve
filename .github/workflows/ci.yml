@@ -24,6 +24,8 @@ env:
   CARGO_TERM_COLOR: always
   # Missing sshd end-to-end prerequisites are a failure in CI, not a skip.
   SIGSIEVE_REQUIRE_SSHD: "1"
+  # Likewise for the throwaway gpg-agent upstream tests.
+  SIGSIEVE_REQUIRE_GPG_AGENT: "1"
 
 jobs:
   test:
@@ -47,15 +49,15 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends openssh-client openssh-server python3
+          sudo apt-get install -y --no-install-recommends openssh-client openssh-server python3 gnupg git
           sudo mkdir -p -m 0755 /run/sshd
       - name: Require every tool the security tests use
         # Some tests skip when a tool is missing; make that impossible here.
         run: |
-          for t in ssh ssh-agent ssh-add ssh-keygen python3 /usr/sbin/sshd; do
+          for t in ssh ssh-agent ssh-add ssh-keygen python3 /usr/sbin/sshd git gpg gpg-agent gpgconf; do
             command -v "$t" || { echo "::error::missing $t"; exit 1; }
           done
-          uname -a; ssh -V
+          uname -a; ssh -V; gpg --version | head -1; git --version
       - run: cargo fmt --all -- --check
       - run: cargo clippy --all-targets --all-features --locked -- -D warnings
       - name: cargo test (debug)

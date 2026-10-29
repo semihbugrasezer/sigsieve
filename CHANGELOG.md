@@ -71,8 +71,9 @@ The project follows [Semantic Versioning](https://semver.org/).
   destination, agent forwarded through two hops, and `git commit -S` refused
   in binding mode (verified in filtering mode). Each was mutation-checked.
 - Throwaway `gpg-agent --enable-ssh-support` as upstream: filtering, SSHSIG
-  and RSA SHA-2 signing, SHA-1 refusal, mutations, and destination binding
-  (skipped without GnuPG).
+  and RSA SHA-2 signing, SHA-1 refusal through SigSieve (not independent
+  evidence of the SHA-1 guard), mutations, and destination binding
+  (required in CI).
 - Mock-upstream regression: a truncated sign response is never completed.
 
 - Pin that session binds after an authentication bind, including forged

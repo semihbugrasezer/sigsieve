@@ -70,6 +70,8 @@ unprivileged. Missing prerequisites → skip with a message, or failure with
 `git` is needed by the commit-signing E2E test (failure under
 `SIGSIEVE_REQUIRE_SSHD=1`). The two gpg-agent tests need `gpg`, `gpg-agent`
 and `gpgconf`; they skip without them unless `SIGSIEVE_REQUIRE_GPG_AGENT=1`.
+CI sets that variable and checks for `git`, `gpg`, `gpg-agent` and
+`gpgconf` up front, so a missing tool fails CI instead of skipping.
 They use a fresh GnuPG home in a temporary directory, never `~/.gnupg`, and
 stop its daemons when done.
 
