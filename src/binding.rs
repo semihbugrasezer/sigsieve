@@ -767,6 +767,41 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn binds_after_authentication_bind_leave_state_unchanged() {
+        let fwd = TestHost::ed(1);
+        let dest = TestHost::ed(2);
+        let key = client_key();
+        let alg: &[u8] = b"ecdsa-sha2-nistp256";
+        let allowed = dests(&[&dest]);
+        let mut b = Bindings::default();
+        b.bind(&fwd.bind_body(b"s1", true)).unwrap();
+        b.bind(&dest.bind_body(b"s2", false)).unwrap();
+
+        // Repeating the authentication bind is not the accepted duplicate path.
+        assert_eq!(
+            b.bind(&dest.bind_body(b"s2", false)),
+            Err(BindError::AlreadyBoundForAuth)
+        );
+        // A forged signature on a later bind is rejected, whatever the order
+        // of the checks.
+        let mut forged = dest.bind_body(b"s3", false);
+        let sig_end = forged.len() - 2; // last signature byte; the flag follows
+        forged[sig_end] ^= 1;
+        assert!(b.bind(&forged).is_err());
+        assert!(b.bind(&dest.bind_body(b"s3", false)).is_err());
+
+        // Neither attempt changed the bindings or what may be signed.
+        assert_eq!(b.len(), 2);
+        let s2 = userauth(b"s2", &key, alg, Some(&dest.public_blob()));
+        assert_eq!(b.authorize(&key, &s2, &allowed), Ok(()));
+        let s3 = userauth(b"s3", &key, alg, Some(&dest.public_blob()));
+        assert_eq!(
+            b.authorize(&key, &s3, &allowed),
+            Err(Denied::SessionIdMismatch)
+        );
+    }
+
+    #[test]
     fn authorization_accepts_only_bound_userauth_to_allowed_destination() {
         let vps = TestHost::ed(1);
         let dest = TestHost::p256(2);

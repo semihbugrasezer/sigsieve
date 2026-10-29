@@ -14,9 +14,19 @@ The project follows [Semantic Versioning](https://semver.org/).
   explicitly pending; no executable behaviour changes.
 - Prepare sourced review options and unsent expert/volunteer recruitment
   drafts; no reviewer, participant or paid engagement is confirmed.
+- Add a five-minute quickstart with a throwaway agent and synthetic keys,
+  a governance document, a roadmap execution plan and checklist, and design
+  notes for username/path constraints and platform support (proposals only).
+- Record the 2026-10-29 internal AI-assisted review of the alpha.2 source
+  (no new actionable finding, five INFO observations); not an audit.
 - Add an unpublished Homebrew formula draft (`packaging/homebrew`) and a
   crates.io readiness assessment; neither channel is published, and both
   need maintainer approval. No executable behaviour changes.
+
+### Tests
+
+- Pin that session binds after an authentication bind, including forged
+  ones, leave binding state and signing authorization unchanged.
 
 ## [0.1.0-alpha.2] - 2026-10-28 (experimental pre-release)
 
