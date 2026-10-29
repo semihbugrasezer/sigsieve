@@ -18,6 +18,7 @@ ports, configured from a temporary directory.
 | Fuzzing (stable) | `tests/fuzz_corpus.rs` + `fuzz/seeds` (read via the `tests/data/fuzz-seeds` symlink) | seed replay + bounded deterministic mutation through `src/fuzzing.rs` entry points |
 | Fuzzing (cargo-fuzz) | `fuzz/` | coverage-guided targets: `requests`, `session_bind`, `key_blob`, `upstream_reply` |
 | Benchmark | `tests/bench.rs` (ignored) | overhead vs. direct agent access |
+| MSRV | CI job `msrv (Rust 1.88)` | the full suite (real sshd and gpg-agent, skips fail) and the packaged `.crate` on the declared `rust-version`, Ubuntu 24.04 x86_64 only |
 
 The session-bind harness processes intact signed bodies as well as a framed
 bind/bind/key/userauth sequence. A regression test requires the committed
