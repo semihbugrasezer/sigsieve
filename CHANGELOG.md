@@ -92,6 +92,13 @@ proven end to end only once this tag's attest job has run (see
   evidence of the SHA-1 guard), mutations, and destination binding
   (required in CI).
 - Mock-upstream regression: a truncated sign response is never completed.
+- The sshd end-to-end harness picks all its ports while holding them (two
+  ports released one after the other could be the same, which applied the
+  hop port's `authorized_keys` to logins and failed a test on Linux arm64
+  with `Permission denied (publickey)`), and checks with `ssh-keyscan` that
+  each port is served by its own sshd's host key before any test runs,
+  rebuilding the environment (at most three attempts) if another process
+  took a port. Test infrastructure only.
 - CI installs and requires `git`, `gpg`, `gpg-agent` and `gpgconf` and sets
   `SIGSIEVE_REQUIRE_GPG_AGENT=1`, so these tests cannot be skipped silently.
 

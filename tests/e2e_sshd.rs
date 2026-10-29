@@ -95,12 +95,38 @@ for path in sys.argv[1:]:
     print("RAW-BIND-%s type=%d" % (name, t))
 "#;
 
-fn free_port() -> u16 {
-    TcpListener::bind("127.0.0.1:0")
-        .unwrap()
-        .local_addr()
-        .unwrap()
-        .port()
+/// `N` distinct free ports. Every listener stays bound until all ports are
+/// chosen: releasing one before binding the next can hand out the same port
+/// twice, and an sshd configured with a duplicate `Port` then applies the hop
+/// port's `Match` block to logins too.
+fn free_ports<const N: usize>() -> [u16; N] {
+    let held: Vec<TcpListener> = (0..N)
+        .map(|_| TcpListener::bind("127.0.0.1:0").unwrap())
+        .collect();
+    std::array::from_fn(|i| held[i].local_addr().unwrap().port())
+}
+
+/// Whether the server on `port` presents the host key in `pubkey_line`
+/// (`<type> <base64> [comment]`). A port released by `free_ports` can still
+/// be taken by another process before sshd binds it.
+fn serves_host_key(port: u16, pubkey_line: &str) -> Result<(), String> {
+    let key = pubkey_line.split_whitespace().nth(1).unwrap();
+    let o = Command::new("ssh-keyscan")
+        // Explicit timeout: the default 5 s can expire while parallel tests
+        // generate host keys.
+        .args(["-T", "15", "-p", &port.to_string(), "127.0.0.1"])
+        .output()
+        .map_err(|e| format!("ssh-keyscan: {e}"))?;
+    let out = String::from_utf8_lossy(&o.stdout);
+    if out.split_whitespace().any(|w| w == key) {
+        return Ok(());
+    }
+    Err(format!(
+        "port {port} did not present this test's host key ({}); stdout: {:?}; stderr: {:?}",
+        o.status,
+        out.trim(),
+        String::from_utf8_lossy(&o.stderr).trim()
+    ))
 }
 
 struct Killer(Child);
@@ -177,18 +203,34 @@ fn setup() -> Option<Env> {
 }
 
 /// Like [`setup`], but the second (destination) sshd uses a host key
-/// generated with these `ssh-keygen` type arguments.
+/// generated with these `ssh-keygen` type arguments. If another process took
+/// one of the chosen ports before an sshd bound it, the environment is
+/// rebuilt on new ports (bounded); the tests never run against a server
+/// whose host key was not verified.
 fn setup_with_dest_key(dest_key: &[&str]) -> Option<Env> {
-    for tool in ["ssh", "ssh-agent", "ssh-add", "ssh-keygen"] {
+    let mut last = String::new();
+    for _ in 0..3 {
+        match try_setup(dest_key)? {
+            Ok(env) => return Some(env),
+            Err(e) => last = e,
+        }
+    }
+    panic!("isolated sshds kept losing their ports to other processes: {last}");
+}
+
+/// One attempt: `None` when prerequisites are missing (see `skip_or_fail`),
+/// `Err` when a port did not end up served by this environment's sshd.
+fn try_setup(dest_key: &[&str]) -> Option<Result<Env, String>> {
+    for tool in ["ssh", "ssh-agent", "ssh-add", "ssh-keygen", "ssh-keyscan"] {
         if !have(tool) {
-            return skip_or_fail(&format!("{tool} not installed"));
+            return skip_or_fail(&format!("{tool} not installed")).map(Ok);
         }
     }
     let Some(sshd) = ["/usr/sbin/sshd", "/usr/bin/sshd", "/usr/local/sbin/sshd"]
         .into_iter()
         .find(|p| Path::new(p).exists())
     else {
-        return skip_or_fail("sshd not found");
+        return skip_or_fail("sshd not found").map(Ok);
     };
     let dir = tempfile::Builder::new()
         .prefix("ss")
@@ -254,7 +296,7 @@ fn setup_with_dest_key(dest_key: &[&str]) -> Option<Env> {
         .arg(&hostkey));
     fs::copy(d.join("p/admin.pub"), d.join("ak_login")).unwrap();
     fs::copy(d.join("p/ci.pub"), d.join("ak_hop")).unwrap();
-    let (login_port, hop_port) = (free_port(), free_port());
+    let [login_port, hop_port, dest_port] = free_ports();
     let cfg = d.join("sshd_config");
     fs::write(
         &cfg,
@@ -280,7 +322,8 @@ fn setup_with_dest_key(dest_key: &[&str]) -> Option<Env> {
         return skip_or_fail(&format!(
             "sshd cannot run unprivileged here: {}",
             String::from_utf8_lossy(&test.stderr).trim()
-        ));
+        ))
+        .map(Ok);
     }
     let sshd_proc = Killer(
         Command::new(sshd)
@@ -308,7 +351,6 @@ fn setup_with_dest_key(dest_key: &[&str]) -> Option<Env> {
         .args(dest_key)
         .arg("-f")
         .arg(&hostkey2));
-    let dest_port = free_port();
     let cfg2 = d.join("sshd_config2");
     fs::write(
         &cfg2,
@@ -353,7 +395,7 @@ fn setup_with_dest_key(dest_key: &[&str]) -> Option<Env> {
     let hostkey_fp = fingerprint(&hostkey.with_extension("pub"));
     let dest_hostkey_fp = fingerprint(&hostkey2.with_extension("pub"));
 
-    Some(Env {
+    let env = Env {
         dir,
         agent_sock,
         _agent: agent,
@@ -365,7 +407,17 @@ fn setup_with_dest_key(dest_key: &[&str]) -> Option<Env> {
         hostkey_fp,
         _sshd2: sshd2,
         known_hosts,
-    })
+    };
+    for (port, key) in [
+        (login_port, &host_pub),
+        (hop_port, &host_pub),
+        (dest_port, &host2_pub),
+    ] {
+        if let Err(e) = serves_host_key(port, key) {
+            return Some(Err(e));
+        }
+    }
+    Some(Ok(env))
 }
 
 /// Run `sigsieve connect` with the upstream agent as login agent (like

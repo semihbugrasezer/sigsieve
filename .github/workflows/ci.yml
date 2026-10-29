@@ -54,7 +54,7 @@ jobs:
       - name: Require every tool the security tests use
         # Some tests skip when a tool is missing; make that impossible here.
         run: |
-          for t in ssh ssh-agent ssh-add ssh-keygen python3 /usr/sbin/sshd git gpg gpg-agent gpgconf; do
+          for t in ssh ssh-agent ssh-add ssh-keygen ssh-keyscan python3 /usr/sbin/sshd git gpg gpg-agent gpgconf; do
             command -v "$t" || { echo "::error::missing $t"; exit 1; }
           done
           uname -a; ssh -V; gpg --version | head -1; git --version
