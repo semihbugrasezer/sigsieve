@@ -21,6 +21,10 @@ Linux arm64 is tested in CI but has no prebuilt archive. Intel macOS and
 Windows are not validated. OpenSSH 8.4+ is required; proxy-jump/relay sessions
 require 8.7+.
 
+Homebrew and crates.io installs are **not available**. An unpublished draft
+formula lives in [`packaging/homebrew`](../packaging/homebrew/README.md) for
+maintainer review only.
+
 ## Verify and install a published archive
 
 Prerequisites: `gh` (GitHub CLI, authenticated if your setup requires it),
