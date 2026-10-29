@@ -1,9 +1,11 @@
 # Release build for a pushed `v*` tag. Gates: the tag must match Cargo.toml
 # and the full CI workflow must pass. Then it builds the supported targets,
 # packages deterministic archives (binary, LICENSE files, third-party
-# notices, README, CHANGELOG) with SHA-256 checksums, and attests their build
-# provenance in a separate job that runs no build steps (attestations are
-# recorded in GitHub and the public Sigstore transparency log). It does NOT
+# notices, README, CHANGELOG) with SHA-256 checksums, writes a CycloneDX SBOM
+# sidecar (with checksum) next to each archive, and in a separate job that
+# runs no build steps attests the build provenance of archives and SBOMs and
+# links each SBOM to its archive (attestations are recorded in GitHub and the
+# public Sigstore transparency log). It does NOT
 # create a GitHub release or publish any artifact: a maintainer does that manually after
 # verifying the artifacts (docs/RELEASE_CHECKLIST.md).
 name: Release build
@@ -74,6 +76,29 @@ jobs:
           python3 scripts/package-release.py "$name"
           cd dist && shasum -a 256 "${name}.tar.gz" > "${name}.tar.gz.sha256"
           cat "${name}.tar.gz.sha256"
+      - name: SBOM sidecar (CycloneDX 1.5 JSON, not inside the archive)
+        # The archive stays byte-identical to the rehearsal's; the SBOM is a
+        # separate file. bom-refs embed the checkout path, which is rewritten
+        # to /sigsieve like the binary's path remapping.
+        run: |
+          name="sigsieve-${GITHUB_REF_NAME}-${{ matrix.target }}"
+          cargo install --locked cargo-cyclonedx@0.5.9
+          export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          cargo cyclonedx --format json --spec-version 1.5 --target "${{ matrix.target }}" --override-filename sbom-out
+          python3 - "$GITHUB_WORKSPACE" sbom-out.json "dist/${name}.cdx.json" "${GITHUB_REF_NAME#v}" <<'EOF'
+          import json, sys
+          workspace, src, dst, version = sys.argv[1:]
+          text = open(src).read().replace(workspace, "/sigsieve")
+          bom = json.loads(text)
+          root = bom["metadata"]["component"]
+          assert bom["bomFormat"] == "CycloneDX" and bom["specVersion"] == "1.5", "unexpected SBOM format"
+          assert (root["name"], root["version"]) == ("sigsieve", version), "SBOM describes the wrong package"
+          assert len(bom["components"]) > 0, "SBOM lists no dependencies"
+          open(dst, "w").write(text)
+          EOF
+          rm sbom-out.json
+          cd dist && shasum -a 256 "${name}.cdx.json" > "${name}.cdx.json.sha256"
+          cat "${name}.cdx.json.sha256"
       # actions/upload-artifact v7.0.2
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
@@ -97,12 +122,31 @@ jobs:
           pattern: sigsieve-*
           path: dist
           merge-multiple: true
-      - name: Exactly two archives with matching checksums
+      - name: Exactly two archives and two SBOMs with matching checksums
         run: |
           cd dist
           test "$(ls *.tar.gz | wc -l)" -eq 2 || { ls -la; echo "::error::expected 2 archives"; exit 1; }
+          test "$(ls *.cdx.json | wc -l)" -eq 2 || { ls -la; echo "::error::expected 2 SBOMs"; exit 1; }
+          test "$(ls *.sha256 | wc -l)" -eq 4 || { ls -la; echo "::error::expected 4 checksum files"; exit 1; }
           shasum -a 256 -c *.sha256
+      # Provenance covers the SBOM files too, so a verifier can check that the
+      # downloaded sidecar is the one this workflow produced.
       # actions/attest-build-provenance v4.2.2
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
-          subject-path: dist/*.tar.gz
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.cdx.json
+      # SBOM attestations: subject = archive, predicate = that target's SBOM
+      # (predicate type https://cyclonedx.org/bom). actions/attest replaces
+      # the deprecated actions/attest-sbom wrapper; one SBOM per step.
+      # actions/attest v4.2.2
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: dist/sigsieve-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz
+          sbom-path: dist/sigsieve-${{ github.ref_name }}-aarch64-apple-darwin.cdx.json
+      # actions/attest v4.2.2
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: dist/sigsieve-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz
+          sbom-path: dist/sigsieve-${{ github.ref_name }}-x86_64-unknown-linux-gnu.cdx.json
