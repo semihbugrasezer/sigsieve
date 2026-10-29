@@ -1,0 +1,37 @@
+CHANGELOG.md
+  s_c68b92ee5f638d::t_777e6e829cc5ae 17-21,35-36,44-48
+GOVERNANCE.md
+  s_c68b92ee5f638d::t_5e3b72b7c6a3d4 1-90
+README.md
+  s_c68b92ee5f638d::t_53c3e971d336be 98-100
+docs/FINDINGS.md
+  s_c68b92ee5f638d::t_0be5465d4bf8e9 71-87
+docs/IMPLEMENTATION_CHECKLIST.md
+  s_c68b92ee5f638d::t_12decebd7842c2 1-102
+docs/QUICKSTART.md
+  s_c68b92ee5f638d::t_cd2d1bc3a6f72c 1-81
+docs/ROADMAP_EXECUTION.md
+  s_c68b92ee5f638d::t_b25b80df115415 1-95
+docs/design/DESTINATION_CONSTRAINT_EXTENSIONS.md
+  s_c68b92ee5f638d::t_4fb7b222b08ae1 1-134
+docs/design/PLATFORM_SUPPORT.md
+  s_c68b92ee5f638d::t_15c98f4893e99f 1-66
+src/binding.rs
+  s_c68b92ee5f638d::t_bc0285a71ba1b7 769-803
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "50dc50b34ad59a43b78b9550b0e822fd0636d8c8",
+  "prompts": {},
+  "sessions": {
+    "s_c68b92ee5f638d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a8909518-2df4-4dab-82d0-d7222a653bd4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <17555579+semihbugrasezer@users.noreply.github.com>"
+    }
+  }
+}
