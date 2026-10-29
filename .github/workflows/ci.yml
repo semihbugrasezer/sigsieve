@@ -149,8 +149,11 @@ jobs:
         # ignore directory; inline allow comments are ignored.
         # gitleaks always also reads ./.gitleaksignore from the scanned
         # directory, whatever the flags, so the file is refused outright.
+        # No pipeline: an early-exiting reader would SIGPIPE find, and
+        # pipefail would turn a match into a pass. A find error fails the step.
         run: |
-          if find . -path ./.git -prune -o -name .gitleaksignore -print | grep -q .; then
+          hits=$(find . -path ./.git -prune -o -name .gitleaksignore -print -quit)
+          if [ -n "$hits" ]; then
             echo "::error::.gitleaksignore is not allowed; it would suppress findings"; exit 1
           fi
           mkdir -p "$RUNNER_TEMP/gitleaks/noignore"

@@ -9,6 +9,9 @@ SSH host-key verification and recovery access.
 
 - No unresolved known CRITICAL/HIGH finding in the Core release scope;
   security fixes include regression evidence in [FINDINGS.md](FINDINGS.md).
+- F-42 is resolved before the next tag: the attest job must bind each
+  downloaded artifact to the job that uploaded it (artifact ID or digest).
+  Until then, a green attest job is not evidence of archive origin.
 - On the exact candidate: format, clippy with warnings denied, debug and
   release tests with `SIGSIEVE_REQUIRE_SSHD=1`, and a release build pass.
 - Hosted CI passes on macOS and Linux, including real sshd tests, umask 0002,
