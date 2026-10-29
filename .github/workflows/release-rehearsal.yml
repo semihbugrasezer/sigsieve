@@ -6,6 +6,9 @@
 # CycloneDX SBOM sidecars as release.yml does, twice (byte-identical), and
 # checks they list every normal/build dependency of each target. It creates no tag, release or
 # provenance attestation and uploads only short-lived workflow artifacts.
+# A `verify` job then rehearses release.yml's attest input binding (F-42)
+# without OIDC: it runs attest's own checks, read from release.yml, on this
+# run's artifacts, and checks the build jobs' display names.
 #
 # Runs when started by hand, and on pull requests that change the release
 # packaging (so a change to it is rehearsed before it can reach a tag).
@@ -20,6 +23,7 @@ on:
       - scripts/package-release.py
       - scripts/test-package-release.py
       - scripts/third-party-notices.py
+      - scripts/test-attest-inputs.sh
 
 permissions:
   contents: read
@@ -29,19 +33,26 @@ defaults:
     shell: bash
 
 jobs:
-  rehearse:
+  # One job per target, as in release.yml (F-42), with the same `name:`
+  # pattern, so `verify` can bind each artifact to its own job's outputs and
+  # check the rendered names verify-release.sh expects. The steps are shared
+  # unchanged through a YAML anchor; only an output step and the upload's
+  # id and artifact name (now release.yml's) were added or changed.
+  rehearse-aarch64-apple-darwin:
+    name: build (${{ matrix.os }}, ${{ matrix.target }})
     strategy:
       fail-fast: false
       matrix:
         include:
-          # The targets release.yml builds.
           - os: macos-latest
             target: aarch64-apple-darwin
-          - os: ubuntu-24.04
-            target: x86_64-unknown-linux-gnu
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
-    steps:
+    outputs: &rehearse-outputs
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+      artifact-digest: ${{ steps.upload.outputs.artifact-digest }}
+      archive-sha256: ${{ steps.archive.outputs.sha256 }}
+    steps: &rehearse-steps
       # actions/checkout v7.0.1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -103,13 +114,34 @@ jobs:
           "$bin" doctor --upstream "$d/agent.sock" --allow-fingerprint "$fp" | tee doctor.txt
           grep -q "Filtering: *verified" doctor.txt || { echo "::error::doctor did not verify filtering"; exit 1; }
           ssh-agent -k > /dev/null
+      - name: Archive SHA-256 for the verify job
+        id: archive
+        run: |
+          sha=$(shasum -a 256 "dist/${name}.tar.gz" | cut -d' ' -f1)
+          echo "sha256=${sha}" >> "$GITHUB_OUTPUT"
+      # Artifact named as in release.yml, so verify runs attest's checks
+      # unmodified.
       # actions/upload-artifact v7.0.2
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      - id: upload
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: rehearsal-${{ matrix.target }}
+          name: sigsieve-${{ matrix.target }}
           path: dist/
           if-no-files-found: error
           retention-days: 7
+
+  rehearse-x86_64-unknown-linux-gnu:
+    name: build (${{ matrix.os }}, ${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    outputs: *rehearse-outputs
+    steps: *rehearse-steps
 
   sbom:
     # As release.yml's sbom job (separate from the archive builds), plus:
@@ -117,6 +149,9 @@ jobs:
     # normal/build dependency cargo resolves for its target.
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    outputs:
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+      artifact-digest: ${{ steps.upload.outputs.artifact-digest }}
     steps:
       # actions/checkout v7.0.1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -157,9 +192,93 @@ jobs:
             (cd dist && shasum -a 256 "${name}.cdx.json" > "${name}.cdx.json.sha256" && shasum -a 256 -c "${name}.cdx.json.sha256")
           done
       # actions/upload-artifact v7.0.2
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      - id: upload
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: rehearsal-sbom
+          name: sigsieve-sbom
           path: dist/
           if-no-files-found: error
           retention-days: 7
+
+  verify:
+    # release.yml's attest job without id-token or attestations: the same
+    # binding and file checks, read from the checked-out release.yml (not
+    # copied), run on this run's artifacts. The rehearsal has no tag, so
+    # GITHUB_REF_NAME is set to "rehearsal-<sha12>" for the scripts, which
+    # matches the rehearsal's archive names (sigsieve-rehearsal-<sha12>-...).
+    needs: [rehearse-aarch64-apple-darwin, rehearse-x86_64-unknown-linux-gnu, sbom]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    env:
+      AARCH64_ID: ${{ needs.rehearse-aarch64-apple-darwin.outputs.artifact-id }}
+      AARCH64_DIGEST: ${{ needs.rehearse-aarch64-apple-darwin.outputs.artifact-digest }}
+      AARCH64_SHA256: ${{ needs.rehearse-aarch64-apple-darwin.outputs.archive-sha256 }}
+      X86_64_ID: ${{ needs.rehearse-x86_64-unknown-linux-gnu.outputs.artifact-id }}
+      X86_64_DIGEST: ${{ needs.rehearse-x86_64-unknown-linux-gnu.outputs.artifact-digest }}
+      X86_64_SHA256: ${{ needs.rehearse-x86_64-unknown-linux-gnu.outputs.archive-sha256 }}
+      SBOM_ID: ${{ needs.sbom.outputs.artifact-id }}
+      SBOM_DIGEST: ${{ needs.sbom.outputs.artifact-digest }}
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          path: src
+      - name: Extract the attest job's checks from release.yml
+        run: |
+          mkdir "$RUNNER_TEMP/attest"
+          ruby -ryaml -e '
+            steps = YAML.load_file(ARGV[0], aliases: true)["jobs"]["attest"]["steps"]
+            { "bind.sh" => "Artifacts in this run are exactly the ones the producing jobs uploaded",
+              "files.sh" => "Exactly the expected files per artifact, with matching checksums" }.each do |file, name|
+              s = steps.select { |x| x["name"] == name }
+              abort "attest step not found exactly once: #{name}" unless s.size == 1
+              File.write(File.join(ARGV[1], file), s[0]["run"])
+            end' src/.github/workflows/release.yml "$RUNNER_TEMP/attest"
+          sha256sum "$RUNNER_TEMP"/attest/*.sh
+      - name: Attest input regression (synthetic artifacts)
+        run: bash src/scripts/test-attest-inputs.sh
+      - name: Build job names are the ones scripts/verify-release.sh expects
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          names=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs" --jq '.jobs[].name')
+          printf '%s\n' "$names"
+          tab=$'\t'
+          for want in "build (macos-latest, aarch64-apple-darwin)" "build (ubuntu-24.04, x86_64-unknown-linux-gnu)"; do
+            grep -qF "\"${want}${tab}" src/scripts/verify-release.sh \
+              || { echo "::error::verify-release.sh no longer expects job '$want'"; exit 1; }
+            printf '%s\n' "$names" | grep -qxF "$want" \
+              || { echo "::error::no job named '$want' in this run"; exit 1; }
+          done
+      - name: Artifacts in this run are exactly the ones the producing jobs uploaded (attest's check)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: GITHUB_REF_NAME="rehearsal-${GITHUB_SHA::12}" bash -eo pipefail "$RUNNER_TEMP/attest/bind.sh"
+      # As in release.yml's attest job.
+      # actions/download-artifact v8.0.2
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          artifact-ids: ${{ needs.rehearse-aarch64-apple-darwin.outputs.artifact-id }}
+          path: zip/aarch64-apple-darwin
+          skip-decompress: true
+          digest-mismatch: error
+      # actions/download-artifact v8.0.2
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          artifact-ids: ${{ needs.rehearse-x86_64-unknown-linux-gnu.outputs.artifact-id }}
+          path: zip/x86_64-unknown-linux-gnu
+          skip-decompress: true
+          digest-mismatch: error
+      # actions/download-artifact v8.0.2
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          artifact-ids: ${{ needs.sbom.outputs.artifact-id }}
+          path: zip/sbom
+          skip-decompress: true
+          digest-mismatch: error
+      - name: Exactly the expected files per artifact, with matching checksums (attest's check)
+        run: GITHUB_REF_NAME="rehearsal-${GITHUB_SHA::12}" bash -eo pipefail "$RUNNER_TEMP/attest/files.sh"
