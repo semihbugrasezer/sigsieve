@@ -1,0 +1,23 @@
+docs/EXTERNAL_REVIEW_OPTIONS.md
+  s_1f1a345995e898::t_3e3e25e6bd0ec9 1-33
+docs/EXTERNAL_VALIDATION.md
+  s_1f1a345995e898::t_57d6e509974b01 49-52,128-179
+CHANGELOG.md
+  s_1f1a345995e898::t_57d6e509974b01 15-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "016c081ffc89472f6d6d294c4b6d0b12e321a792",
+  "prompts": {},
+  "sessions": {
+    "s_1f1a345995e898": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a184e0-210f-7dd1-b919-950d524ee517",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Semih Buğra Sezer <17555579+semihbugrasezer@users.noreply.github.com>"
+    }
+  }
+}
