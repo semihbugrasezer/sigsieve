@@ -14,6 +14,9 @@ The project follows [Semantic Versioning](https://semver.org/).
   explicitly pending; no executable behaviour changes.
 - Prepare sourced review options and unsent expert/volunteer recruitment
   drafts; no reviewer, participant or paid engagement is confirmed.
+- Add an unpublished Homebrew formula draft (`packaging/homebrew`) and a
+  crates.io readiness assessment; neither channel is published, and both
+  need maintainer approval. No executable behaviour changes.
 
 ## [0.1.0-alpha.2] - 2026-10-28 (experimental pre-release)
 
