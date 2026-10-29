@@ -4,8 +4,9 @@
 # artifacts. The positive case must pass; every tampering case must fail with
 # its specific error. `gh` is replaced by a stub that prints a fixture
 # artifact listing; downloads are simulated by placing zips where
-# download-artifact would. Needs bash, ruby, python3, shasum, unzip and GNU
-# find (gfind on macOS).
+# download-artifact would. `unzip` is a stub that records any call: the
+# job must extract with Python's zipfile only (C-1). Needs bash, ruby,
+# python3, shasum and GNU find (gfind on macOS).
 #
 #   bash scripts/test-attest-inputs.sh
 set -euo pipefail
@@ -35,6 +36,13 @@ case "$*" in
 esac
 EOF
 chmod +x "$work/bin/gh"
+cat > "$work/bin/unzip" <<'EOF'
+#!/usr/bin/env bash
+echo "unzip called: $*" >> "${UNZIP_LOG:?}"
+exit 97
+EOF
+chmod +x "$work/bin/unzip"
+export UNZIP_LOG="$work/unzip-calls"
 if ! find --version 2>/dev/null | grep -q GNU; then
     ln -s "$(command -v gfind)" "$work/bin/find"
 fi
@@ -127,6 +135,25 @@ run_case() {
 
 run_case "positive: IDs, digests and archive hashes all match" ok
 
+# The positive case's workspace is still in place: every extracted file is
+# byte-identical to what the producing job zipped, and unzip never ran.
+check() { # description, command...
+    local what=$1; shift
+    if "$@"; then echo "PASS  $what"; pass=$((pass + 1))
+    else echo "FAIL  $what"; failed=$((failed + 1)); fi
+}
+same_files() { # extracted dir, source dir
+    [ "$(ls "$1")" = "$(ls "$2")" ] || return 1
+    local f
+    for f in "$2"/*; do cmp -s "$f" "$1/${f##*/}" || return 1; done
+}
+for t in aarch64-apple-darwin x86_64-unknown-linux-gnu sbom; do
+    check "valid $t zip extracts byte-identical files" same_files "$work/case/in/$t" "$src/$t"
+done
+check "extracted files are regular, not symlinks" \
+    bash -c '[ -z "$(find "$0/in" -mindepth 2 ! -type f)" ]' "$work/case"
+check "extraction never invoked unzip" bash -c '[ ! -e "$UNZIP_LOG" ]'
+
 run_case "wrong artifact ID from the build job" "is not the one its producing job uploaded" AARCH64_ID=1005
 
 run_case "artifact digest output differs from the run's artifact" \
@@ -217,6 +244,13 @@ with zipfile.ZipFile(out, "w") as z:
         entry(z, files[0] + "\0../escape", reg)
     elif kind == "no-mode":
         entry(z, "nomode", 0)
+if kind == "oversize":  # expected names only, one of them 257 MiB of zeros
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+        for f in files[:-1]:
+            z.write(os.path.join(sbom, f), f)
+        zi = zipfile.ZipInfo(files[-1])
+        zi.external_attr, zi.compress_type = 0o100644 << 16, zipfile.ZIP_DEFLATED
+        z.writestr(zi, bytes(257 << 20))
 EOF
 }
 bad_sbom() { # kind expected-error
@@ -229,6 +263,8 @@ bad_sbom() { # kind expected-error
     }
     export -f tamper
     run_case "SBOM zip with $1 entry" "$2" BAD_ZIP="$z" SBOM_DIGEST="$dig"
+    check "SBOM zip with $1 entry: nothing written to in/sbom" \
+        bash -c '[ ! -e "$0/in/sbom" ]' "$work/case"
 }
 bad_sbom symlink "sbom: symlink entry 'link'"
 bad_sbom dotdot "sbom: '..' in entry name '../escape'"
@@ -241,14 +277,9 @@ bad_sbom nul "sbom: NUL in entry name"
 # zipfile stores a zero mode as 0600 with no file type bits.
 bad_sbom no-mode "sbom: entry 'nomode' is not a regular file (mode 600)"
 bad_sbom missing "sbom: missing entries"
+bad_sbom oversize "sbom: entries declare more than the 256 MiB cap"
 
-# Nothing may be extracted when the entry check fails (the last case's
-# workspace is still in place).
-if [ -e "$work/case/in/sbom" ]; then
-    echo "FAIL  rejected SBOM zip was extracted"; failed=$((failed + 1))
-else
-    echo "PASS  rejected SBOM zip was not extracted"; pass=$((pass + 1))
-fi
+check "rejected zips never invoked unzip" bash -c '[ ! -e "$UNZIP_LOG" ]'
 
 echo "$pass passed, $failed failed"
 [ "$failed" -eq 0 ]

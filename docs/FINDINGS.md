@@ -123,6 +123,15 @@ Fix (in `release.yml`; its tag-only path has not run yet):
   whose name is exactly one of the expected names. Symlinks, directories,
   absolute paths, `..`, path separators, NUL bytes, duplicates, unexpected
   and missing names are rejected and nothing is extracted.
+- Extraction no longer uses `unzip` (C-1 of the combined-branch review, LOW,
+  suspected: the attest job holds the OIDC token while parsing zip bytes the
+  SBOM job chose). The same Python `zipfile` object that performed the entry
+  check writes only those regular-file entries, by their exact expected
+  names, into a directory it creates, each opened with
+  `O_CREAT|O_EXCL|O_NOFOLLOW`; zipfile checks each entry's CRC. Total
+  output is capped at 256 MiB (declared sizes before anything is written,
+  and the bytes actually written), so a crafted zip cannot fill the disk
+  (review C1-1, INFO). Fixed.
 - The release rehearsal mirrors the per-target job split and job names and
   adds a `verify` job (`contents: read`, `actions: read`; no OIDC, no
   attestation). It reads attest's two check scripts from the checked-out

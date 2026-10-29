@@ -259,6 +259,9 @@ jobs:
           # unpack DIR DIGEST NAME...: the one downloaded zip in zip/DIR must
           # have the producing job's digest and hold exactly the named files,
           # all regular, before anything is extracted into in/DIR (R-3).
+          # Extraction uses the same zipfile object that did the check, not
+          # unzip (C-1): only the checked entries, by exact name, each
+          # created with O_EXCL|O_NOFOLLOW in a directory made here.
           unpack() {
             local dir=$1 digest=$2 zip got
             shift 2
@@ -267,9 +270,10 @@ jobs:
               || fail "zip/$dir: expected exactly one downloaded zip file"
             got=$(shasum -a 256 "$zip" | cut -d' ' -f1)
             [ "$got" = "$digest" ] || fail "$dir: downloaded zip digest $got != $digest from its producing job"
-            python3 -I - "$dir" "$zip" "$@" <<'EOF'
-          import stat, sys, zipfile
-          label, path, want = sys.argv[1], sys.argv[2], set(sys.argv[3:])
+            mkdir -p in
+            python3 -I - "$dir" "$zip" "in/$dir" "$@" <<'EOF'
+          import os, stat, sys, zipfile
+          label, path, dest, want = sys.argv[1], sys.argv[2], sys.argv[3], set(sys.argv[4:])
           def bad(msg):
               print(f"::error::{label}: {msg}")
               sys.exit(1)
@@ -296,10 +300,25 @@ jobs:
                   if n not in want:
                       bad(f"unexpected entry {n!r}")
                   seen.add(n)
-          if seen != want:
-              bad(f"missing entries {sorted(want - seen)}")
+              if seen != want:
+                  bad(f"missing entries {sorted(want - seen)}")
+              # Bound disk use (review C1-1). zipfile already stops each entry
+              # at its declared size (then fails the CRC); the byte count
+              # below is defense in depth.
+              cap = 256 << 20
+              if sum(i.file_size for i in z.infolist()) > cap:
+                  bad("entries declare more than the 256 MiB cap")
+              os.mkdir(dest, 0o755)  # fails if it exists
+              d = os.open(dest, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+              for i in z.infolist():
+                  f = os.open(i.filename, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644, dir_fd=d)
+                  with z.open(i) as src, os.fdopen(f, "wb") as out:
+                      while chunk := src.read(1 << 20):  # zipfile checks the CRC
+                          cap -= len(chunk)
+                          if cap < 0:
+                              bad("entries expand to more than the 256 MiB cap")
+                          out.write(chunk)
           EOF
-            mkdir -p in && unzip -q "$zip" -d "in/$dir"
           }
           a="sigsieve-${GITHUB_REF_NAME}-aarch64-apple-darwin"
           x="sigsieve-${GITHUB_REF_NAME}-x86_64-unknown-linux-gnu"
