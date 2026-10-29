@@ -1,7 +1,8 @@
 # Threat model
 
-Status: written by the project authors for v0.1.0-dev. **Not independently
-reviewed.** Guarantees and their evidence are in
+Status: maintained by the project authors for `v0.1.0-alpha.2`, release source
+`fc7484be0371242f517b6628b0f7dcc3a9a12a29`. **No independent external
+security review.** Guarantees and their evidence are in
 [SECURITY_MODEL.md](SECURITY_MODEL.md); residual limits in
 [LIMITATIONS.md](LIMITATIONS.md); the findings register in
 [FINDINGS.md](FINDINGS.md).
@@ -59,11 +60,12 @@ trailing messages, unknown types, random bytes, slow trickles.
 - *Protection:* bounds-checked parser without `unsafe`; 256 KiB frame cap
   checked before allocation; per-frame deadline (10 s) independent of byte
   rate; idle limit (300 s); malformed → `FAILURE`; unframeable → close.
-- *Evidence:* unit/property tests, stable mutation fuzzing (~800k inputs per
-  run at 50k iterations), libFuzzer smoke runs (~146M executions,
-  uninstrumented), a coverage-guided 3600 s/target campaign on `103e9f9` with
-  no crash ([TESTING.md](TESTING.md#recorded-one-hour-campaign)), raw
-  attackers in real SSH sessions.
+- *Evidence:* unit/property tests, stable mutation fuzzing and raw attackers
+  in real SSH sessions. The released `fc7484b` passed a coverage-guided
+  3600 s/target campaign across four targets with no reported crash or
+  sanitizer failure ([exact-revision record](TESTING.md#release-candidate-evidence-2026-10-28)).
+  Earlier smoke runs and campaigns are historical evidence for their own
+  revisions, not additional release acceptance or proof of safety.
 
 ### Unauthorized signing with a known public key
 

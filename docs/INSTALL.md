@@ -73,8 +73,8 @@ binary**, and installs to `~/.local/bin` (not a system directory).
   "$name/sigsieve" --version
   mkdir -p "$HOME/.local/bin"
   install -m 755 "$name/sigsieve" "$HOME/.local/bin/sigsieve"
+  "$HOME/.local/bin/sigsieve" --version
 )
-"$HOME/.local/bin/sigsieve" --version
 ```
 
 Expected version: `sigsieve 0.1.0-alpha.2`. Add `~/.local/bin` to your
