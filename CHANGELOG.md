@@ -40,6 +40,11 @@ The project follows [Semantic Versioning](https://semver.org/).
   downloads them by ID, hashes each zip before unpacking, and compares each
   archive with the SHA-256 its build job computed. Tested with
   `scripts/test-attest-inputs.sh`; not yet run in GitHub Actions.
+- Attest checks every zip entry (regular file, exactly an expected name)
+  before extracting. The release rehearsal mirrors the per-target build
+  jobs and adds a `verify` job (no OIDC) that runs attest's checks, read
+  from `release.yml`, on the rehearsal's artifacts and checks the build job
+  names. Rehearsal artifacts are now named as in `release.yml`.
 
 ### Tests
 

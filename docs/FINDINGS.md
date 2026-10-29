@@ -57,7 +57,7 @@ fix (where one exists).
 | F-31 | HIGH | Review of F-29/F-30: a relay's own `-F` was ignored for its nested hops; hop forwardings were not checked; quoting (`e'x'ec`) hid `Match exec`; X11 forwarding ran xauth with the login agent; unsafe `-F` paths reached ssh's ProxyJump shell command; concurrent stale-socket recovery could have two winners | Fixed (details below) |
 | F-40 | LOW (availability) | A slow downstream reader could keep a reply write going indefinitely: SO_SNDTIMEO restarts on every partial transfer | Fixed: nonblocking reply writes under one whole-reply deadline; red/green regression |
 | F-41 | LOW (diagnostic) | RSA binding self-test refused by algorithm policy instead of exercising destination enforcement | Fixed: valid RSA/SHA-2 probe; regression catches missing enforcement for RSA, ECDSA and Ed25519 |
-| F-42 | LOW (supply chain) | Release attest job selects artifacts by name; a compromised job holding the Actions runtime token could replace an artifact before attestation | **Fixed in the workflow, not yet run**: attest binds each artifact to its producing job's ID, zip digest and archive SHA-256 (`scripts/test-attest-inputs.sh`); blocks publishing the next tag's release until that tag's run shows it working ([RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)); manual `verify-release.sh` and native smoke test remain mandatory |
+| F-42 | LOW (supply chain) | Release attest job selects artifacts by name; a compromised job holding the Actions runtime token could replace an artifact before attestation | **Fixed in the workflow; tag path not yet run**: attest binds each artifact to its producing job's ID, zip digest and archive SHA-256 and checks zip entries before extraction (`scripts/test-attest-inputs.sh`); hosted evidence comes from the rehearsal `verify` job; blocks the next tag's release until that tag's attest log confirms the binding ([RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)); manual `verify-release.sh` and native smoke test remain mandatory |
 
 
 ### Review scope
@@ -87,7 +87,7 @@ so they receive no F-number:
 
 ## Details
 
-### F-42 — LOW — attest job trusts artifacts by name (fixed, not yet run)
+### F-42 — LOW — attest job trusts artifacts by name (fixed, tag path not yet run)
 
 Found by the internal review of the SBOM branch (suspected, not
 demonstrated). The release `attest` job downloads `sigsieve-<target>`
@@ -99,7 +99,7 @@ attest job runs. The attest job's exact-contents check would pass and build
 provenance would be recorded for the replaced file. Publishing stays manual,
 and the exploit needs a compromised tool and runner-token extraction.
 
-Fix (in `release.yml`, not yet exercised by a hosted run):
+Fix (in `release.yml`; its tag-only path has not run yet):
 
 - Each build target is its own job (a one-entry matrix sharing the
   unchanged build steps through a YAML anchor) instead of a leg of one
@@ -118,21 +118,39 @@ Fix (in `release.yml`, not yet exercised by a hosted run):
   the server's listing and is skipped when that is empty. After the
   exact-contents check, each archive must match its build job's SHA-256, so
   a replacement with a self-consistent `.sha256` fails.
+- Before extracting any zip (R-3 of the fix review; the SBOM job runs
+  third-party tooling), every entry must be a regular file by its Unix mode
+  whose name is exactly one of the expected names. Symlinks, directories,
+  absolute paths, `..`, path separators, NUL bytes, duplicates, unexpected
+  and missing names are rejected and nothing is extracted.
+- The release rehearsal mirrors the per-target job split and job names and
+  adds a `verify` job (`contents: read`, `actions: read`; no OIDC, no
+  attestation). It reads attest's two check scripts from the checked-out
+  `release.yml` and runs them unmodified on the rehearsal's artifacts (with
+  `GITHUB_REF_NAME` set to `rehearsal-<sha12>`), runs the synthetic test,
+  and checks via the jobs API that the build jobs render the names
+  `scripts/verify-release.sh` expects.
 - `scripts/test-attest-inputs.sh` runs those steps from the workflow file
   against synthetic artifacts: the genuine case passes; a wrong ID, a digest
   mismatch, a replaced download, a replaced archive with a self-consistent
   checksum, a duplicate or missing artifact name, every empty or malformed
   output, the other target's outputs, another run's or an expired artifact,
-  and a wrong number of downloaded files each fail with their own error.
+  a wrong number of downloaded files, and each bad zip entry kind each fail
+  with their own error.
 
 Residual: a compromised build job can still replace its own target's
 archive before uploading it (the binding proves which job uploaded an
 artifact, not that the job was honest). The service is trusted to report
-job outputs and artifact metadata faithfully. The fix has not run in GitHub
-Actions: the release rehearsal has no attest-like consumer, so only a tag
-run exercises it. F-42 therefore stays a blocker for publishing the next
-tag's release: that tag's attest log must show the binding step passed and
-all three downloads by artifact ID. The maintainer's
+job outputs and artifact metadata faithfully. A full re-run of a release
+run likely fails the binding: the run's artifact list may then hold
+earlier attempts' artifacts under the same names (R-2). That fails closed;
+re-run only the attest job (not yet tried on a hosted run), or push a new
+tag. Hosted evidence comes from
+the rehearsal `verify` job on the pull request, which does not exercise
+the attest job itself, the OIDC token or the tag trigger. F-42 therefore
+stays a next-tag blocker until the first tag's attest log confirms the
+binding: the binding step passed and all three downloads were by artifact
+ID. The maintainer's
 `scripts/verify-release.sh` run and native smoke test stay mandatory before
 publishing.
 
