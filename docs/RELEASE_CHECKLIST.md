@@ -11,7 +11,7 @@ SSH host-key verification and recovery access.
   security fixes include regression evidence in [FINDINGS.md](FINDINGS.md).
 - F-42: the attest job binds each downloaded artifact to the job that
   uploaded it (artifact ID, zip digest, archive SHA-256) and checks zip
-  entries before extracting. Hosted evidence comes from the release
+  entries before extracting. Hosted evidence will come from the release
   rehearsal's `verify` job on the pull request, which runs attest's checks
   unmodified on the rehearsal's artifacts; it must pass on the candidate.
   `bash scripts/test-attest-inputs.sh` (needs GNU find; `gfind` on macOS)
