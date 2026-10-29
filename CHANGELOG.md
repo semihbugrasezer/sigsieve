@@ -13,6 +13,8 @@ The project follows [Semantic Versioning](https://semver.org/).
 - Ship the fuzz seed corpus in the package through a `tests/data/fuzz-seeds`
   symlink to `fuzz/seeds` (single copy, contents unchanged) and add
   `scripts/check-crate-package.sh` to test the unpacked `.crate`.
+- CI packages the crate and runs its tests from the unpacked `.crate`
+  (`scripts/check-crate-package.sh`, Ubuntu 24.04).
 - Declare `rust-version = "1.88"`, the floor set by dependencies; it is not
   built on a 1.88 toolchain in CI.
 

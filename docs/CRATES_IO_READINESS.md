@@ -116,13 +116,18 @@ and release-checklist evidence as a GitHub release.
 
 ## Blockers
 
-1. The packaged source cannot run its own tests because `fuzz/seeds` is
-   missing. Fix this by moving the seeds that tests use (for example to
-   `tests/data/`) or by restructuring so the files are packaged. Then check
-   with `cargo package` and `cargo test` run in the unpacked crate.
-2. There is no `include`/`exclude` allowlist, so CI and release tooling ship
-   in the crate.
-3. No `rust-version` (MSRV) is declared and no CI job tests one.
+1. **Resolved.** The packaged source could not run its own tests because
+   `fuzz/seeds` (a sub-package, always excluded by cargo) was missing. The
+   seeds are now packaged through the `tests/data/fuzz-seeds` symlink (one
+   copy in git), the tests read that path, and
+   `scripts/check-crate-package.sh` (run in CI on Ubuntu 24.04) packages the
+   crate, checks its file list and seeds, and runs `cargo test` inside the
+   unpacked `.crate`.
+2. **Resolved.** `Cargo.toml` has an `include` allowlist; CI, release
+   tooling, `deny.toml` and `rust-toolchain.toml` no longer ship.
+3. **Declared, not CI-tested.** `rust-version = "1.88"` is the floor set by
+   dependencies (sha2 0.11, proptest 1.12), and clippy's `incompatible_msrv`
+   lint is clean. It has not been built with a 1.88 toolchain.
 4. No provenance story for the `.crate`, and no reviewed trusted-publishing
    workflow.
 5. No decision on whether the `pub` library API is supported (semver,

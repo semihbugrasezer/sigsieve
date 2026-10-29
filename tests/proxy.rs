@@ -266,7 +266,7 @@ fn one_connection_cannot_send_an_unbounded_request_burst() {
 
 #[test]
 fn destination_bound_duplicates_do_not_reach_upstream_on_another_connection() {
-    let mut seed = protocol::Reader::new(include_bytes!("../fuzz/seeds/session_bind/sequence"));
+    let mut seed = protocol::Reader::new(include_bytes!("data/fuzz-seeds/session_bind/sequence"));
     let first = seed.string().unwrap();
     let last = seed.string().unwrap();
     let key = seed.string().unwrap();

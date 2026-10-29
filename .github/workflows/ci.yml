@@ -74,6 +74,15 @@ jobs:
           cargo test --all-targets --locked -- --nocapture 2>&1 | tee test-umask002.log
           if grep -nE 'skipp(ing|ed)' test-umask002.log; then echo "::error::a test was skipped"; exit 1; fi
       - run: cargo build --release --locked
+      - name: Packaged crate builds and passes its tests (cargo package)
+        # The .crate has no rust-toolchain.toml, so pin the toolchain here.
+        # One leg is enough: the package contents do not depend on the OS.
+        if: matrix.os == 'ubuntu-24.04'
+        env:
+          RUSTUP_TOOLCHAIN: "1.99.1"
+        run: |
+          bash scripts/check-crate-package.sh 2>&1 | tee crate-package.log
+          if grep -nE 'skipp(ing|ed)' crate-package.log; then echo "::error::a test was skipped"; exit 1; fi
       - name: Peer-uid check rejects a connection from another uid
         # Root bypasses the 0700 directory, so only the peer-uid check can
         # stop it. ssh-add -l exits 1 both for an empty agent and for a

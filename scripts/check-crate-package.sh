@@ -64,5 +64,5 @@ echo "check-crate-package: file list ok ($(wc -l <<<"$list" | tr -d ' ') files, 
 # Own subdirectory of the target dir: the unpacked crate builds units with the
 # same hashes as the repo, so sharing one directory would let either reuse the
 # other's stale binaries (with a different CARGO_MANIFEST_DIR baked in).
-(cd "$pkg" && CARGO_TARGET_DIR="$target_dir/check-crate-package" cargo test --locked --offline)
+(cd "$pkg" && CARGO_TARGET_DIR="$target_dir/check-crate-package" cargo test --locked --offline -- --nocapture)
 echo "check-crate-package: ok"
