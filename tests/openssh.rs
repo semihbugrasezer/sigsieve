@@ -835,7 +835,8 @@ fn gpg_agent_upstream_filtering_signing_and_mutations() {
         .unwrap()
         .trim_end_matches(':')
         .to_string();
-    for algo in ["nistp256", "rsa2048"] {
+    // GnuPG 2.2/2.4 otherwise default a bare curve name to ECDH for subkeys.
+    for algo in ["nistp256/ecdsa", "rsa2048"] {
         ok(gpg
             .cmd("gpg")
             .args(quiet)
