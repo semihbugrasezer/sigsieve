@@ -62,6 +62,9 @@ The project follows [Semantic Versioning](https://semver.org/).
   jobs and adds a `verify` job (no OIDC) that runs attest's checks, read
   from `release.yml`, on the rehearsal's artifacts and checks the build job
   names. Rehearsal artifacts are now named as in `release.yml`.
+- Attest extracts artifact zips with the Python `zipfile` object that
+  checked their entries, writing only the checked regular files with
+  O_EXCL/O_NOFOLLOW, instead of `unzip` (C-1).
 
 ### Tests
 
