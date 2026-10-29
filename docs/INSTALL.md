@@ -104,6 +104,13 @@ binds the archive to this repository's `release.yml`, immutable tag ref and
 source digest, while denying self-hosted runners. See the
 [release verification procedure](RELEASE_CHECKLIST.md).
 
+`v0.1.0-alpha.2` has no SBOM, because it was released before SBOM sidecars
+existed. Later releases add a CycloneDX SBOM (`$name.cdx.json` and
+`.sha256`) next to each archive, with its own provenance and an SBOM
+attestation for the archive. To verify those, or to verify on a machine
+without network access by using downloaded attestation bundles, see
+[VERIFY_OFFLINE.md](VERIFY_OFFLINE.md).
+
 ## Install the tagged version from source
 
 Use this path for Linux arm64, older glibc distributions, or to avoid

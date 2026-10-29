@@ -10,14 +10,23 @@
 # a run on another platform finish, reporting INCOMPLETE and exiting 3.
 #
 # Read-only towards GitHub: downloads the run's artifacts, verifies checksums
-# and build provenance, inspects the archives and smoke-tests the native
-# binary against a throwaway ssh-agent. Creates no tag, release or comment.
+# and build provenance, the CycloneDX SBOM sidecars (checksum, provenance and
+# that a CycloneDX SBOM attestation exists for each archive; its predicate is
+# not compared with the sidecar), inspects the archives and
+# smoke-tests the native binary against a throwaway ssh-agent.
+#
+# SBOMs are required for every tag except those in PRE_SBOM_TAGS, which were
+# released before SBOM sidecars existed; for those the SBOM is reported as
+# NOT_PRESENT (not verified, not a failure) and anything extra fails. Creates no tag, release or comment.
 # Never talks to your own ssh-agent and never reads ~/.ssh.
 set -eu
 
 REPO=semihbugrasezer/sigsieve
 WORKFLOW=.github/workflows/release.yml
 TARGETS="aarch64-apple-darwin x86_64-unknown-linux-gnu"
+# Releases published before SBOM sidecars. Never add a new tag here.
+PRE_SBOM_TAGS="v0.1.0-alpha.1 v0.1.0-alpha.2"
+SBOM_PREDICATE=https://cyclonedx.org/bom
 
 [ $# -ge 1 ] && [ $# -le 2 ] || { echo "usage: $0 RUN_ID [TAG]" >&2; exit 2; }
 RUN_ID=$1
@@ -25,6 +34,13 @@ TAG=${2:-v0.1.0-alpha.2}
 VERSION=${TAG#v}
 case $RUN_ID in *[!0-9]* | '') echo "RUN_ID must be numeric" >&2; exit 2 ;; esac
 case $TAG in v[0-9]*) ;; *) echo "TAG must look like v0.1.0-alpha.2" >&2; exit 2 ;; esac
+case " $PRE_SBOM_TAGS " in *" $TAG "*) sbom=0 ;; *) sbom=1 ;; esac
+
+# The artifact files this run must contain for one target, one per line.
+files_for() {
+    printf '%s\n' "sigsieve-$TAG-$1.tar.gz" "sigsieve-$TAG-$1.tar.gz.sha256"
+    [ "$sbom" = 0 ] || printf '%s\n' "sigsieve-$TAG-$1.cdx.json" "sigsieve-$TAG-$1.cdx.json.sha256"
+}
 
 work=''
 agent_pid=''
@@ -96,46 +112,56 @@ done
 printf '%s\n' "$jobs" | awk -F '\t' '$1 == "attest" { f = 1 } END { exit !f }' || die "no attest job"
 ok "jobs: all successful on GitHub-hosted runners; both build jobs and attest present"
 
-# 2. Exactly the two archives and their checksum files.
+# 2. Exactly the two archives, their SBOMs (unless pre-SBOM) and checksums.
 gh run download "$RUN_ID" --repo "$REPO" --dir "$dl"
 expected=$(for t in $TARGETS; do
-    n="sigsieve-$TAG-$t.tar.gz"
-    printf '%s\n%s\n' "sigsieve-$t/$n" "sigsieve-$t/$n.sha256"
+    files_for "$t" | sed "s|^|sigsieve-$t/|"
 done | LC_ALL=C sort)
+nfiles=$(printf '%s\n' "$expected" | wc -l | tr -d ' ')
 # gh run download puts several artifacts in per-artifact directories; locate
 # files by name instead of relying on that layout, and allow nothing else.
-[ "$(find "$dl" ! -type d | wc -l | tr -d ' ')" = 4 ] || die "expected 4 artifact files, got:
+[ "$(find "$dl" ! -type d | wc -l | tr -d ' ')" = "$nfiles" ] || die "expected $nfiles artifact files, got:
 $(cd "$dl" && find . ! -type d)
 expected (any directory):
 $expected"
 for t in $TARGETS; do
-    for f in "sigsieve-$TAG-$t.tar.gz" "sigsieve-$TAG-$t.tar.gz.sha256"; do
-        [ "$(find "$dl" -type f -name "$f" | wc -l | tr -d ' ')" = 1 ] || die "missing or duplicate artifact $f"
-    done
     mkdir -p "$work/a-$t"
-    mv "$(find "$dl" -type f -name "sigsieve-$TAG-$t.tar.gz")" "$(find "$dl" -type f -name "sigsieve-$TAG-$t.tar.gz.sha256")" "$work/a-$t/"
+    for f in $(files_for "$t"); do
+        [ "$(find "$dl" -type f -name "$f" | wc -l | tr -d ' ')" = 1 ] || die "missing or duplicate artifact $f"
+        mv "$(find "$dl" -type f -name "$f")" "$work/a-$t/"
+    done
 done
 dl=$work/a
 mkdir "$dl"
 for t in $TARGETS; do mv "$work/a-$t" "$dl/sigsieve-$t"; done
-ok "artifacts: exactly 2 archives + 2 checksum files named for $TAG"
+if [ "$sbom" = 1 ]; then
+    ok "artifacts: exactly 2 archives + 2 SBOMs + 4 checksum files named for $TAG"
+else
+    ok "artifacts: exactly 2 archives + 2 checksum files named for $TAG (pre-SBOM release)"
+fi
 
-# 3. Checksums.
-for t in $TARGETS; do
-    n="sigsieve-$TAG-$t.tar.gz"
+# 3. Checksums (archives and SBOMs).
+for f in $(for t in $TARGETS; do files_for "$t"; done | grep -v '\.sha256$'); do
+    t=${f#"sigsieve-$TAG-"}; t=${t%.tar.gz}; t=${t%.cdx.json}
     d=$dl/sigsieve-$t
-    [ "$(wc -l < "$d/$n.sha256" | tr -d ' ')" = 1 ] || die "$n.sha256 is not one line"
-    awk -v n="$n" 'NF != 2 || $2 != n || $1 !~ /^[0-9a-f]{64}$/ { exit 1 }' "$d/$n.sha256" \
-        || die "$n.sha256 does not name $n with a SHA-256 digest"
-    (cd "$d" && sha256 -c "$n.sha256" >/dev/null) || die "checksum mismatch for $n"
+    [ "$(wc -l < "$d/$f.sha256" | tr -d ' ')" = 1 ] || die "$f.sha256 is not one line"
+    awk -v n="$f" 'NF != 2 || $2 != n || $1 !~ /^[0-9a-f]{64}$/ { exit 1 }' "$d/$f.sha256" \
+        || die "$f.sha256 does not name $f with a SHA-256 digest"
+    (cd "$d" && sha256 -c "$f.sha256" >/dev/null) || die "checksum mismatch for $f"
 done
+if [ "$sbom" = 1 ]; then
+    for t in $TARGETS; do
+        grep -q '"bomFormat": "CycloneDX"' "$dl/sigsieve-$t/sigsieve-$TAG-$t.cdx.json" \
+            || die "sigsieve-$TAG-$t.cdx.json is not a CycloneDX JSON SBOM"
+    done
+fi
 ok "checksums match"
 
 # 4. Build provenance, bound to this repository, workflow, tag and commit.
 # Every constraint is required; an older gh that lacks one fails instead of
 # silently checking less.
 help=$(gh attestation verify --help 2>&1 || true)
-for flag in signer-workflow source-ref source-digest deny-self-hosted-runners; do
+for flag in signer-workflow source-ref source-digest deny-self-hosted-runners predicate-type; do
     printf '%s\n' "$help" | grep -q -- "--$flag " || die "gh attestation verify lacks --$flag; upgrade gh"
 done
 signer="--signer-workflow $REPO/$WORKFLOW"
@@ -149,6 +175,23 @@ for t in $TARGETS; do
         >"$work/attest-$t.txt" 2>&1 || { cat "$work/attest-$t.txt" >&2; die "attestation for $n"; }
 done
 ok "provenance: $signer$extra"
+if [ "$sbom" = 1 ]; then
+    for t in $TARGETS; do
+        n="sigsieve-$TAG-$t.tar.gz"
+        s="sigsieve-$TAG-$t.cdx.json"
+        # The sidecar's own provenance: these exact SBOM bytes came from this
+        # workflow, tag and commit.
+        # shellcheck disable=SC2086
+        gh attestation verify "$dl/sigsieve-$t/$s" --repo "$REPO" $signer $extra \
+            >"$work/attest-sbom-$t.txt" 2>&1 || { cat "$work/attest-sbom-$t.txt" >&2; die "provenance for $s"; }
+        # The SBOM attestation whose subject is the archive.
+        # shellcheck disable=SC2086
+        gh attestation verify "$dl/sigsieve-$t/$n" --repo "$REPO" $signer $extra \
+            --predicate-type "$SBOM_PREDICATE" \
+            >"$work/attest-sbom-link-$t.txt" 2>&1 || { cat "$work/attest-sbom-link-$t.txt" >&2; die "SBOM attestation for $n"; }
+    done
+    ok "SBOM: provenance of both sidecars and an SBOM attestation ($SBOM_PREDICATE) for both archives"
+fi
 
 # 5. Archive contents (listed before extracting, so no path can escape).
 for t in $TARGETS; do
@@ -208,16 +251,24 @@ fi
 
 # 7. Summary for the release notes.
 echo
+note=''
+[ "$sbom" = 1 ] || note="  (SBOM NOT_PRESENT: pre-SBOM release)"
 if [ -n "$host" ]; then
-    echo "RESULT: PASS  $TAG  run $RUN_ID  commit $tag_sha"
+    echo "RESULT: PASS  $TAG  run $RUN_ID  commit $tag_sha$note"
 else
-    echo "RESULT: INCOMPLETE  $TAG  run $RUN_ID  commit $tag_sha  (native smoke test NOT run)"
+    echo "RESULT: INCOMPLETE  $TAG  run $RUN_ID  commit $tag_sha  (native smoke test NOT run)$note"
 fi
 echo "Native smoke test: ${host:-NOT RUN on $(uname -s) $(uname -m)}"
+if [ "$sbom" = 1 ]; then
+    echo "SBOM: verified (checksum, provenance, SBOM attestation)"
+else
+    echo "SBOM: NOT_PRESENT ($TAG predates SBOM sidecars; nothing verified)"
+fi
 echo "Other target: run this script on that platform too; a release needs a native PASS for both."
 echo "SHA-256:"
 for t in $TARGETS; do
     cat "$dl/sigsieve-$t/sigsieve-$TAG-$t.tar.gz.sha256"
+    [ "$sbom" = 0 ] || cat "$dl/sigsieve-$t/sigsieve-$TAG-$t.cdx.json.sha256"
 done
 done_ok=1
 # Everything else verified, but not the native binary: not a PASS.

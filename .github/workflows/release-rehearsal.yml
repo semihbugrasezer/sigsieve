@@ -2,7 +2,9 @@
 # script and packaging as release.yml, plus checks that the release workflow
 # does not make: the archive is byte-identical when packaged twice, its
 # checksum verifies, the binary embeds no runner paths, and the extracted
-# binary runs `doctor` against a real ssh-agent. It creates no tag, release or
+# binary runs `doctor` against a real ssh-agent. A separate job generates the
+# CycloneDX SBOM sidecars as release.yml does, twice (byte-identical), and
+# checks they list every normal/build dependency of each target. It creates no tag, release or
 # provenance attestation and uploads only short-lived workflow artifacts.
 #
 # Runs when started by hand, and on pull requests that change the release
@@ -105,6 +107,59 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: rehearsal-${{ matrix.target }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  sbom:
+    # As release.yml's sbom job (separate from the archive builds), plus:
+    # each SBOM is generated twice and must be identical, and must list every
+    # normal/build dependency cargo resolves for its target.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - run: rustup show active-toolchain || rustup toolchain install
+      - run: cargo install --locked cargo-cyclonedx@0.5.9
+      - name: CycloneDX 1.5 JSON SBOM per release target, generated twice
+        run: |
+          export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          version=$(cargo metadata --no-deps --locked --format-version 1 \
+            | python3 -c 'import json,sys; print(next(p["version"] for p in json.load(sys.stdin)["packages"] if p["name"]=="sigsieve"))')
+          mkdir dist
+          for target in aarch64-apple-darwin x86_64-unknown-linux-gnu; do
+            name="sigsieve-rehearsal-${GITHUB_SHA::12}-${target}"
+            cargo tree --locked -e normal,build --target "$target" --prefix none -f '{p}' \
+              | awk '{print $1}' | sort -u > sbom-deps.txt
+            for out in "dist/${name}.cdx.json" sbom-second.json; do
+              cargo cyclonedx --format json --spec-version 1.5 --target "$target" --override-filename sbom-out
+              python3 - "$GITHUB_WORKSPACE" sbom-out.json "$out" "$version" sbom-deps.txt <<'EOF'
+          import json, sys
+          workspace, src, dst, version, deps = sys.argv[1:]
+          text = open(src).read().replace(workspace, "/sigsieve")
+          bom = json.loads(text)
+          root = bom["metadata"]["component"]
+          assert bom["bomFormat"] == "CycloneDX" and bom["specVersion"] == "1.5", "unexpected SBOM format"
+          assert (root["name"], root["version"]) == ("sigsieve", version), "SBOM describes the wrong package"
+          assert len(bom["components"]) > 0, "SBOM lists no dependencies"
+          listed = {c["name"] for c in bom["components"]} | {root["name"]}
+          missing = set(open(deps).read().split()) - listed
+          assert not missing, f"SBOM misses dependencies: {sorted(missing)}"
+          open(dst, "w").write(text)
+          EOF
+              rm sbom-out.json
+            done
+            cmp "dist/${name}.cdx.json" sbom-second.json || { echo "::error::SBOM for $target is not deterministic"; exit 1; }
+            rm sbom-second.json
+            (cd dist && shasum -a 256 "${name}.cdx.json" > "${name}.cdx.json.sha256" && shasum -a 256 -c "${name}.cdx.json.sha256")
+          done
+      # actions/upload-artifact v7.0.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: rehearsal-sbom
           path: dist/
           if-no-files-found: error
           retention-days: 7

@@ -1,6 +1,7 @@
 # Verify a tag's release build on Linux x86_64, from the real release
 # archives: run scripts/verify-release.sh (the same script used on macOS)
 # against the given release run. It checks the run, checksums, provenance,
+# SBOM sidecars and attestations (required after v0.1.0-alpha.2),
 # archive contents and binary type, and smoke-tests the extracted Linux
 # binary with `doctor` against a throwaway ssh-agent. Read-only: it creates
 # no tag, release or artifact and uses no SSH keys of its own.
