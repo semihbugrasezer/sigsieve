@@ -1,0 +1,19 @@
+docs/IMPLEMENTATION_CHECKLIST.md
+  s_c68b92ee5f638d::t_c87acd64146b45 51-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f559f620fb3241b9a81edf08e63e2db1e48d548d",
+  "prompts": {},
+  "sessions": {
+    "s_c68b92ee5f638d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a8909518-2df4-4dab-82d0-d7222a653bd4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <17555579+semihbugrasezer@users.noreply.github.com>"
+    }
+  }
+}
