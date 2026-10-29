@@ -1,0 +1,23 @@
+docs/CRATES_IO_READINESS.md
+  s_c68b92ee5f638d::t_cd6a2b390f145c 130-131
+  s_c68b92ee5f638d::t_1d13d20994fd92 1-60,65-129,132-141
+  s_c68b92ee5f638d::t_f1479145a67b4f 61-64
+CHANGELOG.md
+  s_c68b92ee5f638d::t_f0b8a582675f5a 17-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "687e71a95863df765d63140b5c049dee4ebcddff",
+  "prompts": {},
+  "sessions": {
+    "s_c68b92ee5f638d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a8909518-2df4-4dab-82d0-d7222a653bd4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <17555579+semihbugrasezer@users.noreply.github.com>"
+    }
+  }
+}
