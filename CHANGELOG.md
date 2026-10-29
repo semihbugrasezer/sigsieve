@@ -51,8 +51,30 @@ The project follows [Semantic Versioning](https://semver.org/).
   `v0.1.0-alpha.2` has no SBOM, and the script reports it as NOT_PRESENT.
   The pull-request jobs (secret scan, rehearsal SBOM) ran on GitHub in
   PR #30; the tag-only release path has not run yet.
+- F-42: the release attest job no longer trusts artifacts by name. Each
+  build target is its own job; the attest job checks that the run holds
+  exactly the artifacts (ID and digest) the build and SBOM jobs reported,
+  downloads them by ID, hashes each zip before unpacking, and compares each
+  archive with the SHA-256 its build job computed. Tested with
+  `scripts/test-attest-inputs.sh`; not yet run in GitHub Actions.
+- Attest checks every zip entry (regular file, exactly an expected name)
+  before extracting. The release rehearsal mirrors the per-target build
+  jobs and adds a `verify` job (no OIDC) that runs attest's checks, read
+  from `release.yml`, on the rehearsal's artifacts and checks the build job
+  names. Rehearsal artifacts are now named as in `release.yml`.
 
 ### Tests
+
+- Real OpenSSH destination-binding negative matrix: plain `publickey` to an
+  allowed destination refused, RSA destination host key refused even when
+  allowed, an allowed forwarding hop does not authorize another final
+  destination, agent forwarded through two hops, and `git commit -S` refused
+  in binding mode (verified in filtering mode). Each was mutation-checked.
+- Throwaway `gpg-agent --enable-ssh-support` as upstream: filtering, SSHSIG
+  and RSA SHA-2 signing, SHA-1 refusal through SigSieve (not independent
+  evidence of the SHA-1 guard), mutations, and destination binding
+  (required in CI).
+- Mock-upstream regression: a truncated sign response is never completed.
 
 - Pin that session binds after an authentication bind, including forged
   ones, leave binding state and signing authorization unchanged.

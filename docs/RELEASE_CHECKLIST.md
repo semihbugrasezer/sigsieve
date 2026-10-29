@@ -9,9 +9,20 @@ SSH host-key verification and recovery access.
 
 - No unresolved known CRITICAL/HIGH finding in the Core release scope;
   security fixes include regression evidence in [FINDINGS.md](FINDINGS.md).
-- F-42 is resolved before the next tag: the attest job must bind each
-  downloaded artifact to the job that uploaded it (artifact ID or digest).
-  Until then, a green attest job is not evidence of archive origin.
+- F-42: the attest job binds each downloaded artifact to the job that
+  uploaded it (artifact ID, zip digest, archive SHA-256) and checks zip
+  entries before extracting. Hosted evidence will come from the release
+  rehearsal's `verify` job on the pull request, which runs attest's checks
+  unmodified on the rehearsal's artifacts; it must pass on the candidate.
+  `bash scripts/test-attest-inputs.sh` (needs GNU find; `gfind` on macOS)
+  must pass too. F-42 stays a next-tag blocker: for the first tag after the
+  fix, check in the release run's attest log that the binding step passed
+  and that its three downloads were by ID, before publishing; until one
+  release run shows this, a green attest job is not evidence of archive
+  origin.
+- A full re-run of a release run likely fails the binding on duplicate
+  artifact names (fails closed, R-2). Re-run only the attest job (not yet
+  tried on a hosted run), or push a new tag.
 - On the exact candidate: format, clippy with warnings denied, debug and
   release tests with `SIGSIEVE_REQUIRE_SSHD=1`, and a release build pass.
 - Hosted CI passes on macOS and Linux, including real sshd tests, umask 0002,
@@ -68,7 +79,10 @@ These remain explicit limitations of the alpha, not passing tests:
    that the CycloneDX SBOM sidecar is byte-identical when generated twice
    and lists every dependency cargo resolves for the target,
    and smoke-tests the extracted binary with `doctor` against a real
-   `ssh-agent`. It creates no tag, release or attestation.
+   `ssh-agent`. Its `verify` job runs the attest job's binding and file
+   checks (read from `release.yml`) on the rehearsal's artifacts and checks
+   the build job names `verify-release.sh` expects. It creates no tag,
+   release or attestation.
 3. Tag the accepted candidate. `release.yml` gates, builds deterministic
    macOS arm64 and Linux x86_64 archives, writes a CycloneDX SBOM sidecar
    per archive (not inside it), creates checksums, records provenance for

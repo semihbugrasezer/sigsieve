@@ -814,3 +814,338 @@ fn verified_proxyjump_still_connects_and_filters() {
     assert!(out.contains(&ci_fp), "{out}");
     assert!(!out.contains(&admin_fp), "{out}");
 }
+
+// --- Destination-binding negative matrix (real OpenSSH) --------------------
+
+/// An `ssh` command line, run on the remote side with the forwarded agent,
+/// that logs in to `port` with the allowed `ci` key and prints `tag`.
+fn remote_hop(env: &Env, port: u16, extra: &str, tag: &str) -> String {
+    format!(
+        "ssh {} {extra} 127.0.0.1 echo {tag}",
+        env.ssh_opts(port, "ci").join(" ")
+    )
+}
+
+/// Run `script` on the remote side through `sigsieve connect`, destination
+/// binding enforced for `allowed` host key fingerprints. Returns stdout and
+/// stderr after asserting that connect itself succeeded.
+fn run_bound(env: &Env, allowed: &[&str], script: &str) -> (String, String) {
+    let d = env.d();
+    fs::write(d.join("remote.sh"), script).unwrap();
+    let mut args = Vec::new();
+    for fp in allowed {
+        args.push("--allow-destination".to_string());
+        args.push(fp.to_string());
+    }
+    let o = sigsieve_connect_with(env, &args, &[], &format!("sh {}/remote.sh", d.display()));
+    let out = String::from_utf8_lossy(&o.stdout).into_owned();
+    let err = String::from_utf8_lossy(&o.stderr).into_owned();
+    assert!(o.status.success(), "stdout:\n{out}\nstderr:\n{err}");
+    assert!(
+        err.contains("destination binding enforced") || err.contains("enforced: allowed keys"),
+        "{err}"
+    );
+    (out, err)
+}
+
+/// A remote client that authenticates to an allowed destination with plain
+/// `publickey` (`PubkeyAuthentication=unbound`, which is what a server
+/// without `publickey-hostbound` support leads to) is refused, even though
+/// the session is correctly bound to that destination. sshd has no option
+/// to stop advertising hostbound, so the client-side setting stands in for
+/// such a server. The same destination with hostbound authentication works.
+#[test]
+fn destination_binding_refuses_plain_publickey_to_allowed_destination() {
+    let Some(env) = setup() else { return };
+    let script = format!(
+        "{} 2>/dev/null; echo \"HOSTBOUND rc=$?\"\n{} 2>/dev/null; echo \"UNBOUND rc=$?\"\n",
+        remote_hop(&env, env.dest_port, "", "hostbound-ok"),
+        remote_hop(
+            &env,
+            env.dest_port,
+            "-o PubkeyAuthentication=unbound",
+            "unbound-ok"
+        ),
+    );
+    let (out, err) = run_bound(&env, &[&env.dest_hostkey_fp], &script);
+    assert_eq!(marker(&out, "HOSTBOUND"), "0", "{out}\n{err}");
+    assert!(out.contains("hostbound-ok"), "{out}");
+    assert_ne!(marker(&out, "UNBOUND"), "0", "{out}\n{err}");
+    assert!(!out.contains("unbound-ok"), "{out}");
+    assert!(
+        err.contains("destination binding requires publickey-hostbound authentication"),
+        "{err}"
+    );
+}
+
+/// An RSA host key cannot be bound, so the final hop fails closed even when
+/// its fingerprint is explicitly an allowed destination: binding mode never
+/// silently degrades to identity-only filtering.
+#[test]
+fn destination_binding_rsa_host_key_fails_closed_even_when_allowed() {
+    let Some(env) = setup_with_dest_key(&["-t", "rsa", "-b", "3072"]) else {
+        return;
+    };
+    let script = format!(
+        "{} 2>/dev/null; echo \"HOP-RSA rc=$?\"\n",
+        remote_hop(&env, env.dest_port, "", "rsa-ok")
+    );
+    let (out, err) = run_bound(&env, &[&env.dest_hostkey_fp], &script);
+    assert_ne!(marker(&out, "HOP-RSA"), "0", "{out}\n{err}");
+    assert!(!out.contains("rsa-ok"), "{out}");
+    assert!(
+        err.contains("rejected session-bind: unsupported host key type"),
+        "{err}"
+    );
+    assert!(
+        err.contains("(destination binding): sign attempted on a forwarding hop"),
+        "{err}"
+    );
+}
+
+/// Only the final (authentication) hop's host key counts. With only the
+/// forwarding host's (Ed25519) key allowed, logging in to that host again
+/// works, but a different final destination is refused although an allowed
+/// host key is earlier in the binding chain.
+#[test]
+fn allowed_forwarding_hop_does_not_authorize_another_final_destination() {
+    let Some(env) = setup() else { return };
+    let script = format!(
+        "{} 2>/dev/null; echo \"HOP-ALLOWED-ED25519 rc=$?\"\n{} 2>/dev/null; echo \"HOP-OTHER rc=$?\"\n",
+        remote_hop(&env, env.hop_port, "", "ed25519-ok"),
+        remote_hop(&env, env.dest_port, "", "other-ok"),
+    );
+    let (out, err) = run_bound(&env, &[&env.hostkey_fp], &script);
+    assert_eq!(marker(&out, "HOP-ALLOWED-ED25519"), "0", "{out}\n{err}");
+    assert!(out.contains("ed25519-ok"), "{out}");
+    assert_ne!(marker(&out, "HOP-OTHER"), "0", "{out}\n{err}");
+    assert!(!out.contains("other-ok"), "{out}");
+    assert!(
+        err.contains(&format!(
+            "destination host key {} is not an allowed destination",
+            env.dest_hostkey_fp
+        )),
+        "{err}"
+    );
+}
+
+/// The agent forwarded on through an intermediate host: local -> login host
+/// -> allowed destination (agent forwarded again) -> final hop. The binding
+/// chain then has two forwarding entries; an allowed final destination still
+/// works and a disallowed one is refused.
+#[test]
+fn destination_binding_across_two_forwarding_hops() {
+    let Some(env) = setup() else { return };
+    let d = env.d();
+    let inner = format!(
+        "{} 2>/dev/null; echo \"INNER-ALLOWED rc=$?\"\n{} 2>/dev/null; echo \"INNER-OTHER rc=$?\"\n",
+        remote_hop(&env, env.dest_port, "", "inner-allowed-ok"),
+        remote_hop(&env, env.hop_port, "", "inner-other-ok"),
+    );
+    fs::write(d.join("inner.sh"), inner).unwrap();
+    let outer = format!(
+        "ssh {} -o ForwardAgent=yes 127.0.0.1 sh {}/inner.sh 2>/dev/null; echo \"OUTER rc=$?\"\n",
+        env.ssh_opts(env.dest_port, "ci").join(" "),
+        d.display()
+    );
+    let (out, err) = run_bound(&env, &[&env.dest_hostkey_fp], &outer);
+    assert_eq!(marker(&out, "OUTER"), "0", "{out}\n{err}");
+    assert_eq!(marker(&out, "INNER-ALLOWED"), "0", "{out}\n{err}");
+    assert!(out.contains("inner-allowed-ok"), "{out}");
+    assert_ne!(marker(&out, "INNER-OTHER"), "0", "{out}\n{err}");
+    assert!(!out.contains("inner-other-ok"), "{out}");
+    assert!(
+        err.contains(&format!(
+            "destination host key {} is not an allowed destination",
+            env.hostkey_fp
+        )),
+        "{err}"
+    );
+}
+
+/// `git commit -S` with `gpg.format=ssh` on the remote host, using the
+/// forwarded agent: it works and verifies in identity-filtering mode and is
+/// refused in destination-binding mode (no commit is created). git's global
+/// and system configuration are ignored, and the repository has no hooks.
+#[test]
+fn git_ssh_commit_signing_through_forwarded_agent() {
+    let Some(env) = setup() else { return };
+    if !have("git") {
+        if std::env::var_os("SIGSIEVE_REQUIRE_SSHD").is_some_and(|v| v == "1") {
+            panic!("git is required for the commit-signing test");
+        }
+        eprintln!("skipping git commit-signing test: git not installed");
+        return;
+    }
+    let d = env.d();
+    let ci_pub = env.pubkey("ci");
+    fs::write(
+        d.join("allowed_signers"),
+        format!("e2e {}", fs::read_to_string(&ci_pub).unwrap()),
+    )
+    .unwrap();
+    let script = |repo: &str| {
+        format!(
+            r#"export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+R={d}/{repo}
+git init -q --template= "$R" || exit 1
+cd "$R" || exit 1
+git -c user.name=e2e -c user.email=e2e -c gpg.format=ssh -c user.signingkey={key} commit -q -S --allow-empty -m signed >/dev/null 2>&1; echo "GIT-COMMIT rc=$?"
+git -c gpg.ssh.allowedSignersFile={d}/allowed_signers verify-commit HEAD >/dev/null 2>&1; echo "GIT-VERIFY rc=$?"
+git rev-parse -q --verify HEAD >/dev/null 2>&1; echo "GIT-HEAD rc=$?"
+"#,
+            d = d.display(),
+            key = ci_pub.display(),
+        )
+    };
+
+    // Identity filtering: the allowed key signs the commit.
+    fs::write(d.join("git_a.sh"), script("repo-a")).unwrap();
+    let o = sigsieve_connect(&env, &[], &format!("sh {}/git_a.sh", d.display()));
+    let out = String::from_utf8_lossy(&o.stdout).into_owned();
+    let err = String::from_utf8_lossy(&o.stderr).into_owned();
+    assert!(o.status.success(), "stdout:\n{out}\nstderr:\n{err}");
+    assert_eq!(marker(&out, "GIT-COMMIT"), "0", "{out}\n{err}");
+    assert_eq!(marker(&out, "GIT-VERIFY"), "0", "{out}\n{err}");
+
+    // Destination binding: commit signing is not SSH authentication.
+    let (out, err) = run_bound(&env, &[&env.dest_hostkey_fp], &script("repo-b"));
+    assert_ne!(marker(&out, "GIT-COMMIT"), "0", "{out}\n{err}");
+    assert_ne!(
+        marker(&out, "GIT-HEAD"),
+        "0",
+        "unsigned commit created: {out}"
+    );
+    assert!(
+        err.contains("(destination binding): connection has no verified session binding")
+            || err.contains("(destination binding): sign attempted on a forwarding hop"),
+        "{err}"
+    );
+}
+
+/// Stops every GnuPG daemon of a throwaway home directory on drop.
+struct GpgHome(PathBuf);
+
+impl Drop for GpgHome {
+    fn drop(&mut self) {
+        let _ = Command::new("gpgconf")
+            .env("GNUPGHOME", &self.0)
+            .arg("--homedir")
+            .arg(&self.0)
+            .args(["--kill", "all"])
+            .output();
+    }
+}
+
+/// Destination binding with gpg-agent as the upstream (and login) agent: a
+/// throwaway GnuPG home with one unprotected synthetic ECDSA P-256
+/// authentication key. Skipped when GnuPG is not installed, unless
+/// `SIGSIEVE_REQUIRE_GPG_AGENT=1`.
+#[test]
+fn destination_binding_with_gpg_agent_upstream() {
+    if !["gpg", "gpgconf", "gpg-agent"].iter().all(|c| have(c)) {
+        if std::env::var_os("SIGSIEVE_REQUIRE_GPG_AGENT").is_some_and(|v| v == "1") {
+            panic!("GnuPG tools required for the gpg-agent test");
+        }
+        eprintln!("skipping gpg-agent test: GnuPG tools not installed");
+        return;
+    }
+    let Some(env) = setup() else { return };
+    let d = env.d();
+    let home = d.join("g");
+    fs::DirBuilder::new().mode(0o700).create(&home).unwrap();
+    let gpg_home = GpgHome(home.clone());
+    let gpg = |program: &str| {
+        let mut c = Command::new(program);
+        c.env("GNUPGHOME", &gpg_home.0)
+            .arg("--homedir")
+            .arg(&gpg_home.0);
+        c
+    };
+    fs::write(home.join("gpg-agent.conf"), "enable-ssh-support\n").unwrap();
+    // The daemon keeps inherited pipes open, so do not capture its output.
+    let started = gpg("gpg-agent")
+        .arg("--daemon")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .unwrap();
+    assert!(started.success(), "gpg-agent did not start");
+    ok(gpg("gpg").args([
+        "--batch",
+        "--pinentry-mode",
+        "loopback",
+        "--passphrase",
+        "",
+        "--quick-gen-key",
+        "sigsieve test",
+        "nistp256",
+        "auth",
+        "never",
+    ]));
+    let grips: String = ok(gpg("gpg").args(["--list-keys", "--with-keygrip", "--with-colons"]))
+        .lines()
+        .filter_map(|l| l.strip_prefix("grp:::::::::"))
+        .map(|g| format!("{}\n", g.trim_end_matches(':')))
+        .collect();
+    fs::write(home.join("sshcontrol"), grips).unwrap();
+    let sock = PathBuf::from(ok(gpg("gpgconf").args(["--list-dirs", "agent-ssh-socket"])).trim());
+    let line = ok(Command::new("ssh-add")
+        .arg("-L")
+        .env("SSH_AUTH_SOCK", &sock));
+    assert_eq!(line.lines().count(), 1, "{line}");
+    assert!(line.starts_with("ecdsa-sha2-nistp256 "), "{line}");
+    fs::write(env.pubkey("gpg"), &line).unwrap();
+    let gpg_fp = fingerprint(&env.pubkey("gpg"));
+    // Both sshds accept the gpg key on every port (authorized_keys files are
+    // read at authentication time).
+    for ak in ["ak_login", "ak_hop"] {
+        let mut keys = fs::read_to_string(d.join(ak)).unwrap();
+        keys.push_str(&line);
+        fs::write(d.join(ak), keys).unwrap();
+    }
+
+    let hop = |port: u16, tag: &str| {
+        format!(
+            "ssh {} 127.0.0.1 echo {tag} 2>/dev/null; echo \"{tag} rc=$?\"\n",
+            env.ssh_opts(port, "gpg").join(" ")
+        )
+    };
+    fs::write(
+        d.join("remote.sh"),
+        format!(
+            "ssh-add -l; {}{}ssh-keygen -Y sign -n test -f {} {}/remote.sh >/dev/null 2>&1; echo \"SIGN rc=$?\"\n",
+            hop(env.dest_port, "GPG-ALLOWED"),
+            hop(env.hop_port, "GPG-OTHER"),
+            env.pubkey("gpg").display(),
+            d.display()
+        ),
+    )
+    .unwrap();
+    let o = Command::new(env!("CARGO_BIN_EXE_sigsieve"))
+        .env("SSH_AUTH_SOCK", &sock)
+        .env("TMPDIR", d.join("rt"))
+        .args(["connect", "127.0.0.1", "--upstream"])
+        .arg(&sock)
+        .args(["--allow-fingerprint", &gpg_fp])
+        .args(["--allow-destination", &env.dest_hostkey_fp, "--"])
+        .args(env.ssh_opts(env.login_port, "gpg"))
+        .arg(format!("sh {}/remote.sh", d.display()))
+        .output()
+        .unwrap();
+    let out = String::from_utf8_lossy(&o.stdout).into_owned();
+    let err = String::from_utf8_lossy(&o.stderr).into_owned();
+    assert!(o.status.success(), "stdout:\n{out}\nstderr:\n{err}");
+    assert!(out.contains(&gpg_fp), "{out}");
+    assert_eq!(marker(&out, "GPG-ALLOWED"), "0", "{out}\n{err}");
+    assert!(out.contains("\nGPG-ALLOWED\n"), "{out}");
+    assert_ne!(marker(&out, "GPG-OTHER"), "0", "{out}\n{err}");
+    assert_ne!(marker(&out, "SIGN"), "0", "{out}\n{err}");
+    assert!(
+        err.contains(&format!(
+            "destination host key {} is not an allowed destination",
+            env.hostkey_fp
+        )),
+        "{err}"
+    );
+}

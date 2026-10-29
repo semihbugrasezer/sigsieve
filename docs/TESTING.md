@@ -13,8 +13,8 @@ ports, configured from a temporary directory.
 | Property | proptest in `src/*`, `tests/proxy.rs` | parsers never panic; arbitrary requests fail closed; arbitrary bind bodies never bind; arbitrary sign data never authorized; hostile client sequences (upstream only ever sees authorized traffic) |
 | Mock-agent integration | `tests/proxy.rs`, `tests/socket.rs`, `tests/resources.rs` | hostile downstream client vs. SigSieve vs. mock agent with hostile modes (failure, garbage, hang, drop, oversized, wrong type); socket security; failure injection (agent restart, no retries, ~3200 short-lived connections, fd leak check, byte-by-byte frames, eviction) |
 | CLI | `tests/cli.rs` | the real binary: config errors, signals and cleanup, doctor/status output privacy, `connect` with fake ssh (argument plan, refusal cases, crash and SIGTERM cleanup, dry run) |
-| Real OpenSSH tools | `tests/openssh.rs` | real `ssh-agent`, `ssh-add`, `ssh-keygen -Y sign`, constrained keys, real `ssh` config precedence |
-| Real OpenSSH E2E | `tests/e2e_sshd.rs` | `sigsieve connect` → `ssh` → throwaway `sshd`s: filtering, raw-protocol attackers in the remote session, second hop with `session-bind`, hidden-key hop refused, mutations, ControlMaster regression, destination binding (allowed host OK, other host refused, forged binds rejected) |
+| Real OpenSSH tools | `tests/openssh.rs` | real `ssh-agent`, `ssh-add`, `ssh-keygen -Y sign`, constrained keys, real `ssh` config precedence; throwaway `gpg-agent` as upstream (skipped without GnuPG) |
+| Real OpenSSH E2E | `tests/e2e_sshd.rs` | `sigsieve connect` → `ssh` → throwaway `sshd`s: filtering, raw-protocol attackers in the remote session, second hop with `session-bind`, hidden-key hop refused, mutations, ControlMaster regression, destination binding (allowed host OK, other host refused, forged binds rejected) and its [negative matrix](SSH_COMPATIBILITY.md#destination-binding-negative-matrix-real-openssh): plain `publickey` refused, RSA host key refused, allowed forwarding hop vs. other final host, two forwarding hops, `git commit -S`, gpg-agent upstream |
 | Fuzzing (stable) | `tests/fuzz_corpus.rs` + `fuzz/seeds` (read via the `tests/data/fuzz-seeds` symlink) | seed replay + bounded deterministic mutation through `src/fuzzing.rs` entry points |
 | Fuzzing (cargo-fuzz) | `fuzz/` | coverage-guided targets: `requests`, `session_bind`, `key_blob`, `upstream_reply` |
 | Benchmark | `tests/bench.rs` (ignored) | overhead vs. direct agent access |
@@ -67,6 +67,13 @@ E2E prerequisites: `ssh`, `sshd`, `ssh-agent`, `ssh-add`, `ssh-keygen`,
 `python3` (raw-protocol attackers), and the ability to run `sshd -t`
 unprivileged. Missing prerequisites → skip with a message, or failure with
 `SIGSIEVE_REQUIRE_SSHD=1` (set in CI).
+`git` is needed by the commit-signing E2E test (failure under
+`SIGSIEVE_REQUIRE_SSHD=1`). The two gpg-agent tests need `gpg`, `gpg-agent`
+and `gpgconf`; they skip without them unless `SIGSIEVE_REQUIRE_GPG_AGENT=1`.
+CI sets that variable and checks for `git`, `gpg`, `gpg-agent` and
+`gpgconf` up front, so a missing tool fails CI instead of skipping.
+They use a fresh GnuPG home in a temporary directory, never `~/.gnupg`, and
+stop its daemons when done.
 
 ### Coverage-guided fuzzing
 

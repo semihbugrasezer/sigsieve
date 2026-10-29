@@ -41,19 +41,31 @@ jobs:
     needs: verify-tag
     uses: ./.github/workflows/ci.yml
 
-  build:
+  # One job per target (F-42). Each is a one-entry matrix so the steps are
+  # shared, via a YAML anchor, with no edits. Separate jobs, not legs of one
+  # matrix: matrix legs share one set of job outputs, and a runner reports its
+  # own job's outputs, so a compromised runner of one leg could rewrite the
+  # other leg's artifact ID/digest/hash. needs.<job>.outputs of a separate
+  # job can only come from that job's runner. Only targets whose full CI
+  # (incl. real sshd) is part of the gate. `name:` is meant to keep the
+  # display names scripts/verify-release.sh checks (not yet seen in a run).
+  build-aarch64-apple-darwin:
+    name: build (${{ matrix.os }}, ${{ matrix.target }})
     needs: [verify-tag, ci]
     strategy:
       matrix:
         include:
-          # Only targets whose full CI (incl. real sshd) is part of the gate.
           - os: macos-latest
             target: aarch64-apple-darwin
-          - os: ubuntu-24.04
-            target: x86_64-unknown-linux-gnu
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
-    steps:
+    # Bind the uploaded artifact (ID and zip digest, as reported by
+    # upload-artifact) and the archive's own SHA-256 for the attest job.
+    outputs: &build-outputs
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+      artifact-digest: ${{ steps.upload.outputs.artifact-digest }}
+      archive-sha256: ${{ steps.archive.outputs.sha256 }}
+    steps: &build-steps
       # actions/checkout v7.0.1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -76,12 +88,32 @@ jobs:
           python3 scripts/package-release.py "$name"
           cd dist && shasum -a 256 "${name}.tar.gz" > "${name}.tar.gz.sha256"
           cat "${name}.tar.gz.sha256"
+      - name: Archive SHA-256 for the attest job
+        id: archive
+        run: |
+          name="sigsieve-${GITHUB_REF_NAME}-${{ matrix.target }}"
+          sha=$(shasum -a 256 "dist/${name}.tar.gz" | cut -d' ' -f1)
+          echo "sha256=${sha}" >> "$GITHUB_OUTPUT"
       # actions/upload-artifact v7.0.2
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      - id: upload
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: sigsieve-${{ matrix.target }}
           path: dist/
           if-no-files-found: error
+
+  build-x86_64-unknown-linux-gnu:
+    name: build (${{ matrix.os }}, ${{ matrix.target }})
+    needs: [verify-tag, ci]
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    outputs: *build-outputs
+    steps: *build-steps
 
   sbom:
     # Separate job: cargo-cyclonedx and its ~120 dependencies never run where
@@ -91,6 +123,9 @@ jobs:
     needs: [verify-tag, ci]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    outputs:
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+      artifact-digest: ${{ steps.upload.outputs.artifact-digest }}
     steps:
       # actions/checkout v7.0.1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -122,7 +157,8 @@ jobs:
             (cd dist && shasum -a 256 "${name}.cdx.json" > "${name}.cdx.json.sha256" && cat "${name}.cdx.json.sha256")
           done
       # actions/upload-artifact v7.0.2
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      - id: upload
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: sigsieve-sbom
           path: dist/
@@ -130,34 +166,146 @@ jobs:
 
   attest:
     # Kept apart from the build so no build step runs with an OIDC token.
-    needs: [build, sbom]
+    needs: [build-aarch64-apple-darwin, build-x86_64-unknown-linux-gnu, sbom]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
+      # Read-only: list this run's artifacts to check them against the
+      # producing jobs' outputs.
+      actions: read
       id-token: write
       attestations: write
+    # F-42: upload-artifact can replace an artifact of the same name, so any
+    # job holding the run's Actions runtime token could swap an archive and a
+    # self-consistent .sha256 before this job runs. Every input is therefore
+    # bound to the upload its producing job reported:
+    # - artifact ID, zip digest and (for archives) the archive's SHA-256 come
+    #   only from needs.<producing job>.outputs ("uploaded by the expected
+    #   job"; the artifacts API has no job field). Each build target is its
+    #   own job, so one runner cannot report another target's outputs.
+    # - the run's artifact list must hold exactly one artifact per expected
+    #   name, with that ID, digest and this run's ID ("same run").
+    # - downloads are by that single ID, without a token, i.e. from this run
+    #   only. download-artifact's own digest check compares with the
+    #   server's listing and is skipped when that is empty, so the zip is
+    #   downloaded undecompressed and hashed here against the producing
+    #   job's digest before it is unpacked.
+    # - after unpacking, each archive's SHA-256 must equal the build job's.
+    # A replaced artifact gets a new ID and digest, so any swap fails here.
+    env:
+      AARCH64_ID: ${{ needs.build-aarch64-apple-darwin.outputs.artifact-id }}
+      AARCH64_DIGEST: ${{ needs.build-aarch64-apple-darwin.outputs.artifact-digest }}
+      AARCH64_SHA256: ${{ needs.build-aarch64-apple-darwin.outputs.archive-sha256 }}
+      X86_64_ID: ${{ needs.build-x86_64-unknown-linux-gnu.outputs.artifact-id }}
+      X86_64_DIGEST: ${{ needs.build-x86_64-unknown-linux-gnu.outputs.artifact-digest }}
+      X86_64_SHA256: ${{ needs.build-x86_64-unknown-linux-gnu.outputs.archive-sha256 }}
+      SBOM_ID: ${{ needs.sbom.outputs.artifact-id }}
+      SBOM_DIGEST: ${{ needs.sbom.outputs.artifact-digest }}
     steps:
-      # Each artifact is downloaded by exact name into its own directory and
-      # must contain exactly its expected files, so the sbom job (which runs
-      # third-party tooling) cannot add or shadow an archive.
+      - name: Artifacts in this run are exactly the ones the producing jobs uploaded
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          fail() { echo "::error::$*"; exit 1; }
+          for v in AARCH64_ID X86_64_ID SBOM_ID; do
+            [[ ${!v} =~ ^[1-9][0-9]*$ ]] || fail "$v from the producing job is missing or malformed: '${!v}'"
+          done
+          for v in AARCH64_DIGEST X86_64_DIGEST SBOM_DIGEST AARCH64_SHA256 X86_64_SHA256; do
+            [[ ${!v} =~ ^[0-9a-f]{64}$ ]] || fail "$v from the producing job is missing or malformed: '${!v}'"
+          done
+          listing=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100" \
+            --jq '.artifacts[] | [.name, (.id | tostring), (.digest // ""), (.workflow_run.id | tostring), (.expired | tostring)] | join("\t")')
+          tab=$'\t'
+          bound() { # artifact name, ID and digest from its producing job
+            local n
+            n=$(printf '%s\n' "$listing" | awk -F '\t' -v n="$1" '$1 == n { c++ } END { print c + 0 }')
+            [ "$n" -eq 1 ] || fail "$1: $n artifacts of that name in this run, expected exactly 1"
+            printf '%s\n' "$listing" | grep -qxF "$1${tab}$2${tab}sha256:$3${tab}${GITHUB_RUN_ID}${tab}false" \
+              || fail "$1: the artifact in this run is not the one its producing job uploaded (ID $2, digest $3)"
+          }
+          bound sigsieve-aarch64-apple-darwin "$AARCH64_ID" "$AARCH64_DIGEST"
+          bound sigsieve-x86_64-unknown-linux-gnu "$X86_64_ID" "$X86_64_DIGEST"
+          bound sigsieve-sbom "$SBOM_ID" "$SBOM_DIGEST"
+      # One ID per download: with several IDs, download-artifact only warns
+      # about a missing one. Undecompressed, so the zip can be hashed first.
       # actions/download-artifact v8.0.2
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
-          name: sigsieve-aarch64-apple-darwin
-          path: in/aarch64-apple-darwin
+          artifact-ids: ${{ needs.build-aarch64-apple-darwin.outputs.artifact-id }}
+          path: zip/aarch64-apple-darwin
+          skip-decompress: true
+          digest-mismatch: error
       # actions/download-artifact v8.0.2
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
-          name: sigsieve-x86_64-unknown-linux-gnu
-          path: in/x86_64-unknown-linux-gnu
+          artifact-ids: ${{ needs.build-x86_64-unknown-linux-gnu.outputs.artifact-id }}
+          path: zip/x86_64-unknown-linux-gnu
+          skip-decompress: true
+          digest-mismatch: error
       # actions/download-artifact v8.0.2
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
-          name: sigsieve-sbom
-          path: in/sbom
+          artifact-ids: ${{ needs.sbom.outputs.artifact-id }}
+          path: zip/sbom
+          skip-decompress: true
+          digest-mismatch: error
+      # Each artifact is unpacked into its own directory and must contain
+      # exactly its expected files, so the sbom job (which runs third-party
+      # tooling) cannot add or shadow an archive.
       - name: Exactly the expected files per artifact, with matching checksums
         run: |
+          fail() { echo "::error::$*"; exit 1; }
+          # unpack DIR DIGEST NAME...: the one downloaded zip in zip/DIR must
+          # have the producing job's digest and hold exactly the named files,
+          # all regular, before anything is extracted into in/DIR (R-3).
+          unpack() {
+            local dir=$1 digest=$2 zip got
+            shift 2
+            zip=$(find "zip/$dir" -mindepth 1 -maxdepth 1 -type f)
+            [ "$(find "zip/$dir" -mindepth 1 -printf x)" = x ] && [ -n "$zip" ] \
+              || fail "zip/$dir: expected exactly one downloaded zip file"
+            got=$(shasum -a 256 "$zip" | cut -d' ' -f1)
+            [ "$got" = "$digest" ] || fail "$dir: downloaded zip digest $got != $digest from its producing job"
+            python3 -I - "$dir" "$zip" "$@" <<'EOF'
+          import stat, sys, zipfile
+          label, path, want = sys.argv[1], sys.argv[2], set(sys.argv[3:])
+          def bad(msg):
+              print(f"::error::{label}: {msg}")
+              sys.exit(1)
+          seen = set()
+          with zipfile.ZipFile(path) as z:
+              for i in z.infolist():
+                  n, mode = i.filename, i.external_attr >> 16
+                  if "\0" in i.orig_filename:
+                      bad(f"NUL in entry name {i.orig_filename!r}")
+                  if n.startswith("/"):
+                      bad(f"absolute path entry {n!r}")
+                  if ".." in n:
+                      bad(f"'..' in entry name {n!r}")
+                  if i.is_dir() or stat.S_ISDIR(mode):
+                      bad(f"directory entry {n!r}")
+                  if stat.S_ISLNK(mode):
+                      bad(f"symlink entry {n!r}")
+                  if not stat.S_ISREG(mode):
+                      bad(f"entry {n!r} is not a regular file (mode {mode:o})")
+                  if "/" in n or "\\" in n:
+                      bad(f"path separator in entry name {n!r}")
+                  if n in seen:
+                      bad(f"duplicate entry {n!r}")
+                  if n not in want:
+                      bad(f"unexpected entry {n!r}")
+                  seen.add(n)
+          if seen != want:
+              bad(f"missing entries {sorted(want - seen)}")
+          EOF
+            mkdir -p in && unzip -q "$zip" -d "in/$dir"
+          }
+          a="sigsieve-${GITHUB_REF_NAME}-aarch64-apple-darwin"
+          x="sigsieve-${GITHUB_REF_NAME}-x86_64-unknown-linux-gnu"
+          unpack aarch64-apple-darwin "$AARCH64_DIGEST" "$a.tar.gz" "$a.tar.gz.sha256"
+          unpack x86_64-unknown-linux-gnu "$X86_64_DIGEST" "$x.tar.gz" "$x.tar.gz.sha256"
+          unpack sbom "$SBOM_DIGEST" "$a.cdx.json" "$a.cdx.json.sha256" "$x.cdx.json" "$x.cdx.json.sha256"
           expect() { # dir, expected file names
             local dir=$1; shift
             got=$(cd "$dir" && find . -mindepth 1 -printf '%P\n' | LC_ALL=C sort)
@@ -171,6 +319,13 @@ jobs:
             sboms+=("$n.cdx.json" "$n.cdx.json.sha256")
           done
           expect in/sbom "${sboms[@]}"
+          # The archive itself, not only its (replaceable) .sha256 sidecar,
+          # must match the hash its build job computed.
+          for t in aarch64-apple-darwin:"$AARCH64_SHA256" x86_64-unknown-linux-gnu:"$X86_64_SHA256"; do
+            n="sigsieve-${GITHUB_REF_NAME}-${t%%:*}"
+            got=$(shasum -a 256 "in/${t%%:*}/$n.tar.gz" | cut -d' ' -f1)
+            [ "$got" = "${t#*:}" ] || fail "$n.tar.gz: SHA-256 $got != ${t#*:} from its build job"
+          done
           mkdir dist
           cp in/aarch64-apple-darwin/* in/x86_64-unknown-linux-gnu/* in/sbom/* dist/
           cd dist
