@@ -1,0 +1,22 @@
+scripts/test-attest-inputs.sh
+  s_c68b92ee5f638d::t_1028161bed97d5 183-251
+  s_c68b92ee5f638d::t_22661217dbf54c 252
+.github/workflows/release.yml
+  s_c68b92ee5f638d::t_1b1ab700d5d717 259-267,269-302,304-308
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ff22e341340967d142f99af1aa956f50350d2001",
+  "prompts": {},
+  "sessions": {
+    "s_c68b92ee5f638d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a8909518-2df4-4dab-82d0-d7222a653bd4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <17555579+semihbugrasezer@users.noreply.github.com>"
+    }
+  }
+}
