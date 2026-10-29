@@ -1,0 +1,14 @@
+tests/proxy.rs
+  h_8a6a8e7c9aeea2 269
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7a1d577ca80b589cfc9a7d89d39c2e5393b1eaf9",
+  "prompts": {},
+  "humans": {
+    "h_8a6a8e7c9aeea2": {
+      "author": "Semih Buğra Sezer <17555579+semihbugrasezer@users.noreply.github.com>"
+    }
+  }
+}
