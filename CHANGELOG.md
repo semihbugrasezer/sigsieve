@@ -4,6 +4,18 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Packaging
+
+- Restrict the crates.io package to an `include` allowlist (sources, tests,
+  docs, examples, lockfile, README, CHANGELOG, SECURITY, LICENSE); CI
+  workflows, release scripts, `deny.toml` and `rust-toolchain.toml` are no
+  longer shipped. Nothing has been published.
+- Ship the fuzz seed corpus in the package through a `tests/data/fuzz-seeds`
+  symlink to `fuzz/seeds` (single copy, contents unchanged) and add
+  `scripts/check-crate-package.sh` to test the unpacked `.crate`.
+- Declare `rust-version = "1.88"`, the floor set by dependencies; it is not
+  built on a 1.88 toolchain in CI.
+
 ### Documentation
 
 - Reconcile Secretive, fuzzing and published-build evidence with the exact
