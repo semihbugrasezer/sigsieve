@@ -1,0 +1,31 @@
+CHANGELOG.md
+  s_c68b92ee5f638d::t_808cb7a0d54db0 68-77
+docs/IMPLEMENTATION_CHECKLIST.md
+  s_c68b92ee5f638d::t_f06cc9fced7b47 33-34,41
+docs/SSH_COMPATIBILITY.md
+  s_c68b92ee5f638d::t_671764d5cd12bc 54,58,62-98,159
+docs/TESTING.md
+  s_c68b92ee5f638d::t_30afd0349f4f13 16-17,70-74
+tests/e2e_sshd.rs
+  s_c68b92ee5f638d::t_cef3360d3fe9c6 817-1151
+tests/openssh.rs
+  s_c68b92ee5f638d::t_df7339b6fd7035 765-948
+tests/proxy.rs
+  s_c68b92ee5f638d::t_2b8905355040c5 1002-1031
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3838dbe3ae1a198af8e5faad7908ec9bb723fe11",
+  "prompts": {},
+  "sessions": {
+    "s_c68b92ee5f638d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a8909518-2df4-4dab-82d0-d7222a653bd4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <17555579+semihbugrasezer@users.noreply.github.com>"
+    }
+  }
+}
