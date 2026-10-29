@@ -160,6 +160,13 @@ is pinned to commit `fc7484be0371242f517b6628b0f7dcc3a9a12a29`
   no unexpected Touch ID requests during forbidden steps. This is one
   device/configuration and not an independent external audit.
 
+The device check used one real P-256 key and two localhost SSH servers.
+Secretive version and full per-operation prompt counts were not recorded;
+other devices, versions, 1Password, physical FIDO keys and external production
+services remain unverified. See the [device record](SECRETIVE_INTEGRATION.md#recorded-real-device-results).
+The [external validation protocol](EXTERNAL_VALIDATION.md) tracks the still
+outstanding expert review and three-user trial separately from these results.
+
 | Target | Executions | Final `cov / ft` | Final corpus | New units | Result |
 |---|---:|---|---:|---:|---|
 | `requests` | 13,375,674 | 1,712 / 7,600 | 698 | 3,419 | no crash reported |

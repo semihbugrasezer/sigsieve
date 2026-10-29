@@ -4,6 +4,12 @@ Two parts: how SigSieve speaks the **agent protocol**, and how
 `sigsieve connect` interprets **ssh client configuration**. Every rule below
 is enforced in code; "tested" refers to tests in this repository.
 
+Release evidence is pinned to `v0.1.0-alpha.2`, source commit
+`fc7484be0371242f517b6628b0f7dcc3a9a12a29`. See the
+[exact-revision record](TESTING.md#release-candidate-evidence-2026-10-28);
+automated protocol tests and owner-assisted device observations have different
+scopes and do not establish compatibility with other agents or services.
+
 References: [RFC 9987](https://www.rfc-editor.org/rfc/rfc9987),
 [OpenSSH PROTOCOL.agent](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.agent),
 [agent-restrict](https://www.openssh.org/agent-restrict.html).
@@ -36,7 +42,7 @@ after 300 s.
 | Algorithm | Validation | Status |
 |---|---|---|
 | `ssh-ed25519` | 32-byte key | tested, incl. real `ssh-agent` |
-| `ecdsa-sha2-nistp256/384/521` | curve name matches, uncompressed point (65/97/133 bytes) | P-256 tested incl. real `ssh-agent`; with Secretive (P-256) only listing and hidden-key refusal are recorded; 384/521 unit-tested |
+| `ecdsa-sha2-nistp256/384/521` | curve name matches, uncompressed point (65/97/133 bytes) | P-256 tested incl. real `ssh-agent`; one owner-assisted Secretive P-256 test recorded signing and destination binding (9/9 checks, two localhost SSH servers); [device scope and gaps](SECRETIVE_INTEGRATION.md#recorded-real-device-results). P-384/521 identities unit-tested |
 | `ssh-rsa` | canonical mpints; `e` odd, > 1; `n` odd, 1024–16384 bits; signs only with `rsa-sha2-256`/`-512`, SHA-1 refused | tested with real `ssh-keygen -Y sign` and `ssh-keygen -s -U -t` (SHA-2 works, `ssh-rsa` refused) |
 | `sk-ssh-ed25519@openssh.com`, `sk-ecdsa-sha2-nistp256@openssh.com` | structural | **untested with hardware** |
 | `*-cert-v01@openssh.com` | unsupported | hidden, cannot sign |
@@ -45,7 +51,7 @@ after 300 s.
 
 | Item | Behaviour |
 |---|---|
-| Binding host keys | Ed25519, ECDSA P-256/384/521 verified (real OpenSSH: Ed25519 and P-256 E2E). RSA and certificate host keys: bind fails → restricted signing refused. Use `-o HostKeyAlgorithms=ssh-ed25519,ecdsa-sha2-nistp256` if a server offers RSA first |
+| Binding host keys | Ed25519, ECDSA P-256/384/521 verified with real OpenSSH E2E tests (`destination_binding_end_to_end`, `destination_binding_with_p384_and_p521_host_keys`). RSA and certificate host keys: bind fails → restricted signing refused. Use `-o HostKeyAlgorithms=ssh-ed25519,ecdsa-sha2-nistp256` if a server offers RSA first |
 | Session id | ≤ 128 bytes; duplicate (same id + key) accepted once; same id with another key refused |
 | Bindings per connection | ≤ 16; none after an authentication binding |
 | Failed initial binding | terminal for that connection: subsequent binds and restricted signing are refused, even if a remote peer offers a valid binding |

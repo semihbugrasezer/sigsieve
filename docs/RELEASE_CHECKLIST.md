@@ -47,6 +47,9 @@ These remain explicit limitations of the alpha, not passing tests:
   exact SHA; a successful campaign is not an audit.
 - See [LIMITATIONS.md](LIMITATIONS.md) for availability limits, supported
   host-key types, trust in the local client/configuration, and allowed-key misuse.
+- Record external expert findings and three real-user trials using the
+  [external validation protocol](EXTERNAL_VALIDATION.md). Preparation and
+  internal AI-assisted review do not complete those checks.
 
 ## Publication procedure
 

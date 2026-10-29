@@ -152,14 +152,16 @@ CLI options, common errors and returning to ordinary SSH, follow the
 
 These are distinct kinds of evidence, not security certifications. Test
 results apply to the revision exercised; a green older run does not validate
-a new candidate.
+a new candidate. The released `v0.1.0-alpha.2` evidence below is for
+`fc7484be0371242f517b6628b0f7dcc3a9a12a29`; see the
+[release evidence record](docs/TESTING.md#release-candidate-evidence-2026-10-28).
 
 | Evidence | Current scope |
 |---|---|
 | Code review | Internal AI-assisted reviews in separate contexts; [findings and residual risks](docs/FINDINGS.md). No independent external audit. |
 | Automated tests | Parsers, policy, adversarial agents, lifecycle and resource limits; [test layers and historical results](docs/TESTING.md). |
 | Real OpenSSH | Real `ssh-agent`, `ssh` and throwaway `sshd` tests in CI on macOS arm64 and Linux x86_64/aarch64; inspect [CI for your exact commit](https://github.com/semihbugrasezer/sigsieve/actions/workflows/ci.yml). |
-| Real Secretive (ECDSA P-256) | Owner-assisted release-candidate test: allowed signing, verified hostbound login, forbidden-destination and generic signing refusal (9/9 checks); no unexpected Touch ID prompt during forbidden steps. Limited to one configuration. [Recorded results](docs/SECRETIVE_INTEGRATION.md#recorded-real-device-results). |
+| Real Secretive (ECDSA P-256) | Owner-assisted test with one real key and two localhost SSH servers: allowed signing, verified hostbound login, forbidden-destination and generic signing refusal (9/9 checks). No unexpected Touch ID prompt reported during the two forbidden steps; full prompt counts and Secretive version were not recorded. [Recorded results and limits](docs/SECRETIVE_INTEGRATION.md#recorded-real-device-results). |
 | Git hosts | 2026-10-27 advertisement measurements: GitHub advertises hostbound authentication (end-to-end unverified); GitLab.com and Bitbucket Cloud do not. [Measurements and caveats](docs/SSH_COMPATIBILITY.md#git-hosting-services). |
 | Fuzzing | [Four-target, one-hour-per-target campaign](https://github.com/semihbugrasezer/sigsieve/actions/runs/40730071966) completed for release commit `fc7484b` (312,653,669 reported executions, no crash/sanitizer failure); not evidence of the absence of vulnerabilities. [Testing details](docs/TESTING.md). |
 | Other integrations | 1Password and physical FIDO keys untested; SSH identity certificates unsupported. [Key types and protocol matrix](docs/SSH_COMPATIBILITY.md). |
@@ -172,7 +174,8 @@ a new candidate.
   [Secretive](docs/SECRETIVE_INTEGRATION.md), [example ssh_config](examples/ssh_config).
 - **Evaluate it:** [threat model](docs/THREAT_MODEL.md),
   [security model and test evidence](docs/SECURITY_MODEL.md),
-  [limitations](docs/LIMITATIONS.md), [resource limits](docs/RESOURCE_LIMITS.md).
+  [limitations](docs/LIMITATIONS.md), [resource limits](docs/RESOURCE_LIMITS.md),
+  [external review and user-trial protocol](docs/EXTERNAL_VALIDATION.md).
 - **Understand it:** [architecture](docs/ARCHITECTURE.md),
   [protocol references](docs/REFERENCES.md).
 - **Contribute:** [setup and first contributions](CONTRIBUTING.md),

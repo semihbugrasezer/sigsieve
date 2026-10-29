@@ -9,6 +9,14 @@ on release commit `fc7484b`; this does not guarantee every Secretive
 configuration.
 See the [recorded results](#recorded-real-device-results).
 
+The released `v0.1.0-alpha.2` source is
+`fc7484be0371242f517b6628b0f7dcc3a9a12a29`; its
+[release evidence](TESTING.md#release-candidate-evidence-2026-10-28) is separate
+from the earlier 2026-10-24 observations below. The release-device record
+covers one real P-256 key and two localhost SSH servers. Secretive version
+and full per-operation prompt counts were not recorded; other devices,
+versions and external services remain unverified.
+
 For installation and a first session, start with the
 [usage guide](USAGE.md). The procedure below is a device verification check,
 not a record that every step has passed.

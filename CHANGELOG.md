@@ -4,6 +4,13 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Documentation
+
+- Reconcile Secretive, fuzzing and published-build evidence with the exact
+  `v0.1.0-alpha.2` release revision; retain device and prompt-observation limits.
+- Add an external expert review and three-user trial protocol with results
+  explicitly pending; no executable behaviour changes.
+
 ## [0.1.0-alpha.2] - 2026-10-28 (experimental pre-release)
 
 ### Fixed
@@ -16,12 +23,17 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ### Validation
 
-- Recorded a coverage-guided fuzz campaign: 3,600 s for each of the four
-  targets on commit `103e9f9` (255,532,162 executions in total), with no
-  crash reported.
-- A tag-free release rehearsal passed on macOS arm64 and Linux x86_64 for
-  commit `103e9f9`. A real tag build and its provenance attestation are still
-  to be verified.
+- Release source `fc7484be0371242f517b6628b0f7dcc3a9a12a29` passed exact-SHA
+  CI, a tag-free release rehearsal and a four-target coverage-guided fuzz
+  campaign (3,600 s per target, 312,653,669 reported executions, no reported
+  crash or sanitizer failure).
+- The published tag build, provenance checks and native macOS arm64/Linux
+  x86_64 release verification passed. One owner-assisted Secretive P-256
+  check passed 9/9 against two localhost servers; other configurations and
+  full Touch ID prompt counts remain unverified.
+- These are recorded results, not an independent external audit. See the
+  [release evidence](docs/TESTING.md#release-candidate-evidence-2026-10-28);
+  earlier campaigns remain documented as historical evidence.
 
 ### Changed
 

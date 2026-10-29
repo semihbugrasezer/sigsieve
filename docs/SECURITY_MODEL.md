@@ -18,6 +18,12 @@ evidence categories. See [TESTING.md](TESTING.md) for run provenance and
 [SECRETIVE_INTEGRATION.md](SECRETIVE_INTEGRATION.md#recorded-real-device-results)
 for the limited device record.
 
+The released `v0.1.0-alpha.2` evidence is pinned to
+`fc7484be0371242f517b6628b0f7dcc3a9a12a29`. The
+[release record](TESTING.md#release-candidate-evidence-2026-10-28) identifies
+its CI, fuzzing, distribution and owner-assisted device checks. These results
+do not validate later executable revisions or untested devices/services.
+
 ## Two modes
 
 | | Identity filtering (default) | Destination binding (`--allow-destination`) |
@@ -31,8 +37,10 @@ for the limited device record.
 
 Destination binding is enforced **inside SigSieve**; the upstream agent does
 not need to implement destination constraints. This is intended to support
-agents such as Secretive, but real Secretive signing and destination binding
-remain unverified. SigSieve uses OpenSSH's session-binding and hostbound
+agents such as Secretive. One owner-assisted Secretive P-256 signing and
+destination-binding test passed on the released revision with two localhost
+SSH servers; other configurations and external services remain unverified.
+SigSieve uses OpenSSH's session-binding and hostbound
 authentication protocols with its own final-host-key policy; it does not
 implement OpenSSH's path or username constraints. Protocol references:
 [PROTOCOL.agent](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.agent)
@@ -97,8 +105,8 @@ with stated gaps; **N/A** = not a SigSieve property.
 | # | Invariant | Status | Evidence |
 |---|---|---|---|
 | 16 | Denied requests are not forwarded upstream | Tested (E2E) | mock-agent receive logs in every denial test; `upstream_only_sees_authorized_traffic` |
-| 17 | Policy-denied requests do not reach Secretive to request Touch ID | Derived from tested upstream isolation; device observation pending | follows from 16. A real Secretive run on 2026-10-24 refused raw hidden-key sign requests; whether any prompt appeared has not yet been confirmed by the device owner |
-| 18 | Legitimate local Secretive login keeps working | Tested (E2E) + real check | login-port test authorizes only a hidden key, so login must use the unfiltered login agent; real user-assisted run against a CI host passed |
+| 17 | Policy-denied requests do not reach Secretive to request Touch ID | Tested upstream isolation; limited owner observation | follows from 16. On `fc7484b`, the owner reported no unexpected prompts during forbidden-destination and generic-signing steps. Full prompt counts and Secretive version were not recorded; this is not a per-signature user-presence guarantee. [Device record](SECRETIVE_INTEGRATION.md#recorded-real-device-results) |
+| 18 | Legitimate local Secretive login keeps working | Tested (E2E); historical owner check | login-port test authorizes only a hidden key, so login must use the unfiltered login agent. The owner-assisted CI-host login was recorded on 2026-10-24, not as an exact-release device test. [Device record](SECRETIVE_INTEGRATION.md#recorded-real-device-results) |
 | 19 | No private key material is exported, persisted or copied | By construction | SigSieve has no code path that requests or handles private keys; the protocol messages that carry them (types 17/25) are rejected |
 | 20 | Proxy logs omit request payloads and bound detailed output | Tested / Partial | `hostile_requests_produce_bounded_logs_without_payloads`; at most 16 detail lines/s per process plus suppression summaries. No signed data, session IDs, signatures or untrusted extension names; denial reasons and requester-supplied public fingerprints may appear. A blocked stderr can still stall a thread; see [LIMITATIONS.md](LIMITATIONS.md) |
 
