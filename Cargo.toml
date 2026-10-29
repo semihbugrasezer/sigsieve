@@ -2,12 +2,30 @@
 name = "sigsieve"
 version = "0.1.0-alpha.2"
 edition = "2021"
+# Floor set by dependencies (sha2 0.11, proptest 1.12 declare 1.88) and
+# clippy's incompatible_msrv lint; not built on a 1.88 toolchain in CI.
+rust-version = "1.88"
 description = "SSH agent filtering proxy: expose only the identities you trust."
 license = "MIT"
 repository = "https://github.com/semihbugrasezer/sigsieve"
 readme = "README.md"
 keywords = ["ssh", "ssh-agent", "security", "agent-forwarding"]
 categories = ["command-line-utilities", "cryptography"]
+# Allowlist for the published .crate (checked by scripts/check-crate-package.sh).
+# fuzz/ is a separate package and never shipped; its seeds reach the crate
+# through the tests/data/fuzz-seeds symlink, which cargo dereferences.
+include = [
+    "/src/**",
+    "/tests/**",
+    "/docs/**",
+    "/examples/**",
+    "/Cargo.toml",
+    "/Cargo.lock",
+    "/README.md",
+    "/CHANGELOG.md",
+    "/SECURITY.md",
+    "/LICENSE",
+]
 
 [dependencies]
 base64 = "0.23"

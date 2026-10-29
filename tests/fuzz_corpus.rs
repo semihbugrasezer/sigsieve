@@ -1,4 +1,5 @@
-//! Stable-toolchain fuzzing: replays the committed seeds (fuzz/seeds) through the
+//! Stable-toolchain fuzzing: replays the committed seeds (fuzz/seeds, read via
+//! the tests/data/fuzz-seeds symlink so they ship in the .crate) through the
 //! same entry points as `fuzz/` and runs a bounded, deterministic mutation
 //! loop over them. This is not coverage-guided; coverage-guided fuzzing
 //! needs nightly + cargo-fuzz (see docs/TESTING.md).
@@ -67,7 +68,7 @@ fn mutate(rng: &mut Rng, seed: &[u8]) -> Vec<u8> {
 
 fn seeds(target: &str) -> Vec<Vec<u8>> {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("fuzz/seeds")
+        .join("tests/data/fuzz-seeds")
         .join(target);
     let mut v: Vec<_> = fs::read_dir(&dir)
         .unwrap_or_else(|e| panic!("missing corpus {}: {e}", dir.display()))

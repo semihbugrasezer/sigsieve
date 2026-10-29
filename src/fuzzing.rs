@@ -110,7 +110,7 @@ pub fn upstream_reply(data: &[u8]) {
 mod tests {
     #[test]
     fn committed_sequence_reaches_successful_authorization() {
-        let seed = include_bytes!("../fuzz/seeds/session_bind/sequence");
+        let seed = include_bytes!("../tests/data/fuzz-seeds/session_bind/sequence");
         assert_eq!(super::bound_authorization(seed), Some(Ok(())));
         super::session_bind(seed);
     }
