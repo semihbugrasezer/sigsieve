@@ -999,3 +999,33 @@ mod failure_injection {
         assert!(is_sign_response(&r));
     }
 }
+
+/// An upstream that announces a complete, valid sign response but closes the
+/// connection before its last four bytes (all zero) arrive. Zero-filling the
+/// missing tail would yield a well-formed signature, so this fails only if a
+/// truncated upstream frame is ever treated as complete.
+#[test]
+fn truncated_upstream_sign_response_fails_closed() {
+    let dir = private_tempdir();
+    let path = dir.path().join("trunc.sock");
+    let listener = std::os::unix::net::UnixListener::bind(&path).unwrap();
+    let mut sig = Vec::new();
+    put_string(&mut sig, b"ecdsa-sha2-nistp256");
+    put_string(&mut sig, b"sig\0\0\0\0");
+    let mut reply = vec![protocol::SSH_AGENT_SIGN_RESPONSE];
+    put_string(&mut reply, &sig);
+    let server = thread::spawn(move || {
+        let (mut s, _) = listener.accept().unwrap();
+        let t = Duration::from_secs(5);
+        protocol::read_frame(&mut s, t, t).unwrap().unwrap();
+        let mut out = (reply.len() as u32).to_be_bytes().to_vec();
+        out.extend_from_slice(&reply[..reply.len() - 4]);
+        s.write_all(&out).unwrap();
+    });
+    let p = start_proxy(&path, &[ECDSA_CI_FP]);
+    assert_eq!(
+        request(&p.path, &sign_request(&blob(ECDSA_CI), b"x", 0)),
+        FAILURE
+    );
+    server.join().unwrap();
+}

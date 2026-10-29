@@ -762,3 +762,187 @@ fn connect_verifies_every_proxy_hop() {
         assert!(text.contains("all checks passed"), "{name}: {text}");
     }
 }
+
+/// A throwaway GnuPG agent with SSH support, confined to its own home
+/// directory (never `~/.gnupg`). Dropping it stops every GnuPG daemon of
+/// that home before the directory is removed.
+struct GpgAgent {
+    home: tempfile::TempDir,
+}
+
+impl Drop for GpgAgent {
+    fn drop(&mut self) {
+        let _ = Command::new("gpgconf")
+            .env("GNUPGHOME", self.home.path())
+            .arg("--homedir")
+            .arg(self.home.path())
+            .args(["--kill", "all"])
+            .output();
+    }
+}
+
+impl GpgAgent {
+    fn cmd(&self, program: &str) -> Command {
+        let mut c = Command::new(program);
+        c.env("GNUPGHOME", self.home.path())
+            .arg("--homedir")
+            .arg(self.home.path());
+        c
+    }
+}
+
+/// gpg-agent (`enable-ssh-support`) as the upstream agent: unprotected
+/// synthetic Ed25519, ECDSA P-256 and RSA authentication keys. Skipped when
+/// GnuPG is not installed, unless `SIGSIEVE_REQUIRE_GPG_AGENT=1`.
+#[test]
+fn gpg_agent_upstream_filtering_signing_and_mutations() {
+    if !["gpg", "gpg-agent", "gpgconf", "ssh-add", "ssh-keygen"]
+        .iter()
+        .all(|c| have(c))
+    {
+        if std::env::var_os("SIGSIEVE_REQUIRE_GPG_AGENT").is_some_and(|v| v == "1") {
+            panic!("GnuPG tools required for the gpg-agent test");
+        }
+        eprintln!("skipping gpg-agent test: GnuPG tools not installed");
+        return;
+    }
+    let gpg = GpgAgent {
+        home: private_tempdir(),
+    };
+    let h = gpg.home.path();
+    fs::write(h.join("gpg-agent.conf"), "enable-ssh-support\n").unwrap();
+    // The daemon keeps inherited pipes open, so do not capture its output.
+    let started = gpg
+        .cmd("gpg-agent")
+        .arg("--daemon")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .unwrap();
+    assert!(started.success(), "gpg-agent did not start");
+    let quiet = ["--batch", "--pinentry-mode", "loopback", "--passphrase", ""];
+    ok(gpg.cmd("gpg").args(quiet).args([
+        "--quick-gen-key",
+        "sigsieve test",
+        "ed25519",
+        "auth",
+        "never",
+    ]));
+    let colons = ok(gpg.cmd("gpg").args(["--list-keys", "--with-colons"]));
+    let fpr = colons
+        .lines()
+        .find_map(|l| l.strip_prefix("fpr:::::::::"))
+        .unwrap()
+        .trim_end_matches(':')
+        .to_string();
+    for algo in ["nistp256", "rsa2048"] {
+        ok(gpg
+            .cmd("gpg")
+            .args(quiet)
+            .args(["--quick-add-key", &fpr, algo, "auth", "never"]));
+    }
+    let grips: String = ok(gpg
+        .cmd("gpg")
+        .args(["--list-keys", "--with-keygrip", "--with-colons"]))
+    .lines()
+    .filter_map(|l| l.strip_prefix("grp:::::::::"))
+    .map(|g| format!("{}\n", g.trim_end_matches(':')))
+    .collect();
+    fs::write(h.join("sshcontrol"), grips).unwrap();
+    let sock =
+        PathBuf::from(ok(gpg.cmd("gpgconf").args(["--list-dirs", "agent-ssh-socket"])).trim());
+
+    // Public keys as gpg-agent presents them over the SSH agent protocol.
+    let listing = ok(Command::new("ssh-add")
+        .arg("-L")
+        .env("SSH_AUTH_SOCK", &sock));
+    let pubdir = h.join("p");
+    fs::create_dir(&pubdir).unwrap();
+    let pubkey = |prefix: &str, name: &str| -> PathBuf {
+        let line = listing
+            .lines()
+            .find(|l| l.starts_with(prefix))
+            .unwrap_or_else(|| panic!("{prefix} missing from gpg-agent:\n{listing}"));
+        let p = pubdir.join(format!("{name}.pub"));
+        fs::write(&p, format!("{line}\n")).unwrap();
+        p
+    };
+    let (ed, ec, rsa) = (
+        pubkey("ssh-ed25519 ", "ed"),
+        pubkey("ecdsa-sha2-nistp256 ", "ec"),
+        pubkey("ssh-rsa ", "rsa"),
+    );
+    let (ed_fp, ec_fp, rsa_fp) = (fingerprint(&ed), fingerprint(&ec), fingerprint(&rsa));
+    let p = start_proxy(&sock, &[&ec_fp, &rsa_fp]);
+    let via = |c: &mut Command| -> Output { run(c.env("SSH_AUTH_SOCK", &p.path)) };
+
+    // Listing: only the two allowlisted keys.
+    let o = via(Command::new("ssh-add").arg("-l"));
+    let shown = String::from_utf8_lossy(&o.stdout).into_owned();
+    assert!(o.status.success(), "{o:?}");
+    assert_eq!(shown.lines().count(), 2, "{shown}");
+    assert!(shown.contains(&ec_fp) && shown.contains(&rsa_fp) && !shown.contains(&ed_fp));
+
+    // SSHSIG signing: allowlisted keys sign and verify, the hidden key fails.
+    let msg = h.join("msg");
+    fs::write(&msg, b"sigsieve gpg-agent test").unwrap();
+    let sig = msg.with_extension("sig");
+    for (key, allowed) in [(&ec, true), (&rsa, true), (&ed, false)] {
+        let _ = fs::remove_file(&sig);
+        let o = via(Command::new("ssh-keygen")
+            .args(["-Y", "sign", "-n", "test", "-f"])
+            .arg(key)
+            .arg(&msg));
+        assert_eq!(o.status.success(), allowed, "{key:?}: {o:?}");
+        if allowed {
+            let check = Command::new("ssh-keygen")
+                .args(["-Y", "check-novalidate", "-n", "test", "-f"])
+                .arg(key)
+                .arg("-s")
+                .arg(&sig)
+                .stdin(fs::File::open(&msg).unwrap())
+                .output()
+                .unwrap();
+            assert!(check.status.success(), "{key:?}: {check:?}");
+        } else {
+            assert!(!sig.exists());
+        }
+    }
+
+    // RSA hash selection: gpg-agent honours the SHA-2 flags; SHA-1 is
+    // refused by SigSieve.
+    let user = h.join("user");
+    ok(Command::new("ssh-keygen")
+        .args(["-q", "-N", "", "-t", "ed25519", "-f"])
+        .arg(&user));
+    let cert = h.join("user-cert.pub");
+    for (alg, expect) in [
+        ("rsa-sha2-256", true),
+        ("rsa-sha2-512", true),
+        ("ssh-rsa", false),
+    ] {
+        let _ = fs::remove_file(&cert);
+        let o = via(Command::new("ssh-keygen")
+            .args(["-q", "-U", "-s"])
+            .arg(&rsa)
+            .args(["-t", alg, "-I", "sigsieve-test", "-n", "test"])
+            .arg(user.with_extension("pub")));
+        assert_eq!(o.status.success(), expect, "{alg}: {o:?}");
+        if expect {
+            let shown = ok(Command::new("ssh-keygen").arg("-Lf").arg(&cert));
+            assert!(shown.contains(&format!("(using {alg})")), "{shown}");
+        } else {
+            assert!(!cert.exists(), "{alg}");
+        }
+    }
+
+    // Mutations fail; gpg-agent still holds all three keys.
+    assert!(!via(Command::new("ssh-add").arg("-D")).status.success());
+    assert!(!via(Command::new("ssh-add").arg("-d").arg(&ec))
+        .status
+        .success());
+    let after = ok(Command::new("ssh-add")
+        .arg("-l")
+        .env("SSH_AUTH_SOCK", &sock));
+    assert_eq!(after.lines().count(), 3, "{after}");
+}
