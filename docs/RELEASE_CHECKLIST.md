@@ -16,6 +16,9 @@ SSH host-key verification and recovery access.
   A run on an earlier commit is not acceptance evidence.
 - Scan the publication snapshot for credentials, private keys, personal
   infrastructure references, build outputs and unintended author metadata.
+  The CI `secret-scan` job (pinned gitleaks, history reachable from HEAD plus
+  the tree) is defense in depth next to GitHub secret scanning and push
+  protection. It does not replace that review.
 - The MIT license, third-party notices, protocol references, supported
   platforms and untested integrations are accurate in the published snapshot.
 - GitHub private vulnerability reporting is enabled and `SECURITY.md` links
@@ -59,10 +62,14 @@ These remain explicit limitations of the alpha, not passing tests:
    Run the **Release rehearsal** workflow on that commit: it builds both
    targets as `release.yml` does, checks that packaging is byte-identical
    twice, that the binary embeds no runner paths and the archive contents,
+   that the CycloneDX SBOM sidecar is byte-identical when generated twice
+   and lists every dependency cargo resolves for the target,
    and smoke-tests the extracted binary with `doctor` against a real
    `ssh-agent`. It creates no tag, release or attestation.
 3. Tag the accepted candidate. `release.yml` gates, builds deterministic
-   macOS arm64 and Linux x86_64 archives, creates checksums and records provenance.
+   macOS arm64 and Linux x86_64 archives, writes a CycloneDX SBOM sidecar
+   per archive (not inside it), creates checksums, records provenance for
+   archives and SBOMs, and adds an SBOM attestation for each archive.
 4. Verify the tag's release run with `scripts/verify-release.sh RUN_ID TAG`
    on macOS arm64, and with the **Verify release** workflow (same script,
    GitHub-hosted Ubuntu 24.04) for Linux x86_64. Each checks that the run is
@@ -70,8 +77,13 @@ These remain explicit limitations of the alpha, not passing tests:
    checksums, `gh attestation verify` bound to this repository, `release.yml`,
    the tag and its commit (self-hosted runners denied), the exact archive
    contents and binary type, and smoke-tests the extracted release binary
-   with `doctor`. Both must report `RESULT: PASS`; `INCOMPLETE` is not a pass.
-5. Create a GitHub pre-release and attach only those verified artifacts.
+   with `doctor`. For every tag after `v0.1.0-alpha.2` it also requires both
+   SBOMs and verifies their checksums, their provenance and the archives'
+   SBOM attestations; a missing SBOM fails. Both must report
+   `RESULT: PASS`; `INCOMPLETE` is not a pass.
+5. Create a GitHub pre-release and attach only those verified artifacts:
+   both archives, both SBOMs and all four `.sha256` files. Link
+   [VERIFY_OFFLINE.md](VERIFY_OFFLINE.md) in the release notes.
    Source installation must name the same immutable release tag.
 
 The workflow does not automatically publish a release. Never rewrite an
