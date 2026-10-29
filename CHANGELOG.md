@@ -19,6 +19,21 @@ The project follows [Semantic Versioning](https://semver.org/).
   notes for username/path constraints and platform support (proposals only).
 - Record the 2026-10-29 internal AI-assisted review of the alpha.2 source
   (no new actionable finding, five INFO observations); not an audit.
+- Document offline verification of checksums, provenance and SBOM
+  attestations (`docs/VERIFY_OFFLINE.md`).
+
+### Release engineering
+
+- CI runs a pinned, checksum-verified gitleaks 8.30.1 secret scan over the
+  history reachable from HEAD and the tree. It is defense in depth next to
+  GitHub secret scanning and push protection.
+- Release builds write a CycloneDX 1.5 SBOM sidecar per target with pinned
+  cargo-cyclonedx 0.5.9. The archives are unchanged. Each SBOM gets build
+  provenance, each archive gets a CycloneDX SBOM attestation, and
+  `scripts/verify-release.sh` requires and verifies these for future tags.
+  `v0.1.0-alpha.2` has no SBOM, and the script reports it as NOT_PRESENT.
+  The pull-request jobs (secret scan, rehearsal SBOM) ran on GitHub in
+  PR #30; the tag-only release path has not run yet.
 
 ### Tests
 

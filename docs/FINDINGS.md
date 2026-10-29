@@ -57,6 +57,7 @@ fix (where one exists).
 | F-31 | HIGH | Review of F-29/F-30: a relay's own `-F` was ignored for its nested hops; hop forwardings were not checked; quoting (`e'x'ec`) hid `Match exec`; X11 forwarding ran xauth with the login agent; unsafe `-F` paths reached ssh's ProxyJump shell command; concurrent stale-socket recovery could have two winners | Fixed (details below) |
 | F-40 | LOW (availability) | A slow downstream reader could keep a reply write going indefinitely: SO_SNDTIMEO restarts on every partial transfer | Fixed: nonblocking reply writes under one whole-reply deadline; red/green regression |
 | F-41 | LOW (diagnostic) | RSA binding self-test refused by algorithm policy instead of exercising destination enforcement | Fixed: valid RSA/SHA-2 probe; regression catches missing enforcement for RSA, ECDSA and Ed25519 |
+| F-42 | LOW (supply chain) | Release attest job selects artifacts by name; a compromised job holding the Actions runtime token could replace an artifact before attestation | **Open**: blocks the next tag ([RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)); manual `verify-release.sh` and native smoke test remain mandatory |
 
 
 ### Review scope
@@ -85,6 +86,29 @@ so they receive no F-number:
 | A-5 | `chmod` after `bind` follows symlinks | Out of scope (same-uid attacker, threat model scenario F) | Accepted |
 
 ## Details
+
+### F-42 — LOW — attest job trusts artifacts by name (open)
+
+Found by the internal review of the SBOM branch (suspected, not
+demonstrated). The release `attest` job downloads `sigsieve-<target>`
+artifacts by name. `actions/upload-artifact` can overwrite an artifact of
+the same name, so a job that obtained the workflow's Actions runtime token
+(for example a compromised build or SBOM tool on a hosted runner, which has
+passwordless sudo) could replace an archive and its checksum before the
+attest job runs. The attest job's exact-contents check would pass and build
+provenance would be recorded for the replaced file. Publishing stays manual,
+and the exploit needs a compromised tool and runner-token extraction.
+
+Until fixed, a successful attest job alone does not prove that an archive
+came from the build job. The maintainer's `scripts/verify-release.sh` run
+and native smoke test stay mandatory before publishing. Planned fix: pass
+each build leg's artifact ID or digest through matrix-safe job outputs and
+download or compare by ID/digest; verify with a release rehearsal.
+
+The same review found that merging every `sigsieve-*` artifact into one
+directory let the new SBOM job add or shadow an archive. That was fixed on
+the same branch before merge, by downloading each artifact into its own
+directory and checking its exact contents, so it has no separate entry.
 
 ### F-41 — LOW — RSA binding self-test gave false assurance
 
