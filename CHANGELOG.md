@@ -28,6 +28,12 @@ The project follows [Semantic Versioning](https://semver.org/).
   `scripts/verify-release.sh` requires and verifies these for future tags.
   `v0.1.0-alpha.2` has no SBOM, and the script reports it as NOT_PRESENT.
   These workflow changes have not yet run in GitHub Actions.
+- F-42: the release attest job no longer trusts artifacts by name. Each
+  build target is its own job; the attest job checks that the run holds
+  exactly the artifacts (ID and digest) the build and SBOM jobs reported,
+  downloads them by ID, hashes each zip before unpacking, and compares each
+  archive with the SHA-256 its build job computed. Tested with
+  `scripts/test-attest-inputs.sh`; not yet run in GitHub Actions.
 
 ## [0.1.0-alpha.2] - 2026-10-28 (experimental pre-release)
 

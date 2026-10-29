@@ -9,9 +9,14 @@ SSH host-key verification and recovery access.
 
 - No unresolved known CRITICAL/HIGH finding in the Core release scope;
   security fixes include regression evidence in [FINDINGS.md](FINDINGS.md).
-- F-42 is resolved before the next tag: the attest job must bind each
-  downloaded artifact to the job that uploaded it (artifact ID or digest).
-  Until then, a green attest job is not evidence of archive origin.
+- F-42: the attest job binds each downloaded artifact to the job that
+  uploaded it (artifact ID, zip digest, archive SHA-256). This is in the
+  workflow but has not run in GitHub Actions, and the release rehearsal does
+  not exercise it. Run `bash scripts/test-attest-inputs.sh` (needs GNU
+  find; `gfind` on macOS) on the candidate. For the first tag after the
+  fix, check in the release run's attest log that the binding step ran and
+  passed, and that its three downloads were by ID; until one release run
+  shows this, a green attest job is not evidence of archive origin.
 - On the exact candidate: format, clippy with warnings denied, debug and
   release tests with `SIGSIEVE_REQUIRE_SSHD=1`, and a release build pass.
 - Hosted CI passes on macOS and Linux, including real sshd tests, umask 0002,
