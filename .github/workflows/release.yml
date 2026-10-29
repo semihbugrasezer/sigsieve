@@ -256,18 +256,56 @@ jobs:
       - name: Exactly the expected files per artifact, with matching checksums
         run: |
           fail() { echo "::error::$*"; exit 1; }
-          unpack() { # artifact dir, expected zip digest
-            local zip got
-            zip=$(find "zip/$1" -mindepth 1 -maxdepth 1 -type f)
-            [ "$(find "zip/$1" -mindepth 1 -printf x)" = x ] && [ -n "$zip" ] \
-              || fail "zip/$1: expected exactly one downloaded zip file"
+          # unpack DIR DIGEST NAME...: the one downloaded zip in zip/DIR must
+          # have the producing job's digest and hold exactly the named files,
+          # all regular, before anything is extracted into in/DIR (R-3).
+          unpack() {
+            local dir=$1 digest=$2 zip got
+            shift 2
+            zip=$(find "zip/$dir" -mindepth 1 -maxdepth 1 -type f)
+            [ "$(find "zip/$dir" -mindepth 1 -printf x)" = x ] && [ -n "$zip" ] \
+              || fail "zip/$dir: expected exactly one downloaded zip file"
             got=$(shasum -a 256 "$zip" | cut -d' ' -f1)
-            [ "$got" = "$2" ] || fail "$1: downloaded zip digest $got != $2 from its producing job"
-            mkdir -p in && unzip -q "$zip" -d "in/$1"
+            [ "$got" = "$digest" ] || fail "$dir: downloaded zip digest $got != $digest from its producing job"
+            python3 -I - "$dir" "$zip" "$@" <<'EOF'
+          import stat, sys, zipfile
+          label, path, want = sys.argv[1], sys.argv[2], set(sys.argv[3:])
+          def bad(msg):
+              print(f"::error::{label}: {msg}")
+              sys.exit(1)
+          seen = set()
+          with zipfile.ZipFile(path) as z:
+              for i in z.infolist():
+                  n, mode = i.filename, i.external_attr >> 16
+                  if "\0" in i.orig_filename:
+                      bad(f"NUL in entry name {i.orig_filename!r}")
+                  if n.startswith("/"):
+                      bad(f"absolute path entry {n!r}")
+                  if ".." in n:
+                      bad(f"'..' in entry name {n!r}")
+                  if i.is_dir() or stat.S_ISDIR(mode):
+                      bad(f"directory entry {n!r}")
+                  if stat.S_ISLNK(mode):
+                      bad(f"symlink entry {n!r}")
+                  if not stat.S_ISREG(mode):
+                      bad(f"entry {n!r} is not a regular file (mode {mode:o})")
+                  if "/" in n or "\\" in n:
+                      bad(f"path separator in entry name {n!r}")
+                  if n in seen:
+                      bad(f"duplicate entry {n!r}")
+                  if n not in want:
+                      bad(f"unexpected entry {n!r}")
+                  seen.add(n)
+          if seen != want:
+              bad(f"missing entries {sorted(want - seen)}")
+          EOF
+            mkdir -p in && unzip -q "$zip" -d "in/$dir"
           }
-          unpack aarch64-apple-darwin "$AARCH64_DIGEST"
-          unpack x86_64-unknown-linux-gnu "$X86_64_DIGEST"
-          unpack sbom "$SBOM_DIGEST"
+          a="sigsieve-${GITHUB_REF_NAME}-aarch64-apple-darwin"
+          x="sigsieve-${GITHUB_REF_NAME}-x86_64-unknown-linux-gnu"
+          unpack aarch64-apple-darwin "$AARCH64_DIGEST" "$a.tar.gz" "$a.tar.gz.sha256"
+          unpack x86_64-unknown-linux-gnu "$X86_64_DIGEST" "$x.tar.gz" "$x.tar.gz.sha256"
+          unpack sbom "$SBOM_DIGEST" "$a.cdx.json" "$a.cdx.json.sha256" "$x.cdx.json" "$x.cdx.json.sha256"
           expect() { # dir, expected file names
             local dir=$1; shift
             got=$(cd "$dir" && find . -mindepth 1 -printf '%P\n' | LC_ALL=C sort)

@@ -111,7 +111,7 @@ run_case() {
         X86_64_ID="$X_ID" X86_64_DIGEST="$X_DIG" X86_64_SHA256="$X_SHA" \
         SBOM_ID="$S_ID" SBOM_DIGEST="$S_DIG" "$@" \
         bash -c 'if declare -F tamper >/dev/null; then tamper || { echo "tamper hook failed"; exit 99; }; fi
-                 bash -eo pipefail "$0" && bash -eo pipefail "$1"' "$work/bind.sh" "$work/files.sh" 2>&1)
+                 bash -eo pipefail "$0" && bash -eo pipefail "$1"' "$work/bind.sh" "$work/files.sh" </dev/null 2>&1)
     rc=$?
     set -e
     if [ "$expect" = ok ]; then
@@ -179,6 +179,76 @@ run_case "two files where one downloaded zip is expected" "expected exactly one 
 tamper() { rm zip/x86_64-unknown-linux-gnu/artifact.zip; }
 export -f tamper
 run_case "no downloaded zip" "expected exactly one downloaded zip file"
+
+# R-3: the SBOM job runs third-party tooling, so its zip is untrusted even
+# when it is the one the job uploaded. Each crafted zip holds the four
+# genuine SBOM files plus one bad entry (or lacks one); the listing and the
+# SBOM digest output point at it, so only the entry check can reject it.
+craft() { # out.zip kind
+    python3 -I - "$@" "$src/sbom" <<'EOF'
+import os, sys, zipfile
+out, kind, sbom = sys.argv[1:]
+files = sorted(os.listdir(sbom))
+def entry(z, name, mode, data=b"x"):
+    zi = zipfile.ZipInfo("placeholder")
+    zi.filename = name  # set after construction: keeps a NUL byte
+    zi.external_attr = mode << 16
+    z.writestr(zi, data)
+with zipfile.ZipFile(out, "w") as z:
+    for f in files[:-1] if kind == "missing" else files:
+        z.write(os.path.join(sbom, f), f)
+    reg = 0o100644
+    if kind == "symlink":
+        entry(z, "link", 0o120777, b"../../etc/passwd")
+    elif kind == "dotdot":
+        entry(z, "../escape", reg)
+    elif kind == "absolute":
+        entry(z, "/tmp/escape", reg)
+    elif kind == "directory":
+        entry(z, "sub/", 0o040755, b"")
+    elif kind == "subdir":
+        entry(z, "sub/" + files[0], reg)
+    elif kind == "unexpected":
+        entry(z, "extra.txt", reg)
+    elif kind == "duplicate":
+        import warnings; warnings.simplefilter("ignore")
+        entry(z, files[0], reg)
+    elif kind == "nul":
+        entry(z, files[0] + "\0../escape", reg)
+    elif kind == "no-mode":
+        entry(z, "nomode", 0)
+EOF
+}
+bad_sbom() { # kind expected-error
+    local z="$src/bad-$1.zip" dig
+    craft "$z" "$1"
+    dig=$(sha "$z")
+    tamper() {
+        cp "$BAD_ZIP" zip/sbom/artifact.zip
+        edit '$1 == "sigsieve-sbom" { $3 = "sha256:" ENVIRON["SBOM_DIGEST"] }'
+    }
+    export -f tamper
+    run_case "SBOM zip with $1 entry" "$2" BAD_ZIP="$z" SBOM_DIGEST="$dig"
+}
+bad_sbom symlink "sbom: symlink entry 'link'"
+bad_sbom dotdot "sbom: '..' in entry name '../escape'"
+bad_sbom absolute "sbom: absolute path entry '/tmp/escape'"
+bad_sbom directory "sbom: directory entry 'sub/'"
+bad_sbom subdir "sbom: path separator in entry name 'sub/"
+bad_sbom unexpected "sbom: unexpected entry 'extra.txt'"
+bad_sbom duplicate "sbom: duplicate entry 'sigsieve-v9.9.9-"
+bad_sbom nul "sbom: NUL in entry name"
+# zipfile stores a zero mode as 0600 with no file type bits.
+bad_sbom no-mode "sbom: entry 'nomode' is not a regular file (mode 600)"
+bad_sbom missing "sbom: missing entries"
+
+# Nothing may be extracted when the entry check fails (the last case's
+# workspace is still in place).
+if [ -e "$work/case/in/sbom" ]; then
+    echo "FAIL  rejected SBOM zip was extracted"; failed=$((failed + 1))
+else
+    echo "PASS  rejected SBOM zip was not extracted"; pass=$((pass + 1))
+fi
 
 echo "$pass passed, $failed failed"
 [ "$failed" -eq 0 ]
