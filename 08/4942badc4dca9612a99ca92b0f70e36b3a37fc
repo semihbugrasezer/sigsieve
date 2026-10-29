@@ -1,0 +1,24 @@
+tests/e2e_sshd.rs
+  s_c68b92ee5f638d::t_3401a32e6c8b00 112-127,215,226,325,419
+  s_c68b92ee5f638d::t_9cfb083816a828 98-111,128-129,206-209,211-214,216-224,233,299,326,398,410-418,420
+.github/workflows/ci.yml
+  s_c68b92ee5f638d::t_701605025e827f 57
+CHANGELOG.md
+  s_c68b92ee5f638d::t_06f3f77da8ab13 95-101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "084942badc4dca9612a99ca92b0f70e36b3a37fc",
+  "prompts": {},
+  "sessions": {
+    "s_c68b92ee5f638d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a8909518-2df4-4dab-82d0-d7222a653bd4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <17555579+semihbugrasezer@users.noreply.github.com>"
+    }
+  }
+}
