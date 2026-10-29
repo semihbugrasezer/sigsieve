@@ -68,6 +68,23 @@ reviews did not establish the absence of high-severity defects. The current
 register and executable regression tests supersede earlier review summaries.
 None of these reviews is a professional independent audit.
 
+### Internal review of `v0.1.0-alpha.2` source (2026-10-29)
+
+A separate-context AI-assisted review of `src/` at `fc7484be` covered
+protocol parsing, keys, policy, destination binding, proxy, resource limits,
+upstream and sockets. It reported no new CRITICAL, HIGH, MEDIUM or LOW
+finding. Like earlier reviews, it does not establish that no defects remain.
+It recorded five INFO observations. None of them is an authorization bypass,
+so they receive no F-number:
+
+| Ref | Observation | Classification | Disposition |
+|---|---|---|---|
+| A-1 | In binding mode an RSA userauth `pkalg` is not tied to the sign-request flags; a mismatched pair costs one upstream signature (possibly one Touch ID prompt) that the server then rejects | Confirmed by code trace | Open, optional hardening; maintainer decision. OpenSSH's agent does not enforce this pairing either |
+| A-2 | A session-bind signature is verified before cheaper state checks | Confirmed by code trace | Accepted (bounded by request budgets, F-17). Regression `binds_after_authentication_bind_leave_state_unchanged` pins the state outcome, so the order can be changed safely |
+| A-3 | macOS socket creation sets close-on-exec in a second call | Suspected; no concurrent `exec` in the process | Accepted |
+| A-4 | Sign responses are checked by algorithm name only | Confirmed; upstream agent is trusted | Accepted (F-38 downgrade check remains) |
+| A-5 | `chmod` after `bind` follows symlinks | Out of scope (same-uid attacker, threat model scenario F) | Accepted |
+
 ## Details
 
 ### F-42 — LOW — attest job trusts artifacts by name (fixed, not yet run)
