@@ -2,8 +2,8 @@
 name = "sigsieve"
 version = "0.1.0-alpha.3"
 edition = "2021"
-# Floor set by dependencies (sha2 0.11, proptest 1.12 declare 1.88) and
-# clippy's incompatible_msrv lint; not built on a 1.88 toolchain in CI.
+# Floor set by dependencies (sha2 0.11, proptest 1.12 declare 1.88); built
+# and tested on Rust 1.88 by the `msrv (Rust 1.88)` CI job.
 rust-version = "1.88"
 description = "SSH agent filtering proxy: expose only the identities you trust."
 license = "MIT"
