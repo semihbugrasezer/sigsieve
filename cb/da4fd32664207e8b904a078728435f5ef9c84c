@@ -1,0 +1,25 @@
+Cargo.toml
+  s_c68b92ee5f638d::t_17e831202caafc 5-6
+docs/CRATES_IO_READINESS.md
+  s_c68b92ee5f638d::t_c46412a67f9baa 60-61,74-76,128-131
+docs/IMPLEMENTATION_CHECKLIST.md
+  s_c68b92ee5f638d::t_0b46436be9baf3 15,33-34,38,41-43,53-54,103-104
+docs/RELEASE_CHECKLIST.md
+  s_c68b92ee5f638d::t_2b2f63788f860c 56-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cbda4fd32664207e8b904a078728435f5ef9c84c",
+  "prompts": {},
+  "sessions": {
+    "s_c68b92ee5f638d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a8909518-2df4-4dab-82d0-d7222a653bd4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Semih Buğra Sezer <17555579+semihbugrasezer@users.noreply.github.com>"
+    }
+  }
+}
