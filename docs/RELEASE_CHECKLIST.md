@@ -53,6 +53,9 @@ Runtime code is unchanged from `v0.1.0-alpha.2` (test-only changes under
 `src/`). Supported prebuilt targets stay macOS arm64 and Linux x86_64;
 Linux arm64 is CI-tested but source-only; Intel macOS and Windows are not
 validated. A gate is only ticked from evidence on the exact candidate SHA.
+Evidence for these gates (run IDs) goes into the release notes and the
+post-release evidence record, not into this file: editing it would change
+the candidate SHA the evidence must refer to.
 
 | Gate | Status |
 |---|---|

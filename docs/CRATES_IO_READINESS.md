@@ -57,8 +57,8 @@ its own tests. The `cargo check --tests` row shows that it cannot
 | `description` | present |
 | `keywords` | 4, all valid (at most 5, ASCII, at most 20 characters) |
 | `categories` | `command-line-utilities`, `cryptography` (valid slugs) |
-| `rust-version` | **missing**. No MSRV is declared |
-| `include` / `exclude` | **missing**, so the whole Git tree is shipped (minus `fuzz/`) |
+| `rust-version` | `1.88`, built and tested in CI (`msrv (Rust 1.88)`) |
+| `include` / `exclude` | `include` allowlist (see blocker 2) |
 
 The README has 35 repository-relative links (`docs/...`, `examples/...`).
 crates.io can only resolve these against the `repository` URL, not the
@@ -71,9 +71,9 @@ if it described the release.
 
 `rust-toolchain.toml` pins 1.99.1 for CI and releases. Neither `cargo install`
 from crates.io nor a non-rustup toolchain (such as Homebrew's) honours it.
-Users build with whatever compiler they have. Without `rust-version`, an
-older compiler fails with dependency or language errors, not a clear MSRV
-message. A declared MSRV needs a CI job that tests it.
+Users build with whatever compiler they have. `rust-version = "1.88"` gives
+an older compiler a clear MSRV error, and the `msrv (Rust 1.88)` CI job
+builds and tests both the repository and the packaged `.crate` on it.
 
 ### Provenance
 
@@ -125,9 +125,10 @@ and release-checklist evidence as a GitHub release.
    unpacked `.crate`.
 2. **Resolved.** `Cargo.toml` has an `include` allowlist; CI, release
    tooling, `deny.toml` and `rust-toolchain.toml` no longer ship.
-3. **Declared, not CI-tested.** `rust-version = "1.88"` is the floor set by
-   dependencies (sha2 0.11, proptest 1.12), and clippy's `incompatible_msrv`
-   lint is clean. It has not been built with a 1.88 toolchain.
+3. **Resolved.** `rust-version = "1.88"` is the floor set by dependencies
+   (sha2 0.11, proptest 1.12). The `msrv (Rust 1.88)` CI job builds and
+   tests it, from the repository and from the packaged `.crate`, with
+   real sshd and gpg-agent and no skips.
 4. No provenance story for the `.crate`, and no reviewed trusted-publishing
    workflow.
 5. No decision on whether the `pub` library API is supported (semver,
