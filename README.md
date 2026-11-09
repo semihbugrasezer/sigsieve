@@ -8,8 +8,10 @@
 
 SigSieve is a small local proxy for SSH agent forwarding on macOS and Linux. When you forward your agent to a remote machine, the remote side sees **only the keys you allow**. Your keys stay in your existing agent, such as [Secretive](https://github.com/maxgoedjen/secretive) or OpenSSH `ssh-agent`, and are never exported.
 
+![sigsieve doctor with three keys in the agent: one allowed and visible, two hidden, filtering verified](docs/assets/doctor.svg)
+
 > [!WARNING]
-> **Not independently audited.** Automated security tests do not establish production-grade security assurance. Real Secretive filtering, signing and destination binding were checked with the `v1.0.0-rc.1` binary (and, maintainer-reported, the `1.0.0` binary) for **one** configuration only (one P-256 test key, Secretive 4.0.0, macOS 27.2 arm64, localhost test servers); other devices, Secretive versions and real services are not covered ([details](docs/SECRETIVE_INTEGRATION.md#recorded-real-device-results)). Read the [security model](docs/SECURITY_MODEL.md) and [known limitations](docs/LIMITATIONS.md) before using agent forwarding, and retain an ordinary SSH access path.
+> **Not independently audited.** Automated tests do not establish production-grade security, and real-device Secretive testing covers [one configuration](docs/SECRETIVE_INTEGRATION.md#recorded-real-device-results). Read the [security model](docs/SECURITY_MODEL.md) and [limitations](docs/LIMITATIONS.md) before forwarding an agent, and keep an ordinary SSH access path.
 
 ## Why use it
 
