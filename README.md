@@ -20,9 +20,9 @@
   <a href="#documentation">Documentation</a>
 </p>
 
-SigSieve is a small local proxy for SSH agent forwarding on macOS and Linux. When you forward your agent to a remote machine, the remote side sees **only the keys you allow**. Your keys stay in your existing agent, such as [Secretive](https://github.com/maxgoedjen/secretive) or OpenSSH `ssh-agent`, and are never exported.
+SigSieve is a small local proxy for SSH agent forwarding on macOS and Linux. The agent you forward through it lists only the keys you allow and serves sign requests only for them; requests to add, remove or lock keys are refused. Your keys stay in your existing agent, such as [Secretive](https://github.com/maxgoedjen/secretive) or OpenSSH `ssh-agent`, and are never exported. **An allowed key stays fully usable from the remote host (by its root and by your remote user) for as long as forwarding lasts:** by default it can sign anything and log in to any server that trusts it; with `--allow-destination` it signs only SSH logins (as any user, via OpenSSH hostbound authentication) to the final destination host keys you approve.
 
-![sigsieve doctor with three keys in the agent: one allowed and visible, two hidden, filtering verified](docs/assets/doctor.svg)
+![sigsieve doctor with three keys in the agent: destination binding not enforced (identity filtering only), one allowed and visible, two hidden, filtering verified](docs/assets/doctor.svg)
 
 > [!WARNING]
 > **Not independently audited.** Automated tests do not establish production-grade security, and real-device Secretive testing covers [one configuration](docs/SECRETIVE_INTEGRATION.md#recorded-real-device-results). Read the [security model](docs/SECURITY_MODEL.md) and [limitations](docs/LIMITATIONS.md) before forwarding an agent, and keep an ordinary SSH access path.
@@ -31,8 +31,7 @@ SigSieve is a small local proxy for SSH agent forwarding on macOS and Linux. Whe
 
 - **Hide the keys a server does not need.** Forward one key instead of your whole agent.
 - **Keep your agent.** Works in front of Secretive's Secure Enclave keys, which cannot be moved into another agent.
-- **Optionally bind signing to a destination.** With `--allow-destination`, an allowed key signs only SSH logins to approved host keys.
-- **Check before you connect.** `doctor` verifies the setup and `connect --dry-run` shows the exact SSH plan.
+- **Optionally bind signing to a destination.** With `--allow-destination`, an allowed key signs only SSH logins (as any user) to the destination host keys you approve; the destination server must support OpenSSH hostbound authentication.
 
 If your keys can be exported, OpenSSH's own [`ssh-add -h`](https://www.openssh.org/agent-restrict.html) may be enough. See [Do you need SigSieve?](docs/USAGE.md#do-you-need-sigsieve)
 
@@ -44,7 +43,9 @@ macOS (Apple Silicon):
 brew install semihbugrasezer/sigsieve/sigsieve
 ```
 
-Linux x86_64 (glibc 2.39+): use the [verified prebuilt archive](docs/INSTALL.md#verify-and-install-a-published-archive). Linux arm64 and older systems: [build from source](docs/INSTALL.md#install-the-tagged-version-from-source). Intel macOS and Windows are not validated. Requires OpenSSH 8.4+; no `sudo`, no changes to `~/.ssh`.
+This installs the `sigsieve` CLI only; Homebrew builds it from source. The macOS app is a source-only [preview](#macos-app-preview).
+
+Linux x86_64 (glibc 2.39+): use the [verified prebuilt archive](docs/INSTALL.md#verify-and-install-a-published-archive). Linux arm64 and older systems: [build from source](docs/INSTALL.md#install-the-tagged-version-from-source). Intel macOS and Windows are not validated. Requires OpenSSH 8.4+ (8.7+ for ProxyJump); no `sudo`, no changes to `~/.ssh`. See the full [support matrix](docs/INSTALL.md#supported-platforms); upgrade and uninstall steps are in [INSTALL.md](docs/INSTALL.md).
 
 ## Quick start
 
@@ -77,7 +78,7 @@ sigsieve doctor "${src[@]}" --allow-fingerprint "$fp"
 sigsieve connect build-host "${src[@]}" --allow-fingerprint "$fp" --dry-run -- -o StrictHostKeyChecking=yes
 ```
 
-A working setup ends with:
+A working setup includes (other lines omitted):
 
 ```text
 Approved identities: 1/1 available
@@ -98,7 +99,7 @@ More: destination binding, a stable socket for `ssh_config`, every option and [t
 A menu bar app for the same CLI.
 
 - **See it at a glance:** which server, which keys it may use, and how the connection is protected.
-- **Check before you connect:** the protection mode and its warning are shown before any check, and Connect stays off until the CLI's check passes.
+- **Connect only after a passed check:** the protection mode and its warning are shown before any check, and Connect stays off until the CLI's check passes.
 - **Same enforcement:** the `sigsieve` CLI still does all filtering and checking, and re-checks when it connects. The app adds no security of its own.
 
 <table>
@@ -117,9 +118,9 @@ The app is built from source, ad hoc signed, and not notarized or distributed ye
 ## Security at a glance
 
 - A compromised remote host can still use an **allowed** key while forwarding is on. Forward only what that host needs, and disconnect when done.
-- Destination binding checks the final destination's host key, not usernames or intermediate hops, and needs OpenSSH hostbound authentication.
+- Destination binding restricts only the final destination's host key, not usernames or intermediate hops; see [limitations](docs/LIMITATIONS.md#security).
 - Replay of a recorded session is bounded, not prevented. With Secretive, a cancelled Touch ID prompt means reconnecting.
-- Release files are immutable and come with SHA-256 checksums, SBOMs and build provenance. Test evidence is specific to the tested revision and is not a security certification.
+- The prebuilt release archives are immutable and come with SHA-256 checksums, SBOMs and build provenance. The Homebrew formula builds from source and is checked only by the source archive's SHA-256. Test evidence is specific to the tested revision and is not a security certification.
 
 Details: [security model](docs/SECURITY_MODEL.md) · [limitations](docs/LIMITATIONS.md) · [threat model](docs/THREAT_MODEL.md) · [v1.0.0 evidence](docs/TESTING.md#release-evidence-v100-2026-11-09) · [findings](docs/FINDINGS.md)
 
@@ -127,7 +128,7 @@ Details: [security model](docs/SECURITY_MODEL.md) · [limitations](docs/LIMITATI
 
 | | |
 | --- | --- |
-| Use | [Install](docs/INSTALL.md) · [Quickstart](docs/QUICKSTART.md) · [Usage and troubleshooting](docs/USAGE.md) · [Secretive](docs/SECRETIVE_INTEGRATION.md) · [SSH compatibility](docs/SSH_COMPATIBILITY.md) · [macOS app](macos-app/README.md) |
+| Use | [Install](docs/INSTALL.md) · [Quickstart](docs/QUICKSTART.md) · [Usage and troubleshooting](docs/USAGE.md) · [Secretive](docs/SECRETIVE_INTEGRATION.md) · [SSH compatibility](docs/SSH_COMPATIBILITY.md) · [macOS app (preview)](macos-app/README.md) |
 | Security | [Security model](docs/SECURITY_MODEL.md) · [Threat model](docs/THREAT_MODEL.md) · [Limitations](docs/LIMITATIONS.md) · [Findings](docs/FINDINGS.md) · [Testing](docs/TESTING.md) |
 | Project | [Architecture](docs/ARCHITECTURE.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Governance](GOVERNANCE.md) · [Support](SUPPORT.md) |
 

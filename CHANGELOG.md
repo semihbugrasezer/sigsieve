@@ -4,6 +4,12 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- macOS menu bar app (preview): source-only, ad hoc signed, not notarized or
+  distributed; see [macos-app/README.md](macos-app/README.md). It runs the
+  `sigsieve` CLI and does not change the CLI's behaviour.
+
 ### Changed
 
 - `sigsieve --help` no longer says "EXPERIMENTAL" (v1.0.0 is a stable

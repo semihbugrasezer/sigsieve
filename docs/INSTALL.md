@@ -11,16 +11,50 @@ brew install semihbugrasezer/sigsieve/sigsieve
 sigsieve --version
 ```
 
+Use the full name `semihbugrasezer/sigsieve/sigsieve`. According to
+Homebrew 7's source (examined at 7.0.15: `trust.rb`, `cmd/install.rb`), a
+full-name install then trusts this one formula, not the whole tap, and prints
+`Trusted formula semihbugrasezer/sigsieve/sigsieve` only the first time the
+formula is trusted. This is not a guarantee for every Homebrew version, and
+the message was not captured from a 1.0.0 install log. The full-name install
+is the tested install path: recorded for the alpha.4 formula
+([alpha.4 evidence](../packaging/homebrew/README.md#test-evidence-for-alpha4-macos-arm64-homebrew-7012-2026-11-03))
+and maintainer-reported for 1.0.0
+([1.0.0 evidence](../packaging/homebrew/README.md#test-evidence-for-100-published-tap)).
+Other paths, such as `brew tap` followed by a short-name install, are not
+tested.
+
 Check `sigsieve --version` after installation; the formula can advance
-separately from GitHub release assets. To upgrade an existing installation,
-run `brew update && brew upgrade sigsieve`, then check the version again.
+separately from GitHub release assets. Expected: `sigsieve 1.0.0`.
+
+To upgrade, use the full name again, then check the version:
+
+```sh
+brew update && brew upgrade semihbugrasezer/sigsieve/sigsieve
+sigsieve --version
+```
+
+An upgrade of the published tap from `v0.1.0-alpha.4` to `1.0.0` passed
+(maintainer-reported; the exact command was not recorded). That a full-name
+`brew upgrade` also trusts the formula is based on Homebrew's source
+(`cmd/upgrade.rb`), not on a recorded run. See also
+[Upgrading from alpha.4](#upgrading-from-alpha4).
+
 Installation and upgrade need neither `sudo` nor changes to your SSH keys.
 The formula installs only the binary: no service, configuration file, change
 to `~/.ssh`, or change to your agent.
 The formula builds from source and does not verify the binary build
-provenance described below. See [Homebrew packaging](../packaging/homebrew/README.md).
+provenance described below.
 The formula is tested on macOS Apple Silicon only; Homebrew on Linux is not
 tested. Uninstall with `brew uninstall sigsieve && brew untap semihbugrasezer/sigsieve`.
+
+## Upgrading from alpha.4
+
+With destination binding, only one signing attempt is permitted per verified
+session and key (F-47). A failed or cancelled Touch ID prompt cannot be
+retried on the same connection; open a new connection. This applies to
+Homebrew and archive installs alike. See the
+[CHANGELOG](https://github.com/semihbugrasezer/sigsieve/blob/71ae5e95e666eeb3cb1b94b25ba6b0b8571eca35/CHANGELOG.md).
 
 ## Pinned prebuilt archive: v1.0.0
 
@@ -31,17 +65,11 @@ built from immutable commit
 changed after publication (GitHub immutable release).
 Do not substitute a newer `main` archive or an unverified Actions artifact.
 
-**Upgrading from alpha.4:** with destination binding, only one signing
-attempt is permitted per verified session and key (F-47). A failed or
-cancelled Touch ID prompt cannot be retried on the same connection; open a
-new connection. See the
-[CHANGELOG](https://github.com/semihbugrasezer/sigsieve/blob/71ae5e95e666eeb3cb1b94b25ba6b0b8571eca35/CHANGELOG.md).
-
 ## Supported downloads
 
 | Host | Archive target | Notes |
 |---|---|---|
-| macOS Apple Silicon (arm64) | `aarch64-apple-darwin` | Native release verification passed; no signed/notarized macOS distribution is claimed |
+| macOS Apple Silicon (arm64) | `aarch64-apple-darwin` | Native release verification maintainer-reported (see below); no signed/notarized macOS distribution is claimed |
 | Linux x86_64 | `x86_64-unknown-linux-gnu` | Built on Ubuntu 24.04, glibc 2.39 baseline; older distributions may need a source build |
 
 Linux arm64 is tested in CI but has no prebuilt archive. Intel macOS and
@@ -49,6 +77,25 @@ Windows are not validated. OpenSSH 8.4+ is required; proxy-jump/relay sessions
 require 8.7+.
 
 A crates.io package is **not available**.
+
+## Supported platforms
+
+| | Status |
+|---|---|
+| macOS Apple Silicon (arm64) | Homebrew (source build) or attested prebuilt archive. No minimum macOS version is stated; recorded device tests ran on macOS 27.2 |
+| Intel macOS | not validated |
+| Linux x86_64 | attested prebuilt archive (glibc 2.39 baseline); older distributions: source build |
+| Linux arm64 | source build (tested in CI, no prebuilt archive) |
+| Homebrew on Linux | not tested |
+| Windows | not validated |
+| Rust (source build) | 1.88 or newer |
+| OpenSSH client | 8.4+; 8.7+ for ProxyJump and relays |
+| Destination binding | restricts the final destination host key only, not usernames or intermediate hops; destination must use an Ed25519 or ECDSA host key; forwarded hops need servers with `publickey-hostbound` (OpenSSH 8.9+); otherwise signing is refused |
+| Secretive | recorded for one configuration: Secretive 4.0.0, one P-256 key, macOS 27.2 arm64, OpenSSH 10.5p1, with the alpha.4, rc.1 and 1.0.0 release binaries (1.0.0 maintainer-reported). Other versions, Intel Macs and the Homebrew-built binary are not verified ([records](SECRETIVE_INTEGRATION.md#recorded-real-device-results)) |
+| macOS app | preview, source only: macOS 13+, Xcode 26+ ([macos-app/README.md](../macos-app/README.md)) |
+
+Sources: this guide, [LIMITATIONS.md](LIMITATIONS.md) and
+[SECRETIVE_INTEGRATION.md](SECRETIVE_INTEGRATION.md).
 
 ## Verify and install a published archive
 
@@ -177,13 +224,12 @@ binary's provenance.
 
 ## First safe check and removal
 
-Start with [identity filtering and a dry run](../README.md#quick-start)
-or the [Secretive setup](../README.md#quick-start).
-`doctor` does not request real-key signing; `connect --dry-run` does not
-start a remote SSH session. Verify the SSH destination's host key through
-a trusted channel before a real connection.
+Start with the README's [quick start](../README.md#quick-start) (OpenSSH
+agent or Secretive); it explains what `doctor` and `connect --dry-run` do and
+do not do. Verify the SSH destination's host key through a trusted channel
+before a real connection.
 
 SigSieve does not edit SSH configuration or your upstream agent. To remove a
 prebuilt installation, stop any SigSieve sessions and delete only
 `$HOME/.local/bin/sigsieve`; for a Cargo installation use
-`cargo uninstall sigsieve`. See [cleanup and recovery](USAGE.md#uninstall-and-recovery).
+`cargo uninstall sigsieve`; for Homebrew see [above](#homebrew-macos-apple-silicon). See [cleanup and recovery](USAGE.md#uninstall-and-recovery).

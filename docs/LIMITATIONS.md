@@ -154,7 +154,10 @@ behind wording that suggests otherwise.
   separates permissions, it does not claim credential isolation).
 - Real Secretive testing is limited to owner-assisted observations, including
   signing, destination binding, cancellation and reconnect against two
-  localhost test servers on the `v1.0.0-rc.1` binary. No interoperability
-  assurance for other devices, services, Secretive versions, Homebrew builds,
-  or the final stable binary; prompts were not timed per operation.
+  localhost test servers on the `v1.0.0-rc.1` binary. With the `1.0.0`
+  binary, the same configuration (Secretive 4.0.0, one P-256 key, macOS 27.2
+  arm64, OpenSSH 10.5p1) passed 13/13, maintainer-reported with no published
+  log. This is not a general compatibility guarantee and not an independent
+  security audit: no interoperability assurance for other devices, services,
+  Secretive versions or Homebrew builds; prompts were not timed per operation.
   See [device evidence](SECRETIVE_INTEGRATION.md#recorded-real-device-results).

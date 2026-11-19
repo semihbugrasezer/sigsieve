@@ -74,8 +74,10 @@ agent, filtered `ForwardAgent` and proxy hops before connecting.
 
 Replace `build-host` with your SSH host alias. Verify its host key through a
 trusted channel and put it in your known_hosts first; the example deliberately
-requires an existing trusted entry. Your login still uses your normal agent;
-only the allowlisted identity is forwarded. `connect` disables connection
+requires an existing trusted entry. Your login uses the agent in
+`SSH_AUTH_SOCK` or `IdentityAgent`; if there is none, ssh may log in with the
+filtered agent. The dry run's `Login agent:` line shows which. Only the
+allowlisted identity is forwarded. `connect` disables connection
 sharing, port forwarding and X11 for that session. It removes its socket
 when SSH exits.
 
@@ -147,10 +149,12 @@ See the compatibility guide before changing that remote configuration.
 
 ```text
 sigsieve run      [--upstream PATH | --secretive] [--allow-fingerprint FP]... [--allow-destination HK]... [--socket PATH]
+                  [--upstream-timeout SECS]
 sigsieve doctor   [--upstream PATH | --secretive] [--allow-fingerprint FP]... [--allow-destination HK]... [--socket PATH]
+                  [--upstream-timeout SECS]
 sigsieve status   [--socket PATH]          (default: $SSH_AUTH_SOCK)
 sigsieve connect  HOST [--upstream PATH | --secretive] --allow-fingerprint FP... [--allow-destination HK]...
-                  [--dry-run] [--ssh PATH] [-- SSH_ARGS...]
+                  [--upstream-timeout SECS] [--dry-run] [--ssh PATH] [-- SSH_ARGS...]
 ```
 
 - Lists are repeatable or comma-separated. `SIGSIEVE_UPSTREAM`,
@@ -220,8 +224,9 @@ returning to ordinary SSH.
    rm /path/to/agent.sock /path/to/agent.sock.state
    ```
 
-3. Remove the binary: `cargo uninstall sigsieve` (if installed with
-   `cargo install`), or delete the file you copied.
+3. Remove the binary: `brew uninstall sigsieve && brew untap
+   semihbugrasezer/sigsieve` (Homebrew), `rm ~/.local/bin/sigsieve` (release
+   archive), or `cargo uninstall sigsieve` (source build).
 4. If you forwarded manually, remove the `ForwardAgent` entry you added to
    ssh_config and stop passing `-o ForwardAgent=<socket>`. Restore any other
    manual edits you made. Test ordinary access with `ssh -a host` (forwarding

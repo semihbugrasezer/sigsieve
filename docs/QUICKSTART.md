@@ -54,8 +54,11 @@ sigsieve status --socket "$demo/filtered.sock"
 
 Expect only `demo-allowed` to be listed and the allowed key to sign. The
 hidden key is not offered at all, so `ssh-keygen` reports that it has no key
-(step 2's `doctor` is what sends a sign request for a hidden key and
-confirms SigSieve rejects it). Key removal is refused; `run.log` shows
+(step 2's `doctor` sends a sign request for a synthetic, never-allowlisted
+test key and confirms SigSieve rejects it; refusal of a sign request for a
+hidden key whose public key the remote already knows is covered by the
+automated tests listed in [SECURITY_MODEL.md](SECURITY_MODEL.md#identity-isolation),
+invariants 2-4). Key removal is refused; `run.log` shows
 `rejected agent operation`. The upstream agent still holds both keys.
 
 ## 4. Clean up
@@ -71,9 +74,7 @@ cd / && rm -rf "$demo"
 - **Destination binding.** It needs real SSH sessions; it is covered by the
   real-`sshd` tests (`tests/e2e_sshd.rs`) and described in [USAGE.md](USAGE.md).
 - **Your agent.** Next, follow the README's
-  [first safe check with OpenSSH](../README.md#quick-start)
-  or [first session with Secretive](../README.md#quick-start),
-  and preview a connection with `sigsieve connect … --dry-run` before
+  [quick start](../README.md#quick-start) with your own agent, and preview a connection with `sigsieve connect … --dry-run` before
   using it.
 
 SigSieve is not independently audited. Read the

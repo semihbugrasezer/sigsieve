@@ -53,9 +53,18 @@ Homebrew ships (1.99.1 on 2026-11-03). The declared minimum is Rust 1.88. A
 future Homebrew Rust that the crate does not build with fails the build; it
 does not produce a different binary silently.
 
-## Test evidence (macOS arm64, Homebrew 7.0.12, 2026-11-03)
+## Test evidence for 1.0.0 (published tap)
 
-Run in a local, unpublished tap created with `brew tap-new --no-git`
+Tap commit `7fd385e`: install, upgrade from `v0.1.0-alpha.4`, `brew test` and
+uninstall on macOS arm64 passed (maintainer-reported; no independent log is
+published). In particular, the published tap's 1.0.0 `brew test` result is
+maintainer-reported only: no independent log of that run exists.
+
+## Test evidence for alpha.4 (macOS arm64, Homebrew 7.0.12, 2026-11-03)
+
+This section is alpha.4 evidence, not 1.0.0 evidence.
+
+Run for the `v0.1.0-alpha.4` formula (2026-11-03) in a local, unpublished tap created with `brew tap-new --no-git`
 (removed afterwards):
 
 | Step | Result |
@@ -75,10 +84,6 @@ Published tap, same day: the tap's formula equals this file at `main`
 `brew audit --strict --online`, uninstall, reinstall, `brew test` again, and
 `brew uninstall` + `brew untap` (clean afterwards) all passed.
 
-1.0.0 published tap (tap commit `7fd385e`): install, upgrade from
-`v0.1.0-alpha.4`, `brew test` and uninstall on macOS arm64 passed
-(maintainer-reported; no independent log is published).
-
 Not tested: Linux (Homebrew on Linux), Intel macOS, a freshly installed macOS.
 
 ## The tap (maintainer)
@@ -87,9 +92,12 @@ Not tested: Linux (Homebrew on Linux), Intel macOS, a freshly installed macOS.
    `Formula/sigsieve.rb` (a copy of this directory's formula) and a README that
    repeats the not-independently-audited status and links to
    [docs/INSTALL.md](../../docs/INSTALL.md).
-2. Users install with
-   `brew install semihbugrasezer/sigsieve/sigsieve` (or `brew tap
-   semihbugrasezer/sigsieve` first). Uninstall:
+2. Users install with the full name
+   `brew install semihbugrasezer/sigsieve/sigsieve` (the tested path: recorded for alpha.4,
+   maintainer-reported for 1.0.0). That Homebrew 7 then trusts only that one
+   formula, not the whole tap, is verified from Homebrew 7's source (examined
+   at 7.0.15), not guaranteed for every Homebrew version. A short-name install after `brew tap` is not
+   tested. Uninstall:
    `brew uninstall sigsieve && brew untap semihbugrasezer/sigsieve`.
 3. After each tap update, run the steps above against the published tap
    from a clean state.
